@@ -722,6 +722,7 @@
 
     <script src="crm-logic.js"></script>
     <script src="script.js"></script>
+    <script src="sync-orders.js"></script>
     <script>
         const stages = ["Novo Pedido", "A Enviar", "Enviados", "Entregues", "Cancelados", "Trocas e Devoluções", "Suporte Humanizado"];
         let currentPipeline = 'cacife';
@@ -731,6 +732,7 @@
         function safeListId(stage) { return 'list-' + (stage || 'Contato').replace(/\s+/g, '-'); }
 
         function renderBoard() {
+            // ... existing code ...
             const board = document.getElementById('crm-board');
             board.innerHTML = '';
             stages.forEach(stage => {
@@ -752,139 +754,19 @@
             });
         }
 
-        async function loadData() {
-            if (!window.CRM_LOGIC) return;
-            const summary = await CRM_LOGIC.fetchPipelineSummary();
+        // ... existing functions ...
 
-            // Total general logic
-            const allTotal = (summary.total.starter || 0) + (summary.total.growth || 0) + (summary.total.enterprise || 0);
-            document.getElementById('total-general').textContent = allTotal;
-
-            // Merge old and new stage names (lowercase)
-            const deliveredCount = (summary.stages['entregue'] || 0) + (summary.stages['entregues'] || 0);
-            const canceledCount = (summary.stages['cancelamento'] || 0) + (summary.stages['cancelados'] || 0);
-
-            const pending = (allTotal - deliveredCount - canceledCount);
-            document.getElementById('total-pending').textContent = Math.max(0, pending);
-
-            const rate = allTotal > 0 ? ((deliveredCount / allTotal) * 100).toFixed(1) : 0;
-            document.getElementById('delivery-rate').textContent = rate + '%';
-
-            allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline);
-            renderLeads(allLeads);
-
-        }
-
-        function renderLeads(leads) {
-            const searchTerm = document.getElementById('crmSearch').value.toLowerCase();
-            const respFilter = document.getElementById('responsibleFilter').value;
-
-            document.querySelectorAll('.opportunity-list').forEach(l => l.innerHTML = '');
-
-            leads.filter(l => (l.name.toLowerCase().includes(searchTerm) || l.company.toLowerCase().includes(searchTerm)) && (respFilter === 'all' || l.responsible === respFilter))
-                .forEach(opp => {
-                    // Compatibility Mapping for old stage names
-                    let displayStage = opp.stage;
-                    if (displayStage === 'Novo pedido') displayStage = 'Novo Pedido';
-                    if (displayStage === 'A Embalar') displayStage = 'A Enviar';
-                    if (displayStage === 'Enviado') displayStage = 'Enviados';
-                    if (displayStage === 'Entregue') displayStage = 'Entregues';
-                    if (displayStage === 'Cancelamento') displayStage = 'Cancelados';
-
-                    const list = document.getElementById(safeListId(displayStage));
-                    if (!list) return;
-                    const card = document.createElement('div');
-                    card.className = `opportunity-card strip-cacife ${selectedLeads.has(opp.id) ? 'selected' : ''}`;
-                    card.draggable = true;
-                    card.innerHTML = `
-                        <div style="font-size:10px; position:absolute; top:10px; right:10px; color:${selectedLeads.has(opp.id) ? 'white' : 'transparent'}" onclick="toggleSelection('${opp.id}', event)"><i class="ph-fill ph-check-circle"></i></div>
-                        <span class="client-name">${opp.name}</span>
-                        <span class="company-name">@${opp.company}</span>
-                        <div class="tags-container">${opp.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
-                        <div class="responsible-badge"><i class="ph-fill ph-user-circle"></i> <span>${opp.responsible}</span></div>
-                    `;
-                    card.onclick = () => openLeadDetails(opp);
-                    card.ondragstart = (e) => { e.dataTransfer.setData('text', opp.id); card.classList.add('dragging'); };
-                    card.ondragend = () => card.classList.remove('dragging');
-                    list.appendChild(card);
-                });
-            updateCounters();
-        }
-
-        async function handleDrop(e, stage) {
-            e.preventDefault();
-            e.currentTarget.classList.remove('drag-over');
-            const id = e.dataTransfer.getData('text');
-            await CRM_LOGIC.updateLeadStage(id, stage);
-            loadData();
-        }
-
-        function updateCounters() {
-            document.querySelectorAll('.crm-column').forEach(c => {
-                c.querySelector('.opportunity-count').textContent = c.querySelector('.opportunity-list').children.length;
-            });
-        }
-
-        function toggleSelection(id, e) {
-            e.stopPropagation();
-            selectedLeads.has(id) ? selectedLeads.delete(id) : selectedLeads.add(id);
-            renderLeads(allLeads);
-            document.getElementById('bulk-action-bar').classList.toggle('visible', selectedLeads.size > 0);
-            document.getElementById('selected-count-badge').textContent = selectedLeads.size;
-        }
-
-        function selectAllInStage(stage, e) {
-            e.stopPropagation();
-            const listId = safeListId(stage);
-            const cards = document.getElementById(listId).children;
-            const anyUnselected = Array.from(cards).some(c => !selectedLeads.has(c.getAttribute('data-id')));
-            // Simple select logic
-            renderLeads(allLeads);
-        }
-
-        const modal = document.getElementById('leadModal');
-        let currentLead = null;
-
-        async function openLeadDetails(lead) {
-            currentLead = lead;
-            document.getElementById('modal-client-name').textContent = lead.name;
-            document.getElementById('modal-company-name').textContent = '@' + lead.company;
-            document.getElementById('modal-phone').value = lead.phone === '---' ? '' : lead.phone;
-            document.getElementById('modal-email').value = lead.email === '---' ? '' : lead.email;
-            document.getElementById('modal-responsible').value = lead.responsible === 'Não atribuído' ? '' : lead.responsible;
-            document.getElementById('modal-tags').value = lead.tags.join(', ');
-            modal.style.display = 'flex';
-            document.body.classList.add('modal-open');
-
-            document.getElementById('ia-info-loading').style.display = 'block';
-            document.getElementById('ia-info-content').style.display = 'none';
-            const ai = await CRM_LOGIC.fetchAILeadInfo(lead.company);
-            if (ai) {
-                document.getElementById('modal-ia-insight').textContent = ai.insight_ia || '---';
-                document.getElementById('modal-ia-obs').textContent = ai.observacoes || '---';
-                document.getElementById('modal-channels').textContent = lead.channels;
-            }
-            document.getElementById('ia-info-loading').style.display = 'none';
-            document.getElementById('ia-info-content').style.display = 'block';
-        }
-
-        document.getElementById('closeModal').onclick = () => { modal.style.display = 'none'; document.body.classList.remove('modal-open'); };
-
-        document.getElementById('saveLeadDetails').onclick = async () => {
-            const data = {
-                oppData: { responsible_name: document.getElementById('modal-responsible').value, tags: document.getElementById('modal-tags').value.split(',').map(t => t.trim()) },
-                contactData: { phone: document.getElementById('modal-phone').value, email: document.getElementById('modal-email').value }
-            };
-            await CRM_LOGIC.updateOpportunityDetails(currentLead.id, currentLead.contactId, data);
-            modal.style.display = 'none';
-            loadData();
-        };
-
-
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initBulk();
             renderBoard();
-            if (CRM_LOGIC.initCrmSupabase()) loadData();
+            if (CRM_LOGIC.initCrmSupabase()) {
+                // Auto-sync orders on load
+                if (typeof syncOrdersToCRM === 'function') {
+                    console.log('Starting auto-sync...');
+                    await syncOrdersToCRM();
+                }
+                loadData();
+            }
 
             document.getElementById('crmSearch').oninput = () => renderLeads(allLeads);
             document.getElementById('responsibleFilter').onchange = () => renderLeads(allLeads);
