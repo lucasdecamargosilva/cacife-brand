@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quantic Conversas</title>
+    <title>Conversas | Cacife Brand</title>
+
+    <!-- Favicons / theme -->
+    <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+    <meta name="theme-color" content="#ffffff">
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,28 +16,43 @@
         rel="stylesheet" />
 
     <link rel="stylesheet" href="style.css" />
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <script src="theme-handler.js"></script>
+    <!-- Supabase Core & Configuration -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
 
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         /* =========================
-       AQUI está o ajuste principal
+       Ajustes para Iframe Gigante
        ========================= */
 
+        .app-container {
+            padding: 10px !important;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-header {
+            margin-bottom: 10px !important;
+            padding: 5px 0 !important;
+        }
+
+        .page-title {
+            font-size: 18px !important;
+        }
+
         .conversations-container {
-            /* Antes: height: calc(100vh - 160px); */
-            height: calc(100vh - 120px);
-            /* diminua esse número para ficar maior */
+            flex: 1;
+            height: auto !important;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             overflow: hidden;
             position: relative;
-
             display: flex;
             flex-direction: column;
             min-height: 0;
-            /* importante em alguns layouts flex */
         }
 
         .chat-header {
@@ -66,13 +85,12 @@
         .status-dot {
             width: 8px;
             height: 8px;
-            background: #ffffff;
+            background: var(--text-white);
             border-radius: 50%;
             box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
         }
 
         .chatwoot-iframe {
-            /* AQUI está o que faz ficar gigante */
             flex: 1 1 auto;
             min-height: 0;
             width: 100%;
@@ -105,7 +123,7 @@
             width: 40px;
             height: 40px;
             border: 4px solid rgba(255, 255, 255, 0.1);
-            border-top-color: #ffffff;
+            border-top-color: var(--text-white);
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-bottom: 16px;
@@ -118,11 +136,22 @@
         }
 
         .error-message {
-            color: var(--text-muted);
+            color: #ff4444;
             font-size: 14px;
             margin-top: 10px;
             max-width: 400px;
             text-align: center;
+        }
+
+        .main-footer {
+            display: none !important;
+        }
+
+        /* Sidebar Standard Consistency */
+        .nav-link.active {
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
         }
     </style>
 </head>
@@ -131,7 +160,7 @@
     <div class="layout-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="logo.png" alt="Quantic Logo" class="sidebar-logo" />
+                <img src="logo.png" alt="Logo" class="sidebar-logo" />
                 <button class="toggle-btn" id="toggleSidebar">
                     <i class="ph ph-list"></i>
                 </button>
@@ -165,10 +194,6 @@
             </nav>
 
             <div class="sidebar-footer">
-                <button id="themeToggle" class="nav-link theme-btn">
-                    <i class="ph ph-sun"></i>
-                    <span class="link-text">Modo Claro</span>
-                </button>
             </div>
         </aside>
 
@@ -182,7 +207,7 @@
 
                 <div class="conversations-container">
                     <div class="chat-header">
-                        <h2><i class="ph-fill ph-chat-centered-text"></i> Quantic Inbox</h2>
+                        <h2><i class="ph-fill ph-chat-centered-text"></i> Cacife Inbox</h2>
                         <div class="status-badge">
                             <span class="status-dot"></span>
                             <span id="status-text">Conectando...</span>
@@ -190,8 +215,7 @@
                     </div>
 
                     <iframe id="chatwoot-frame" class="chatwoot-iframe"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation"
-                        allow="camera;microphone;clipboard-read;clipboard-write;">
+                        allow="camera;microphone;clipboard-read;clipboard-write;display-capture;autoplay">
                     </iframe>
 
                     <div id="loading-overlay" class="loading-overlay">
@@ -199,13 +223,6 @@
                         <p id="loading-text">Carregando central de mensagens...</p>
                     </div>
                 </div>
-
-                <footer class="main-footer">
-                    <div class="footer-logo">
-                        <i class="ph-fill ph-squares-four"></i> <span>Quantic</span>
-                    </div>
-                    <p>© 2024 Quantic Fin. Todos os direitos reservados.</p>
-                </footer>
             </div>
         </div>
     </div>
@@ -225,7 +242,7 @@
                 try {
                     statusText.textContent = 'Autenticando...';
 
-                    const response = await fetch('http://localhost:3000/api/chatwoot/sso', {
+                    const response = await fetch('/api/chatwoot/sso', {
                         method: 'GET',
                         credentials: 'include',
                         headers: { 'Accept': 'application/json' }
@@ -238,24 +255,20 @@
 
                     statusText.textContent = 'Carregando inbox...';
 
-                    // IMPORTANTE: usando o proxy raiz (sem /chatwoot)
-                    const proxyUrl = data.ssoUrl.replace(
-                        'https://chatwoot.segredosdodrop.com',
-                        'http://localhost:3000'
-                    );
-
-                    iframe.src = proxyUrl;
+                    // Carrega a URL do SSO diretamente no iframe
+                    iframe.src = data.ssoUrl;
 
                     iframe.onload = () => {
                         statusText.textContent = 'Conectado';
                         setTimeout(() => overlay.classList.add('hidden'), 800);
                     };
 
+                    // Timeout de segurança para caso o iframe demore a disparar o onload
                     setTimeout(() => overlay.classList.add('hidden'), 15000);
                 } catch (err) {
                     statusText.textContent = 'Erro';
                     loadingText.innerHTML = `
-            <span style="color:var(--text-muted);">Erro ao carregar</span>
+            <span style="color:#ff4444;">Erro ao carregar</span>
             <div class="error-message">${err.message}</div>
           `;
                 }
