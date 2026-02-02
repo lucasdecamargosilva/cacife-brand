@@ -164,7 +164,8 @@
                     <!-- Operational KPI Row (Compact) -->
                     <section class="kpi-grid"
                         style="grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
-                        <div class="card kpi-card" style="padding: 15px;">
+                        <div class="card kpi-card kpi-card-filter active-filter" id="card-filter-all"
+                            onclick="setRevenueFilter('all')" style="padding: 15px;">
                             <div class="card-content">
                                 <span class="label" style="font-size: 12px;">Total Pedidos</span>
                                 <h3 id="kpi-total-orders" class="value text-info" style="font-size: 24px; gap: 8px;">
@@ -174,7 +175,8 @@
                             </div>
                         </div>
 
-                        <div class="card kpi-card" style="padding: 15px;">
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-to_send"
+                            onclick="setRevenueFilter('to_send')" style="padding: 15px;">
                             <div class="card-content">
                                 <span class="label" style="font-size: 12px;">A enviar</span>
                                 <h3 id="kpi-to-send-orders" class="value text-warning"
@@ -186,7 +188,8 @@
                             </div>
                         </div>
 
-                        <div class="card kpi-card" style="padding: 15px;">
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-shipped"
+                            onclick="setRevenueFilter('shipped')" style="padding: 15px;">
                             <div class="card-content">
                                 <span class="label" style="font-size: 12px;">Enviados</span>
                                 <h3 id="kpi-shipped-orders" class="value text-purple"
@@ -198,7 +201,8 @@
                             </div>
                         </div>
 
-                        <div class="card kpi-card" style="padding: 15px;">
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-delivered"
+                            onclick="setRevenueFilter('delivered')" style="padding: 15px;">
                             <div class="card-content">
                                 <span class="label" style="font-size: 12px;">Entregues</span>
                                 <h3 id="kpi-delivered-orders" class="value text-success"
@@ -210,7 +214,8 @@
                             </div>
                         </div>
 
-                        <div class="card kpi-card" style="padding: 15px;">
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-cancelled"
+                            onclick="setRevenueFilter('cancelled')" style="padding: 15px;">
                             <div class="card-content">
                                 <span class="label" style="font-size: 12px;">Cancelados</span>
                                 <h3 id="kpi-cancelled-orders" class="value text-danger"
@@ -687,13 +692,67 @@
             }
         }
 
+        let currentRevenueFilter = 'all';
+
+        function setRevenueFilter(status) {
+            currentRevenueFilter = status;
+
+            // Update UI
+            document.querySelectorAll('.kpi-card-filter').forEach(card => card.classList.remove('active-filter'));
+            const cardId = `card-filter-${status}`;
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('active-filter');
+
+            // Find current chart title element and update it
+            const chartTitle = document.querySelector('#chart-revenue-evolution').parentElement.previousElementSibling.querySelector('h3');
+            if (chartTitle) {
+                let suffix = '';
+                if (status === 'to_send') suffix = ' (A Enviar)';
+                else if (status === 'shipped') suffix = ' (Enviados)';
+                else if (status === 'delivered') suffix = ' (Entregues)';
+                else if (status === 'cancelled') suffix = ' (Cancelados)';
+
+                chartTitle.innerHTML = `<i class="ph-fill ph-chart-line"></i> Evolução de Faturamento${suffix}`;
+            }
+
+            renderRevenueChart(allOrdersData);
+        }
+
         function renderRevenueChart(orders) {
             const ctx = document.getElementById('chart-revenue-evolution').getContext('2d');
             if (charts.revenue) charts.revenue.destroy();
 
             const dateMap = {};
 
-            orders.forEach(o => {
+            // Filter orders based on selection
+            const filteredOrders = orders.filter(o => {
+                const payStatus = (o.payment_status || '').toLowerCase();
+                const isPaid = payStatus === 'paid' || payStatus === 'pago' || payStatus === 'approved' || payStatus === 'aprovado' || payStatus === 'confirmado';
+
+                // Base filter: only consider valid revenue for 'all', but maybe we want to see lost revenue for 'cancelled'?
+                // Request says 'faturamento', usually means confirmed money.
+
+                const shipStatus = (o.shipping_status || '').toLowerCase();
+                const status = (o.status || '').toLowerCase();
+
+                if (currentRevenueFilter === 'all') {
+                    return isPaid;
+                } else if (currentRevenueFilter === 'to_send') {
+                    return isPaid && shipStatus === 'não está embalado';
+                } else if (currentRevenueFilter === 'shipped') {
+                    return isPaid && (shipStatus === 'shipped' || shipStatus === 'enviado');
+                } else if (currentRevenueFilter === 'delivered') {
+                    return isPaid && (shipStatus === 'delivered' || shipStatus === 'entregue');
+                } else if (currentRevenueFilter === 'cancelled') {
+                    // For cancelled, usually revenue is 0 or refunded, but let's show order totals for cancelled orders 
+                    // that MIGHT have been paid or just to show the volume of separate "cancelled revenue" (lost)
+                    // If strictly revenue, maybe only paid ones? Assuming user wants to see the value of cancelled orders.
+                    return status === 'cancelled' || status === 'cancelado';
+                }
+                return isPaid;
+            });
+
+            filteredOrders.forEach(o => {
                 if (!o.created_at) return;
                 const dateObj = new Date(o.created_at);
                 if (isNaN(dateObj.getTime())) return;
@@ -727,6 +786,11 @@
             gradient.addColorStop(0, 'rgba(155, 77, 255, 0.4)');
             gradient.addColorStop(1, 'rgba(155, 77, 255, 0)');
 
+            let lineColor = '#9b4dff';
+            if (currentRevenueFilter === 'cancelled') lineColor = '#ef4444';
+            else if (currentRevenueFilter === 'delivered') lineColor = '#22c55e';
+            else if (currentRevenueFilter === 'to_send') lineColor = '#f59e0b';
+
             charts.revenue = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -734,10 +798,10 @@
                     datasets: [{
                         label: 'Faturamento (R$)',
                         data: data,
-                        borderColor: '#9b4dff',
+                        borderColor: lineColor,
                         backgroundColor: gradient,
                         borderWidth: 3,
-                        pointBackgroundColor: '#9b4dff',
+                        pointBackgroundColor: lineColor,
                         pointBorderColor: '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4,
@@ -753,7 +817,7 @@
                         tooltip: {
                             callbacks: {
                                 label: (context) => {
-                                    return 'Faturamento: ' + context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                    return 'Valor: ' + context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                                 }
                             }
                         }
