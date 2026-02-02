@@ -90,39 +90,40 @@
         }
 
         /* Pipeline Stage Colors */
-        .crm-column[data-stage="Novo pedido"] .column-header {
+        /* Pipeline Stage Colors */
+        .crm-column[data-stage="Novo Pedido"] .column-header {
             border-bottom-color: #3b82f6;
-            /* Blue */
+            /* Azul */
         }
 
-        .crm-column[data-stage="A Embalar"] .column-header {
+        .crm-column[data-stage="A Enviar"] .column-header {
             border-bottom-color: #f59e0b;
-            /* Orange */
+            /* Amarelo */
         }
 
-        .crm-column[data-stage="Enviado"] .column-header {
+        .crm-column[data-stage="Enviados"] .column-header {
             border-bottom-color: #9b4dff;
-            /* Purple */
+            /* Roxo */
         }
 
-        .crm-column[data-stage="Entregue"] .column-header {
+        .crm-column[data-stage="Entregues"] .column-header {
             border-bottom-color: #22c55e;
-            /* Green */
+            /* Verde */
+        }
+
+        .crm-column[data-stage="Cancelados"] .column-header {
+            border-bottom-color: #ef4444;
+            /* Vermelho */
         }
 
         .crm-column[data-stage="Trocas e Devoluções"] .column-header {
             border-bottom-color: #ec4899;
-            /* Pink */
-        }
-
-        .crm-column[data-stage="Cancelamento"] .column-header {
-            border-bottom-color: #ef4444;
-            /* Red */
+            /* Rosa */
         }
 
         .crm-column[data-stage="Suporte Humanizado"] .column-header {
-            border-bottom-color: #06b6d4;
-            /* Cyan */
+            border-bottom-color: #38bdf8;
+            /* Azul Claro */
         }
 
         .column-header h3 {
@@ -722,7 +723,7 @@
     <script src="crm-logic.js"></script>
     <script src="script.js"></script>
     <script>
-        const stages = ["Novo pedido", "A Embalar", "Enviado", "Entregue", "Trocas e Devoluções", "Cancelamento", "Suporte Humanizado"];
+        const stages = ["Novo Pedido", "A Enviar", "Enviados", "Entregues", "Cancelados", "Trocas e Devoluções", "Suporte Humanizado"];
         let currentPipeline = 'cacife';
         let selectedLeads = new Set();
         let allLeads = [];
@@ -759,11 +760,14 @@
             const allTotal = (summary.total.starter || 0) + (summary.total.growth || 0) + (summary.total.enterprise || 0);
             document.getElementById('total-general').textContent = allTotal;
 
-            const pending = (allTotal - (summary.stages['entregue'] || 0) - (summary.stages['cancelamento'] || 0));
+            // Merge old and new stage names (lowercase)
+            const deliveredCount = (summary.stages['entregue'] || 0) + (summary.stages['entregues'] || 0);
+            const canceledCount = (summary.stages['cancelamento'] || 0) + (summary.stages['cancelados'] || 0);
+
+            const pending = (allTotal - deliveredCount - canceledCount);
             document.getElementById('total-pending').textContent = Math.max(0, pending);
 
-            const delivered = summary.stages['entregue'] || 0;
-            const rate = allTotal > 0 ? ((delivered / allTotal) * 100).toFixed(1) : 0;
+            const rate = allTotal > 0 ? ((deliveredCount / allTotal) * 100).toFixed(1) : 0;
             document.getElementById('delivery-rate').textContent = rate + '%';
 
             allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline);
@@ -779,7 +783,15 @@
 
             leads.filter(l => (l.name.toLowerCase().includes(searchTerm) || l.company.toLowerCase().includes(searchTerm)) && (respFilter === 'all' || l.responsible === respFilter))
                 .forEach(opp => {
-                    const list = document.getElementById(safeListId(opp.stage));
+                    // Compatibility Mapping for old stage names
+                    let displayStage = opp.stage;
+                    if (displayStage === 'Novo pedido') displayStage = 'Novo Pedido';
+                    if (displayStage === 'A Embalar') displayStage = 'A Enviar';
+                    if (displayStage === 'Enviado') displayStage = 'Enviados';
+                    if (displayStage === 'Entregue') displayStage = 'Entregues';
+                    if (displayStage === 'Cancelamento') displayStage = 'Cancelados';
+
+                    const list = document.getElementById(safeListId(displayStage));
                     if (!list) return;
                     const card = document.createElement('div');
                     card.className = `opportunity-card strip-cacife ${selectedLeads.has(opp.id) ? 'selected' : ''}`;
