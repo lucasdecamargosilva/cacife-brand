@@ -89,6 +89,42 @@
             margin-bottom: var(--spacing-sm);
         }
 
+        /* Pipeline Stage Colors */
+        .crm-column[data-stage="Novo pedido"] .column-header {
+            border-bottom-color: #3b82f6;
+            /* Blue */
+        }
+
+        .crm-column[data-stage="A Embalar"] .column-header {
+            border-bottom-color: #f59e0b;
+            /* Orange */
+        }
+
+        .crm-column[data-stage="Enviado"] .column-header {
+            border-bottom-color: #9b4dff;
+            /* Purple */
+        }
+
+        .crm-column[data-stage="Entregue"] .column-header {
+            border-bottom-color: #22c55e;
+            /* Green */
+        }
+
+        .crm-column[data-stage="Trocas e Devoluções"] .column-header {
+            border-bottom-color: #ec4899;
+            /* Pink */
+        }
+
+        .crm-column[data-stage="Cancelamento"] .column-header {
+            border-bottom-color: #ef4444;
+            /* Red */
+        }
+
+        .crm-column[data-stage="Suporte Humanizado"] .column-header {
+            border-bottom-color: #06b6d4;
+            /* Cyan */
+        }
+
         .column-header h3 {
             font-size: 14px;
             text-transform: uppercase;
@@ -699,6 +735,7 @@
             stages.forEach(stage => {
                 const column = document.createElement('div');
                 column.className = 'crm-column';
+                column.setAttribute('data-stage', stage);
                 const listId = safeListId(stage);
                 column.innerHTML = `
                     <div class="column-header">
