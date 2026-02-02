@@ -342,6 +342,13 @@ body {
     text-shadow: 0 0 15px rgba(155, 77, 255, 0.4);
 }
 
+.kpi-card .label {
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 .kpi-card .subtext {
     font-size: 11px;
     color: var(--text-muted);
