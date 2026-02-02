@@ -623,14 +623,6 @@
                     </div>
                 </div>
 
-                <!-- Team Ranking -->
-                <div class="section-header" style="margin-top: 48px; margin-bottom: 24px;">
-                    <h3 style="font-size: 16px; color: var(--text-gray);"><i class="ph-fill ph-trophy"></i> Performance
-                        da Equipe</h3>
-                </div>
-                <div id="sales-ranking-container" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-                    <!-- Ranking card will be injected -->
-                </div>
 
                 <footer class="main-footer"
                     style="margin-top: 60px; padding: 40px 0; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted); font-size: 14px;">
@@ -761,8 +753,6 @@
             allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline);
             renderLeads(allLeads);
 
-            // Rankings fallback
-            renderRanking('sales-ranking-container', summary.salesByResponsible, 'Ranking de Vendas', 'ph-crown');
         }
 
         function renderLeads(leads) {
@@ -862,24 +852,6 @@
             loadData();
         };
 
-        function renderRanking(id, data, title, icon) {
-            const container = document.getElementById(id);
-            if (!container) return;
-            const sorted = Object.entries(data || {}).sort(([, a], [, b]) => b - a);
-            const max = Math.max(...Object.values(data || {}), 1);
-            container.innerHTML = `
-                <div class="chart-card">
-                    <div class="chart-header"><i class="ph-fill ${icon}"></i> <span>${title}</span></div>
-                    ${sorted.map(([name, val], i) => `
-                        <div class="chart-row">
-                            <span style="width:100px; font-size:12px;">${name}</span>
-                            <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${(val / max) * 100}%; background:var(--text-white);"></div></div>
-                            <span style="width:20px; font-size:11px;">${val}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initBulk();
