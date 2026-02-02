@@ -337,6 +337,11 @@ body {
     text-shadow: 0 0 15px var(--primary-purple-glow);
 }
 
+.text-purple {
+    color: #9b4dff !important;
+    text-shadow: 0 0 15px rgba(155, 77, 255, 0.4);
+}
+
 .kpi-card .subtext {
     font-size: 11px;
     color: var(--text-muted);

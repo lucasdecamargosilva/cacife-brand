@@ -2,29 +2,76 @@
 <html lang="pt-BR">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Cacife Brand</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pedidos | Cacife Brand</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="theme-handler.js"></script>
+
+    <!-- ✅ NOVO: acabamento preto + ouro 18k (só para os novos cards/gráficos) -->
+    <style>
+        :root {
+            --accent-white: #ffffff;
+            --accent-gray: #a3a3a3;
+            --panel-black: #000000;
+            --panel-black-2: #0a0a0a;
+            --grid-gray: rgba(255, 255, 255, 0.1);
+            --text-white-opaque: rgba(255, 255, 255, 0.9);
+        }
+
+        .card.card-gold {
+            background: linear-gradient(180deg, var(--panel-black-2), var(--panel-black));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .section-header .gold-pill {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--accent-white);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .chart-wrap {
+            height: 320px;
+        }
+
+        .card.card-gold .label,
+        .card.card-gold .subtext {
+            color: var(--accent-gray);
+        }
+
+        .card.card-gold .value {
+            color: var(--accent-white);
+        }
+    </style>
+
+
 </head>
 
-<body>
+<body class="page-dashboard">
     <div class="layout-wrapper">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <img src="logo.png" alt="Quantic Logo" class="sidebar-logo">
+                <img src="logo.png" alt="Logo" class="sidebar-logo" />
                 <button class="toggle-btn" id="toggleSidebar">
                     <i class="ph ph-list"></i>
                 </button>
             </div>
+
             <nav class="sidebar-nav">
-                <a href="dashboard.html" class="nav-link">
+                <a href="index.html" class="nav-link active">
                     <i class="ph-fill ph-shopping-cart"></i>
                     <span class="link-text">Pedidos</span>
                 </a>
@@ -49,449 +96,1009 @@
                     <span class="link-text">Calculadora Custos</span>
                 </a>
             </nav>
+
             <div class="sidebar-footer">
-                <button id="themeToggle" class="nav-link theme-btn">
-                    <i class="ph ph-sun"></i>
-                    <span class="link-text">Modo Claro</span>
-                </button>
+                <!-- Theme toggle removed as per user request -->
             </div>
         </aside>
 
         <div class="main-content">
             <div class="app-container">
-                <!-- Header -->
                 <header class="main-header">
                     <div class="header-left">
-                        <h1 class="page-title">Dashboard de Desempenho</h1>
+                        <h1 class="page-title">Painel de Pedidos</h1>
                     </div>
 
-                    <div class="period-selector">
+                    <div class="header-center">
                         <div class="filter-group">
                             <button class="period-btn active" data-period="7">7 Dias</button>
                             <button class="period-btn" data-period="30">30 Dias</button>
+                            <button class="period-btn" data-period="all">Tudo</button>
                             <button class="period-btn" data-period="custom">Personalizado</button>
                         </div>
-                        <div id="custom-date-range" class="custom-range" style="display: none;">
-                            <input type="date" id="start-date" class="date-input">
-                            <span class="range-sep">até</span>
-                            <input type="date" id="end-date" class="date-input">
-                            <button id="apply-custom-range" class="apply-btn"><i class="ph-bold ph-check"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="user-area">
-                        <button class="icon-btn"><i class="ph-fill ph-bell"></i></button>
-                        <div class="user-profile">
-                            <div class="user-info">
-                                <span class="name">Admin</span>
-                                <span class="role">Financeiro</span>
-                            </div>
-                            <div class="avatar">
-                                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Admin">
-                            </div>
+                        <div id="custom-date-picker"
+                            style="display: none; align-items: center; gap: 8px; margin-left: 16px;">
+                            <input type="date" id="date-start" class="date-input">
+                            <span style="color: var(--accent-gray)">até</span>
+                            <input type="date" id="date-end" class="date-input">
+                            <button id="apply-custom-date" class="apply-btn">Aplicar</button>
                         </div>
                     </div>
                 </header>
 
-                <!-- Main Grid -->
                 <main class="dashboard-grid">
-
-                    <!-- Visão Geral Financeira -->
-                    <section class="section-overview">
-                        <div class="section-header">
-                            <h2><i class="ph-fill ph-chart-line-up"></i> Visão Geral Financeira</h2>
-                            <a href="#" class="export-link">Exportar Relatório <i class="ph ph-download-simple"></i></a>
-                        </div>
-
-                        <div class="kpi-grid">
-                            <!-- KPI Card 1: MRR -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-money"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 12%</span>
-                                </div>
-                                <div class="card-content">
-                                    <span class="label">MRR (Recorrente)</span>
-                                    <h3 id="kpi-mrr-value" class="value">R$ 0,00</h3>
-                                    <span class="subtext">Somatório de recorrências</span>
-                                </div>
-                            </div>
-
-                            <!-- KPI Card 2: ARR -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-calendar"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 8%</span>
-                                </div>
-                                <div class="card-content">
-                                    <span class="label">ARR (Projeção Anual)</span>
-                                    <h3 id="kpi-arr-value" class="value">R$ 0,00</h3>
-                                    <span class="subtext">MRR x 12 + Implementação</span>
-                                </div>
-                            </div>
-
-                            <!-- KPI Card 3: Receita Total -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-wallet"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 15%</span>
-                                </div>
-                                <div class="card-content">
-                                    <span class="label">Receita Total (Mês)</span>
-                                    <h3 id="kpi-total-revenue-value" class="value">R$ 0,00</h3>
-                                    <span class="subtext">Recorrente + Pontual</span>
-                                </div>
-                            </div>
-
-                            <!-- KPI Card 4: Ticket Médio -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-tag"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 2%</span>
-                                </div>
-                                <div class="card-content">
-                                    <span class="label">Ticket Médio</span>
-                                    <h3 id="kpi-avg-ticket-value" class="value">R$ 0,00</h3>
-                                    <span class="subtext">Média de Implementação</span>
-                                </div>
+                    <!-- KPI Dashboard Row -->
+                    <!-- Featured Financial KPIs Row -->
+                    <section class="kpi-grid"
+                        style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); margin-bottom: var(--spacing-lg);">
+                        <div class="card kpi-card"
+                            style="border-left: 4px solid var(--accent-green); background: linear-gradient(145deg, rgba(34, 197, 94, 0.05), transparent);">
+                            <div class="card-content">
+                                <span class="label" style="color: var(--accent-green);">Faturamento Total</span>
+                                <h3 id="top-revenue-value" class="value"
+                                    style="font-size: 42px; color: var(--text-white); text-shadow: 0 0 20px rgba(34, 197, 94, 0.2);">
+                                    <i class="ph-fill ph-currency-circle-dollar"
+                                        style="color: var(--accent-green);"></i>
+                                    <span>R$ 0,00</span>
+                                </h3>
+                                <span class="subtext">Faturamento bruto confirmado</span>
                             </div>
                         </div>
 
-
-                        <!-- Métricas de IA - Now inside Overview -->
-                        <div class="section-header" style="margin-top: 48px;">
-                            <div class="header-title">
-                                <div class="icon-box-header robot"><i class="ph-fill ph-robot"></i></div>
-                                <h2>Métricas de Inteligência Artificial</h2>
+                        <div class="card kpi-card"
+                            style="border-left: 4px solid var(--accent-yellow); background: linear-gradient(145deg, rgba(234, 179, 8, 0.05), transparent);">
+                            <div class="card-content">
+                                <span class="label" style="color: var(--accent-yellow);">Pagamentos Pendentes</span>
+                                <h3 id="top-pending-value" class="value"
+                                    style="font-size: 42px; color: var(--text-white); text-shadow: 0 0 20px rgba(234, 179, 8, 0.2);">
+                                    <i class="ph-fill ph-hourglass" style="color: var(--accent-yellow);"></i>
+                                    <span>R$ 0,00</span>
+                                </h3>
+                                <div id="top-pending-count" class="subtext"
+                                    style="font-weight: 600; color: var(--text-gray);"><i
+                                        class="ph-bold ph-receipt"></i> 0 pedidos aguardando</div>
                             </div>
-                            <div class="toggle-currency">
-                                <span class="active">USD</span>
-                                <span>BRL</span>
-                            </div>
-                        </div>
-
-                        <div class="kpi-grid ai-kpi-grid">
-                            <!-- AI Card 1: Input -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-arrow-right"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 8%</span>
-                                </div>
-                                <div class="card-spacer"></div>
-                                <div class="card-content">
-                                    <span class="label">Input (Entrada)</span>
-                                    <h3 id="ai-input-value" class="value">---</h3>
-                                    <span id="ai-input-subtext" class="subtext">Carregando...</span>
-                                </div>
-                            </div>
-
-                            <!-- AI Card 2: Output -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-arrow-left"></i></div>
-                                    <span class="badge positive"><i class="ph-bold ph-arrow-up-right"></i> 12%</span>
-                                </div>
-                                <div class="card-spacer"></div>
-                                <div class="card-content">
-                                    <span class="label">Output (Saída)</span>
-                                    <h3 id="ai-output-value" class="value">---</h3>
-                                    <span id="ai-output-subtext" class="subtext">Carregando...</span>
-                                </div>
-                            </div>
-
-                            <!-- AI Card 3: Total Cost -->
-                            <div class="card kpi-card">
-                                <div class="card-top">
-                                    <div class="icon-box"><i class="ph-fill ph-chart-bar"></i></div>
-                                    <span class="badge white-pill">74%</span>
-                                </div>
-                                <div class="card-spacer"></div>
-                                <div class="card-content">
-                                    <span class="label">Consumo Total</span>
-                                    <h3 id="ai-total-value" class="value">---</h3>
-                                    <span id="ai-total-subtext" class="subtext">Carregando...</span>
-                                </div>
-                            </div>
-
                         </div>
                     </section>
 
-                    <!-- Clientes Ativos & Engajamento -->
-                    <section class="section-clients">
-                        <div class="section-header">
-                            <h2><i class="ph-fill ph-users-three"></i> Clientes Ativos & Engajamento</h2>
+                    <!-- Operational KPI Row (Compact) -->
+                    <section class="kpi-grid"
+                        style="grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
+                        <div class="card kpi-card" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Total Pedidos</span>
+                                <h3 id="kpi-total-orders" class="value text-info" style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-receipt" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                            </div>
                         </div>
-                        <div class="clients-table-container">
-                            <table class="clients-table">
+
+                        <div class="card kpi-card" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">A enviar</span>
+                                <h3 id="kpi-to-send-orders" class="value text-warning"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-package" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-to-send-percent" class="subtext" style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Enviados</span>
+                                <h3 id="kpi-shipped-orders" class="value text-primary"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-truck" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-shipped-percent" class="subtext" style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Entregues</span>
+                                <h3 id="kpi-delivered-orders" class="value text-success"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-house-line" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-delivered-percent" class="subtext" style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Cancelados</span>
+                                <h3 id="kpi-cancelled-orders" class="value text-danger"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-x-circle" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <div id="kpi-cancelled-percent" class="subtext" style="font-size: 11px;">---%</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- New Revenue Evolution Section -->
+                    <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
+                        <div class="card chart-card" style="min-height: 400px;">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-chart-line"></i> Evolução de Faturamento</h3>
+
+                            </div>
+                            <div class="chart-container" style="min-height: 300px;">
+                                <canvas id="chart-revenue-evolution"></canvas>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Charts Row 1 -->
+                    <section class="charts-row">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-chart-pie"></i> Status do Pedido</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-order-status"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-credit-card"></i> Status de Pagamento</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-payment-status"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-package"></i> Status de Entrega</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-shipping-status"></canvas>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Charts Row 2 -->
+                    <section class="charts-row-large">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-wallet"></i> Fontes de Pagamento</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-gateways"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-map-pin"></i> Vendas por Região (Cidade)</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="chart-regions"></canvas>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                <!-- ✅ NOVO: Painel de Lista de Pedidos -->
+                <section class="dashboard-grid" style="margin-top: 40px;">
+                    <div class="card chart-card" style="min-height: 500px;">
+                        <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
+                            <h3><i class="ph-fill ph-list"></i> Lista de Pedidos <span id="orders-title-count"
+                                    style="font-size: 0.8em; opacity: 0.7; font-weight: 400; margin-left: 4px;">(0)</span>
+                            </h3>
+                            <div style="display: flex; gap: 12px; align-items: center; margin-left: auto;">
+                                <select id="shipping-filter" class="date-input"
+                                    style="height: 36px; padding: 0 12px; min-width: 140px;">
+                                    <option value="all" selected>Todos os Status</option>
+                                    <option value="não está embalado">A Enviar</option>
+                                    <option value="enviado">Enviados</option>
+                                    <option value="entregue">Entregues</option>
+                                </select>
+                                <div class="search-box" style="position: relative;">
+                                    <i class="ph ph-magnifying-glass"
+                                        style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
+                                    <input type="text" id="orders-search" placeholder="Pesquisar informações..."
+                                        class="date-input" style="padding-left: 36px; width: 280px; height: 36px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="custom-table" id="orders-table">
                                 <thead>
                                     <tr>
-                                        <th>CLIENTE</th>
-                                        <th>STATUS DO PROJETO</th>
-                                        <th>VALOR PROJETADO</th>
-                                        <th>RECORRÊNCIA</th>
-                                        <th>AÇÕES</th>
+                                        <th>Cliente</th>
+                                        <th>Email</th>
+                                        <th>WhatsApp</th>
+                                        <th>Status do pedido</th>
+                                        <th>Cód. Rastreio</th>
+                                        <th>Ação</th>
                                     </tr>
                                 </thead>
-                                <tbody id="clients-table-body">
+                                <tbody id="orders-tbody">
                                     <tr>
                                         <td colspan="5"
-                                            style="text-align:center; padding: 40px; color: var(--text-muted);">
-                                            <i class="ph ph-circle-notch ph-spin"
-                                                style="font-size: 24px; margin-bottom: 8px;"></i>
-                                            <p>Carregando clientes...</p>
-                                        </td>
+                                            style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                            Carregando dados...</td>
                                     </tr>
                                 </tbody>
                             </table>
-                            <a href="#" class="view-all-link">Ver Todos os Clientes <i
-                                    class="ph-bold ph-arrow-right"></i></a>
                         </div>
-                    </section>
-
-                    <!-- Bottom Row: Profitability & Cash Flow -->
-                    <div class="bottom-row">
-                        <!-- Análise de Lucratividade -->
-                        <section class="section-profitability">
-                            <div class="section-header">
-                                <h2><i class="ph-fill ph-pie-chart"></i> Análise de Lucratividade</h2>
+                        <!-- Pagination -->
+                        <div class="pagination-container">
+                            <div class="pagination-info">Mostrando <span id="orders-range">0-0</span> de <span
+                                    id="total-orders-count">0</span></div>
+                            <div class="pagination-controls">
+                                <button class="pagination-arrow" id="prev-orders" disabled><i
+                                        class="ph ph-caret-left"></i></button>
+                                <div class="pagination-pages" id="orders-page-numbers"></div>
+                                <button class="pagination-arrow" id="next-orders" disabled><i
+                                        class="ph ph-caret-right"></i></button>
                             </div>
-                            <div class="profit-content">
-                                <div class="margin-cards">
-                                    <div class="card margin-card">
-                                        <span class="label">MARGEM DE CONTRIBUIÇÃO</span>
-                                        <div class="margin-value">
-                                            <h3>52%</h3>
-                                            <span class="subtext">Meta Proj: 60%</span>
-                                        </div>
-                                    </div>
-                                    <div class="card margin-card">
-                                        <span class="label">MARGEM BRUTA</span>
-                                        <div class="margin-value">
-                                            <h3>45%</h3>
-                                            <span class="badge healthy">SAUDÁVEL</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="cost-breakdown">
-                                    <!-- SVG Donut Chart -->
-                                    <div class="donut-chart-container">
-                                        <svg viewBox="0 0 100 100" class="donut-chart">
-                                            <!-- Background Circle -->
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#262626"
-                                                stroke-width="12" />
-
-                                            <!-- Segments (Using stroke-dasharray) 
-                                         Circumference = 2 * pi * 40 ≈ 251.
-                                         50% = 125.5
-                                         25% = 62.75
-                                         12~13% = ~32
-                                    -->
-                                            <!-- Segment 1: Infra (50%) - White -->
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ffffff"
-                                                stroke-width="12" stroke-dasharray="125.5 251" stroke-dashoffset="0"
-                                                transform="rotate(-90 50 50)" />
-
-                                            <!-- Segment 2: API (25%) - Light Gray -->
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#e5e5e5"
-                                                stroke-width="12" stroke-dasharray="62.75 251"
-                                                stroke-dashoffset="-125.5" transform="rotate(-90 50 50)" />
-
-                                            <!-- Segment 3: Tools (13%) - Medium Gray -->
-                                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#a3a3a3"
-                                                stroke-width="12" stroke-dasharray="32 251" stroke-dashoffset="-188.25"
-                                                transform="rotate(-90 50 50)" />
-
-                                            <text x="50" y="55" text-anchor="middle" fill="white" font-size="14"
-                                                font-weight="700">Custos</text>
-                                        </svg>
-                                    </div>
-
-                                    <div class="chart-legend-list">
-                                        <div class="legend-item">
-                                            <span class="dot white" style="background: #ffffff;"></span>
-                                            <span>Infraestrutura & Servers</span>
-                                            <span class="pct">50%</span>
-                                        </div>
-                                        <div class="legend-item">
-                                            <span class="dot light-gray" style="background: #e5e5e5;"></span>
-                                            <span>APIs & Token IA</span>
-                                            <span class="pct">25%</span>
-                                        </div>
-                                        <div class="legend-item">
-                                            <span class="dot medium-gray" style="background: #a3a3a3;"></span>
-                                            <span>Ferramentas (CRM, Mkt..)</span>
-                                            <span class="pct">13%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <!-- Gestão de Fluxo de Caixa -->
-                        <section class="section-cashflow">
-                            <div class="section-header">
-                                <h2><i class="ph-fill ph-bank"></i> Gestão de Fluxo de Caixa</h2>
-                            </div>
-                            <div class="cashflow-content">
-                                <div class="cash-cards">
-                                    <div class="card cash-card balance">
-                                        <span class="label">SALDO EM CAIXA</span>
-                                        <h3>R$ 142.300</h3>
-                                        <div class="tags"><span class="badge positive">Positivo</span></div>
-                                    </div>
-                                    <div class="card cash-card payables">
-                                        <span class="label">CONTAS A PAGAR</span>
-                                        <h3>R$ 12.450</h3>
-                                        <div class="tags"><span class="warning-text">⚠️ Vence em 7 dias</span></div>
-                                    </div>
-                                </div>
-
-                                <div class="receivables-section">
-                                    <div class="section-subheader">
-                                        <h4>Contas a Receber</h4>
-                                        <span class="badge white-pill">Top 3</span>
-                                    </div>
-                                    <div class="receivables-list">
-                                        <div class="receivable-item">
-                                            <div class="rec-icon"><i class="ph-fill ph-check-square"></i></div>
-                                            <div class="rec-info">
-                                                <span class="name">TechCorp Automation</span>
-                                                <span class="date">Venc: 15/10</span>
-                                            </div>
-                                            <span class="amount">R$ 15.000</span>
-                                        </div>
-                                        <div class="receivable-item">
-                                            <div class="rec-icon"><i class="ph-fill ph-check-square"></i></div>
-                                            <div class="rec-info">
-                                                <span class="name">Global Logistics</span>
-                                                <span class="date">Venc: 18/10</span>
-                                            </div>
-                                            <span class="amount">R$ 8.500</span>
-                                        </div>
-                                        <div class="receivable-item">
-                                            <div class="rec-icon"><i class="ph-fill ph-check-square"></i></div>
-                                            <div class="rec-info">
-                                                <span class="name">Retail AI Co.</span>
-                                                <span class="date">Venc: 22/10</span>
-                                            </div>
-                                            <span class="amount">R$ 5.230</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                        </div>
                     </div>
+                </section>
 
-                    <!-- Métricas de Vendas (Full width at bottom or separate?) -> Checking image: It seems to be below Profitability/Cashflow or side-by-side. 
-                 Wait, looking at the image:
-                 Top: Visão Geral + Chart
-                 Middle: Consumo IA
-                 Middle 2: Clientes
-                 Bottom Left: Lucratividade + Métricas de Vendas (stacked?)
-                 Bottom Right: Fluxo de Caixa + Funil de Vendas (stacked?)
-                 
-                 Let's re-analyze the layout based on the image:
-                 Row 1: Visão Geral Financeira (KPIs + Chart)
-                 Row 2: Métricas de Consumo IA
-                 Row 3: Clientes Ativos
-                 Row 4: 
-                    Col 1: Análise de Lucratividade
-                    Col 2: Gestão de Fluxo de Caixa
-                 Row 5:
-                    Col 1: Métricas de Vendas (Conversion + Churn)
-                    Col 2: Funil de Vendas
-            -->
-
-                    <div class="metrics-row">
-                        <!-- Métricas de Vendas -->
-                        <section class="section-sales-metrics">
-                            <div class="section-header">
-                                <h2><i class="ph-fill ph-rocket-launch"></i> Métricas de Vendas</h2>
-                            </div>
-
-                            <div class="sales-cards-container">
-                                <!-- Conversion Rate -->
-                                <div class="card sales-card">
-                                    <span class="label">Taxa de Conversão</span>
-                                    <div class="sales-value-row">
-                                        <h3>28%</h3>
-                                        <span class="badge neutral">Média 30%</span>
-                                    </div>
-                                    <div class="progress-track small">
-                                        <div class="progress-bar white" style="width: 28%"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Avg New Contract -->
-                                <div class="card sales-card">
-                                    <span class="label">Contrato Novo Méd.</span>
-                                    <h3>R$ 7.500</h3>
-                                    <span class="subtext green">+5% vs. média anterior</span>
-                                </div>
-
-                                <!-- Churn Rate -->
-                                <div class="card sales-card">
-                                    <span class="label">Taxa de Churn</span>
-                                    <h3>2.1%</h3>
-                                    <span class="badge white-pill small-text">+0.1% esperado</span>
-                                </div>
-                            </div>
-                        </section>
-
-                        <!-- Funil de Vendas -->
-                        <section class="section-sales-funnel">
-                            <div class="section-header">
-                                <h2>Funil de Vendas (Mês Atual)</h2>
-                            </div>
-
-                            <div class="funnel-container">
-                                <!-- Step 1 -->
-                                <div class="funnel-step step-1">
-                                    <span class="step-label">Leads Qualificados</span>
-                                    <span class="step-count">145</span>
-                                </div>
-                                <div class="funnel-connector"></div>
-
-                                <!-- Step 2 -->
-                                <div class="funnel-step step-2">
-                                    <span class="step-label">Propostas Enviadas</span>
-                                    <span class="step-count">68</span>
-                                </div>
-                                <div class="funnel-connector"></div>
-
-                                <!-- Step 3 -->
-                                <div class="funnel-step step-3">
-                                    <span class="step-label">Contratos Fechados</span>
-                                    <span class="step-count">19</span>
-                                </div>
-                            </div>
-                        </section>
+                <footer class="main-footer"
+                    style="margin-top: 80px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; opacity: 0.9;">
+                        <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Powered by</span>
+                        <img src="logo quantic na melhor qualidade.png" alt="Quantic Logo"
+                            style="height: 18px; object-fit: contain;">
                     </div>
-
-                </main>
-
-                <footer class="main-footer">
-                    <div class="footer-logo">
-                        <i class="ph-fill ph-squares-four"></i> <span>Quantic</span>
-                    </div>
-                    <p>© 2024 Quantic Fin. Todos os direitos reservados.</p>
                 </footer>
-            </div> <!-- end app-container -->
-        </div> <!-- end main-content -->
-    </div> <!-- end layout-wrapper -->
+            </div>
+        </div>
+    </div>
 
-    <!-- Supabase Core Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- Supabase Configuration (Sensitive data) -->
     <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Supabase Integration Logic (Modular) -->
-    <script src="supabase-logic.js?v=2"></script>
+    <script>
+        let supabaseClient;
+        let charts = {};
+        let currentPeriod = '7';
+        let allOrdersData = [];
+        let currentOrdersPage = 1;
+        const ordersPerPage = 10;
 
-    <!-- Dashboard main script -->
-    <script src="script.js"></script>
+        function initSupabase() {
+            if (window.supabase && window.SUPABASE_CONFIG) {
+                supabaseClient = window.supabase.createClient(
+                    window.SUPABASE_CONFIG.URL,
+                    window.SUPABASE_CONFIG.KEY
+                );
+                return true;
+            }
+            return false;
+        }
+
+        async function fetchDashboardData(period = '7', customStart = null, customEnd = null) {
+            if (!supabaseClient) return;
+            currentPeriod = period;
+
+            let startDate, endDate;
+            const now = new Date();
+            endDate = now.toISOString();
+
+            if (period === 'custom' && customStart && customEnd) {
+                startDate = new Date(customStart).toISOString();
+                endDate = new Date(customEnd + 'T23:59:59').toISOString();
+            } else if (period === 'all') {
+                startDate = '2000-01-01T00:00:00Z';
+                endDate = now.toISOString();
+            } else {
+                const days = parseInt(period);
+                const start = new Date();
+                start.setDate(now.getDate() - days);
+                startDate = start.toISOString();
+            }
+
+            try {
+                let allOrders = [];
+                let from = 0;
+                let to = 999;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await supabaseClient
+                        .from('cacife_orders')
+                        .select('*')
+                        .gte('created_at', startDate)
+                        .lte('created_at', endDate)
+                        .range(from, to);
+
+                    if (error) throw error;
+                    allOrders = [...allOrders, ...data];
+
+                    if (data.length < 1000) {
+                        hasMore = false;
+                    } else {
+                        from += 1000;
+                        to += 1000;
+                    }
+                }
+
+                allOrdersData = allOrders;
+                updateDashboard(allOrders);
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            }
+        }
+
+        function updateDashboard(orders) {
+            const total = orders.length;
+
+            // KPIs
+            const paid = orders.filter(o => {
+                const s = o.payment_status?.toLowerCase();
+                return s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado';
+            }).length;
+
+            const revenue = orders.reduce((acc, curr) => {
+                const s = curr.payment_status?.toLowerCase();
+                if (s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado' || s === 'confirmado') {
+                    return acc + (parseFloat(curr.total) || 0);
+                }
+                return acc;
+            }, 0);
+
+            const toSend = orders.filter(o => {
+                const s = o.shipping_status?.toLowerCase();
+                return s === 'não está embalado';
+            }).length;
+
+            const shipped = orders.filter(o => {
+                const s = o.shipping_status?.toLowerCase();
+                return s === 'shipped' || s === 'enviado';
+            }).length;
+
+            const delivered = orders.filter(o => {
+                const s = o.shipping_status?.toLowerCase();
+                return s === 'delivered' || s === 'entregue';
+            }).length;
+
+            const cancelled = orders.filter(o => {
+                const s = o.status?.toLowerCase();
+                return s === 'cancelled' || s === 'cancelado';
+            }).length;
+
+            const pendingOrders = orders.filter(o => {
+                const s = o.payment_status?.toLowerCase();
+                return s === 'pending' || s === 'pendente';
+            });
+            const pendingCount = pendingOrders.length;
+            const pendingSum = pendingOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+
+            document.querySelector('#kpi-total-orders span').textContent = total;
+            document.querySelector('#top-revenue-value span').textContent = revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.querySelector('#top-pending-value span').textContent = pendingSum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.querySelector('#top-pending-count').innerHTML = `<i class="ph-bold ph-receipt"></i> ${pendingCount} pedidos aguardando`;
+
+            document.querySelector('#kpi-shipped-orders span').textContent = shipped;
+            document.getElementById('kpi-shipped-percent').textContent = total > 0 ? ((shipped / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-to-send-orders span').textContent = toSend;
+            document.getElementById('kpi-to-send-percent').textContent = total > 0 ? ((toSend / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-delivered-orders span').textContent = delivered;
+            document.getElementById('kpi-delivered-percent').textContent = total > 0 ? ((delivered / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-cancelled-orders span').textContent = cancelled;
+            document.getElementById('kpi-cancelled-percent').textContent = total > 0 ? ((cancelled / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+
+
+            // Charts (Now dynamic based on user column requests)
+            renderRevenueChart(orders);
+            renderStatusChart(orders);
+            renderPaymentChart(orders);
+            renderShippingChart(orders);
+            renderGatewayChart(orders);
+            renderRegionChart(orders);
+            renderOrdersTable();
+        }
+
+        function formatPhone(phone) {
+            if (!phone) return 'N/A';
+            // Convert to string and handle potential .0 from numeric inputs
+            let str = String(phone).split('.')[0];
+            const cleaned = str.replace(/\D/g, '');
+
+            // Remove 55 if it's there at the start
+            let core = cleaned.startsWith('55') ? cleaned.substring(2) : cleaned;
+
+            if (core.length === 11) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 7)}-${core.substring(7)}`;
+            } else if (core.length === 10) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 6)}-${core.substring(6)}`;
+            }
+            return core;
+        }
+
+        function renderOrdersTable() {
+            const tbody = document.getElementById('orders-tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            const searchTerm = (document.getElementById('orders-search')?.value || '').toLowerCase();
+            const filterValue = document.getElementById('shipping-filter')?.value || 'all';
+
+            // Multi-camadas de filtragem
+            const filteredOrders = allOrdersData.filter(item => {
+                const trk = item.shipping_tracking_number || item.shipping_traking_number;
+                const shippingStatus = (item.shipping_status || '').toLowerCase();
+
+                // 1. Filtro por status de pedido (shipping_status)
+                if (filterValue !== 'all') {
+                    if (filterValue === 'enviado') {
+                        if (shippingStatus !== 'enviado' && shippingStatus !== 'shipped') return false;
+                    } else if (filterValue === 'entregue') {
+                        if (shippingStatus !== 'entregue' && shippingStatus !== 'delivered') return false;
+                    } else if (shippingStatus !== filterValue) {
+                        return false;
+                    }
+                }
+
+                // 2. Filtro por termo de pesquisa
+                if (searchTerm) {
+                    const searchable = [
+                        item.customer_name,
+                        item.customer_email,
+                        item.customer_phone,
+                        item.product_name,
+                        item.produtct_name,
+                        item.shipping_status,
+                        trk
+                    ].join(' ').toLowerCase();
+                    if (!searchable.includes(searchTerm)) return false;
+                }
+
+                return true;
+            });
+
+            const startIndex = (currentOrdersPage - 1) * ordersPerPage;
+            const endIndex = startIndex + ordersPerPage;
+            const paginatedData = filteredOrders.slice(startIndex, endIndex);
+
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                const tr = document.createElement('tr');
+
+                // Clean phone number for WhatsApp
+                const rawPhone = item.customer_phone || '';
+                const strPhone = String(rawPhone).split('.')[0];
+                const cleanPhone = strPhone.replace(/\D/g, '');
+                const formattedPhone = formatPhone(rawPhone);
+
+                const rawTrk = item.shipping_tracking_number || item.shipping_traking_number;
+                const hasTracking = rawTrk && String(rawTrk).toLowerCase() !== 'null' && String(rawTrk).trim() !== '';
+                const trackingCode = hasTracking ? String(rawTrk) : 'Não enviado';
+
+                const productName = item.product_name || item.produtct_name || 'N/A';
+                const customerName = item.customer_name || 'N/A';
+                const shipStatusRaw = item.shipping_status || 'Desconhecido';
+
+                let statusClass = 'text-muted';
+                let shipStatusDisp = shipStatusRaw;
+                if (shipStatusRaw.toLowerCase().includes('entregue') || shipStatusRaw.toLowerCase() === 'delivered') {
+                    statusClass = 'text-success';
+                    shipStatusDisp = 'Entregues';
+                } else if (shipStatusRaw.toLowerCase().includes('enviado') || shipStatusRaw.toLowerCase() === 'shipped') {
+                    statusClass = 'text-purple'; // Purple color for shipped status
+                    shipStatusDisp = 'Enviados';
+                } else if (shipStatusRaw.toLowerCase().includes('embalado')) {
+                    statusClass = 'text-warning';
+                    shipStatusDisp = 'A Enviar';
+                }
+
+                const date = new Date(item.created_at);
+                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                const message = `Olá ${customerName}, tudo bem? Sou da Cacife Brand! 🌟\n\nPassando para informar que seu pedido do produto *${productName}* já foi processado. ✅\n\nSeu código de rastreio é: *${trackingCode}*\n\nVocê pode acompanhar a entrega através do site da transportadora. Qualquer dúvida, estamos à disposição!`;
+
+                const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
+                const isAEnviar = shipStatusDisp === 'A Enviar';
+
+                tr.innerHTML = `
+                    <td>${customerName}</td>
+                    <td>${item.customer_email || 'N/A'}</td>
+                    <td style="white-space: nowrap;">${formattedPhone}</td>
+                    <td><span class="${statusClass}" style="font-weight: 600; font-size: 13px;">${shipStatusDisp}</span></td>
+                    <td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>
+                    <td>
+                        ${isAEnviar ? `
+                            <button class="apply-btn" disabled style="justify-content: center; gap: 8px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); border: none; width: auto; font-size: 12px; padding: 0 16px; white-space: nowrap; font-weight: 700; cursor: not-allowed; opacity: 0.6;">
+                                <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
+                            </button>
+                        ` : `
+                            <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: #9b4dff; color: white; border: none; width: auto; font-size: 12px; padding: 0 16px; white-space: nowrap; font-weight: 700;">
+                                <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
+                            </a>
+                        `}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Pagination UI
+            const total = filteredOrders.length;
+            const countEl = document.getElementById('orders-title-count');
+            if (countEl) countEl.textContent = `(${total})`;
+
+            const startRange = total === 0 ? 0 : startIndex + 1;
+            const endRange = Math.min(endIndex, total);
+
+            document.getElementById('orders-range').textContent = `${startRange}-${endRange}`;
+            document.getElementById('total-orders-count').textContent = total;
+
+            const prevBtn = document.getElementById('prev-orders');
+            const nextBtn = document.getElementById('next-orders');
+            if (prevBtn) prevBtn.disabled = currentOrdersPage === 1;
+            if (nextBtn) nextBtn.disabled = endIndex >= total;
+
+            const pageNumbers = document.getElementById('orders-page-numbers');
+            if (pageNumbers) {
+                pageNumbers.innerHTML = '';
+                const totalPages = Math.ceil(total / ordersPerPage);
+
+                if (totalPages > 1) {
+                    let pages = [];
+                    if (totalPages <= 5) {
+                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                    } else {
+                        if (currentOrdersPage <= 3) pages = [1, 2, 3, 4, totalPages];
+                        else if (currentOrdersPage >= totalPages - 2) pages = [1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+                        else pages = [1, currentOrdersPage - 1, currentOrdersPage, currentOrdersPage + 1, totalPages];
+                    }
+
+                    pages.forEach((p, idx) => {
+                        if (idx > 0 && p - pages[idx - 1] > 1) {
+                            const dots = document.createElement('span');
+                            dots.textContent = '...';
+                            dots.style.opacity = '0.5';
+                            dots.style.padding = '0 8px';
+                            pageNumbers.appendChild(dots);
+                        }
+                        const btn = document.createElement('button');
+                        btn.className = `pagination-btn ${p === currentOrdersPage ? 'active' : ''}`;
+                        btn.textContent = p;
+                        btn.onclick = () => {
+                            currentOrdersPage = p;
+                            renderOrdersTable();
+                        };
+                        pageNumbers.appendChild(btn);
+                    });
+                }
+            }
+        }
+
+        function renderRevenueChart(orders) {
+            const ctx = document.getElementById('chart-revenue-evolution').getContext('2d');
+            if (charts.revenue) charts.revenue.destroy();
+
+            const dateMap = {};
+
+            orders.forEach(o => {
+                if (!o.created_at) return;
+                const dateObj = new Date(o.created_at);
+                if (isNaN(dateObj.getTime())) return;
+
+                let dateKey;
+                if (currentPeriod === 'all') {
+                    // Group by Month: YYYY-MM
+                    const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                    const y = dateObj.getFullYear();
+                    dateKey = `${y}-${m}`;
+                } else {
+                    // Group by Day: YYYY-MM-DD
+                    const d = dateObj.getDate().toString().padStart(2, '0');
+                    const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                    const y = dateObj.getFullYear();
+                    dateKey = `${y}-${m}-${d}`;
+                }
+
+                dateMap[dateKey] = (dateMap[dateKey] || 0) + (parseFloat(o.total) || 0);
+            });
+
+            const sortedKeys = Object.keys(dateMap).sort();
+            const labels = sortedKeys.map(key => {
+                const p = key.split('-');
+                if (p.length === 2) return `${p[1]}/${p[0]}`; // MM/YYYY
+                return `${p[2]}/${p[1]}`; // DD/MM
+            });
+            const data = sortedKeys.map(key => dateMap[key]);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(155, 77, 255, 0.4)');
+            gradient.addColorStop(1, 'rgba(155, 77, 255, 0)');
+
+            charts.revenue = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Faturamento (R$)',
+                        data: data,
+                        borderColor: '#9b4dff',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#9b4dff',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    return 'Faturamento: ' + context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#fff',
+                                callback: (value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+                            },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            ticks: { color: '#fff' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getChartColors() {
+            return {
+                primary: '#ffffff',
+                secondary: '#a3a3a3',
+                success: '#10b981',
+                warning: '#f59e0b',
+                danger: '#ef4444',
+                info: '#3b82f6',
+                grid: 'rgba(255, 255, 255, 0.1)',
+                text: '#ffffff'
+            }
+        }
+
+        function baseOptions() {
+            const colors = getChartColors();
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: colors.text, usePointStyle: true, padding: 20 }
+                    }
+                }
+            }
+        }
+
+        function renderStatusChart(orders) {
+            const ctx = document.getElementById('chart-order-status').getContext('2d');
+            if (charts.status) charts.status.destroy();
+
+            const map = {};
+            orders.forEach(o => {
+                let s = o.status?.toLowerCase();
+                if (!s || s === 'not-provided') s = 'Desconhecido';
+                else if (s === 'cancelled' || s === 'cancelado') s = 'Cancelado';
+                else if (s === 'pending' || s === 'pendente' || s === 'aberto') s = 'Aberto';
+                else if (s === 'processing' || s === 'processando') s = 'Processando';
+                else if (s === 'completed' || s === 'concluido' || s === 'concluído') s = 'Concluído';
+                else s = s.charAt(0).toUpperCase() + s.slice(1);
+
+                map[s] = (map[s] || 0) + 1;
+            });
+
+            const labels = Object.keys(map);
+            const data = Object.values(map);
+
+            // Map colors based on label name
+            const backgroundColor = labels.map(label => {
+                const l = label.toLowerCase();
+                if (l === 'aberto' || l === 'concluído' || l === 'concluido') return '#ffffff'; // White for success
+                if (l === 'cancelado') return '#ef4444'; // Keep Red for danger
+                if (l === 'pendente') return '#737373'; // Gray for pending
+                return '#ffffff'; // Default White
+            });
+
+            charts.status = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: 'transparent',
+                        hoverOffset: 4
+                    }]
+                },
+                options: baseOptions()
+            });
+        }
+
+        function renderPaymentChart(orders) {
+            const ctx = document.getElementById('chart-payment-status').getContext('2d');
+            if (charts.payment) charts.payment.destroy();
+
+            const map = {};
+            orders.forEach(o => {
+                let s = o.payment_status?.toLowerCase();
+                if (!s || s === 'not-provided') s = 'Desconhecido';
+                else if (s.includes('parcialmente estornado')) return; // Ignore this status
+                else if (s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado' || s === 'confirmado') s = 'Confirmado';
+                else if (s === 'pending' || s === 'pendente') s = 'Pendente';
+                else if (s === 'refunded' || s === 'reembolsado' || s === 'estornado') s = 'Estornado';
+                else if (s === 'failed' || s === 'falhou' || s === 'recusado' || s === 'rejected') s = 'Recusado';
+                else s = s.charAt(0).toUpperCase() + s.slice(1);
+
+                map[s] = (map[s] || 0) + 1;
+            });
+
+            const labels = Object.keys(map);
+            const data = Object.values(map);
+            const backgroundColor = labels.map(label => {
+                const l = label.toLowerCase();
+                if (l === 'confirmado') return '#ffffff'; // White for confirmed
+                if (l === 'pendente') return '#737373'; // Gray for pending
+                if (l === 'recusado') return '#ef4444'; // Keep Red for declined
+                if (l === 'estornado') return '#a3a3a3'; // Lighter gray for refunded
+                return '#ffffff'; // Default White
+            });
+
+            charts.payment = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: 'transparent',
+                        hoverOffset: 4
+                    }]
+                },
+                options: baseOptions()
+            });
+        }
+
+        function renderShippingChart(orders) {
+            const ctx = document.getElementById('chart-shipping-status').getContext('2d');
+            if (charts.shipping) charts.shipping.destroy();
+
+            const map = {};
+            orders.forEach(o => {
+                let s = o.shipping_status?.toLowerCase();
+                if (!s || s === 'not-provided') s = 'Desconhecido';
+                else if (s === 'não está embalado') s = 'A Enviar';
+                else if (s === 'shipped' || s === 'enviado') s = 'Enviados';
+                else if (s === 'delivered' || s === 'entregue') s = 'Entregues';
+                else s = s.charAt(0).toUpperCase() + s.slice(1);
+
+                map[s] = (map[s] || 0) + 1;
+            });
+
+            const labels = Object.keys(map);
+            const data = Object.values(map);
+            const backgroundColor = labels.map(label => {
+                const l = label.toLowerCase();
+                if (l === 'a enviar') return '#ef4444'; // Red
+                if (l === 'enviados') return '#9b4dff'; // Purple
+                if (l === 'entregues') return '#22c55e'; // Green
+                return '#ffffff'; // Default White
+            });
+
+            charts.shipping = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: 'transparent',
+                        hoverOffset: 4
+                    }]
+                },
+                options: baseOptions()
+            });
+        }
+
+        function renderGatewayChart(orders) {
+            const gateMap = {};
+            orders.forEach(o => {
+                let name = o.payment_method;
+                if (!name || name === 'not-provided') name = 'Desconhecida';
+                gateMap[name] = (gateMap[name] || 0) + 1;
+            });
+
+            const labels = Object.keys(gateMap);
+            const data = Object.values(gateMap);
+
+            const ctx = document.getElementById('chart-gateways').getContext('2d');
+            if (charts.gateways) charts.gateways.destroy();
+
+            const chartColors = [
+                'rgba(255, 255, 255, 0.8)', // White
+                'rgba(163, 163, 163, 0.8)', // Gray
+                'rgba(115, 115, 115, 0.8)', // Muted Gray
+                'rgba(255, 255, 255, 0.4)', // White transparent
+                'rgba(82, 82, 82, 0.8)'     // Dark Gray
+            ];
+
+            charts.gateways = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pedidos',
+                        data: data,
+                        backgroundColor: chartColors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    ...baseOptions(),
+                    scales: {
+                        y: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#fff' } },
+                        x: { grid: { display: false }, ticks: { color: '#fff' } }
+                    }
+                }
+            });
+        }
+
+        function renderRegionChart(orders) {
+            const regionMap = {};
+            orders.forEach(o => {
+                let city = o.shipping_city || 'Desconhecido';
+                regionMap[city] = (regionMap[city] || 0) + 1;
+            });
+
+            const sorted = Object.entries(regionMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const labels = sorted.map(s => s[0]);
+            const data = sorted.map(s => s[1]);
+
+            const ctx = document.getElementById('chart-regions').getContext('2d');
+            if (charts.regions) charts.regions.destroy();
+
+            const chartColors = [
+                'rgba(155, 77, 255, 0.8)',
+                'rgba(167, 139, 250, 0.8)',
+                'rgba(124, 58, 237, 0.8)',
+                'rgba(192, 132, 252, 0.8)',
+                'rgba(76, 29, 149, 0.8)'
+            ];
+
+            charts.regions = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pedidos',
+                        data: data,
+                        backgroundColor: chartColors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    ...baseOptions(),
+                    indexAxis: 'y',
+                    scales: {
+                        y: { grid: { display: false }, ticks: { color: '#fff' } },
+                        x: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#fff' } }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (initSupabase()) {
+                fetchDashboardData('7');
+
+                // Real-time updates
+                supabaseClient
+                    .channel('cacife_orders_changes')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'cacife_orders' }, () => {
+                        const activeBtn = document.querySelector('.period-btn.active');
+                        if (activeBtn.dataset.period !== 'custom') {
+                            fetchDashboardData(activeBtn.dataset.period);
+                        }
+                    })
+                    .subscribe();
+            }
+
+            // Period buttons logic
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const period = this.dataset.period;
+                    const customPicker = document.getElementById('custom-date-picker');
+
+                    if (period === 'custom') {
+                        customPicker.style.display = 'flex';
+                    } else {
+                        customPicker.style.display = 'none';
+                        currentOrdersPage = 1;
+                        fetchDashboardData(period);
+                    }
+                });
+            });
+
+            // Listeners da Lista de Pedidos
+            document.getElementById('orders-search').addEventListener('input', () => {
+                currentOrdersPage = 1;
+                renderOrdersTable();
+            });
+
+            document.getElementById('shipping-filter').addEventListener('change', () => {
+                currentOrdersPage = 1;
+                renderOrdersTable();
+            });
+
+            // Pagination listeners
+            document.getElementById('prev-orders').addEventListener('click', () => {
+                if (currentOrdersPage > 1) {
+                    currentOrdersPage--;
+                    renderOrdersTable();
+                }
+            });
+
+            document.getElementById('next-orders').addEventListener('click', () => {
+                if ((currentOrdersPage * ordersPerPage) < allOrdersData.length) {
+                    currentOrdersPage++;
+                    renderOrdersTable();
+                }
+            });
+
+            // Apply custom date
+            document.getElementById('apply-custom-date').addEventListener('click', () => {
+                const start = document.getElementById('date-start').value;
+                const end = document.getElementById('date-end').value;
+                if (start && end) {
+                    fetchDashboardData('custom', start, end);
+                } else {
+                    alert('Por favor, selecione as duas datas.');
+                }
+            });
+
+            // Toggle sidebar (existing functionality)
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            if (toggleBtn) {
+                toggleBtn.onclick = () => sidebar.classList.toggle('collapsed');
+            }
+        });
+    </script>
 </body>
 
 </html>
