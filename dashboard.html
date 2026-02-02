@@ -75,6 +75,10 @@
                     <i class="ph-fill ph-shopping-cart"></i>
                     <span class="link-text">Pedidos</span>
                 </a>
+                <a href="crm.html" class="nav-link">
+                    <i class="ph-fill ph-users-three"></i>
+                    <span class="link-text">Relacionamento (CRM)</span>
+                </a>
                 <a href="ranking-produtos.html" class="nav-link">
                     <i class="ph-fill ph-trophy"></i>
                     <span class="link-text">Ranking de Produtos</span>
@@ -280,6 +284,65 @@
                     </section>
                 </main>
 
+                <!-- ✅ NOVO: Painel de Lista de Pedidos -->
+                <section class="dashboard-grid" style="margin-top: 40px;">
+                    <div class="card chart-card" style="min-height: 500px;">
+                        <div class="card-header" style="flex-wrap: wrap; gap: 16px;">
+                            <h3><i class="ph-fill ph-list"></i> Lista de Pedidos <span id="orders-title-count"
+                                    style="font-size: 0.8em; opacity: 0.7; font-weight: 400; margin-left: 4px;">(0)</span>
+                            </h3>
+                            <div style="display: flex; gap: 12px; align-items: center; margin-left: auto;">
+                                <select id="shipping-filter" class="date-input"
+                                    style="height: 36px; padding: 0 12px; min-width: 140px;">
+                                    <option value="all" selected>Todos os Status</option>
+                                    <option value="não está embalado">A Enviar</option>
+                                    <option value="enviado">Enviados</option>
+                                    <option value="entregue">Entregues</option>
+                                </select>
+                                <div class="search-box" style="position: relative;">
+                                    <i class="ph ph-magnifying-glass"
+                                        style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray);"></i>
+                                    <input type="text" id="orders-search" placeholder="Pesquisar informações..."
+                                        class="date-input" style="padding-left: 36px; width: 280px; height: 36px;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="custom-table" id="orders-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Email</th>
+                                        <th>WhatsApp</th>
+                                        <th>Status do pedido</th>
+                                        <th>Cód. Rastreio</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-tbody">
+                                    <tr>
+                                        <td colspan="5"
+                                            style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                            Carregando dados...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <div class="pagination-container">
+                            <div class="pagination-info">Mostrando <span id="orders-range">0-0</span> de <span
+                                    id="total-orders-count">0</span></div>
+                            <div class="pagination-controls">
+                                <button class="pagination-arrow" id="prev-orders" disabled><i
+                                        class="ph ph-caret-left"></i></button>
+                                <div class="pagination-pages" id="orders-page-numbers"></div>
+                                <button class="pagination-arrow" id="next-orders" disabled><i
+                                        class="ph ph-caret-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <footer class="main-footer"
                     style="margin-top: 80px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 24px;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px; opacity: 0.9;">
@@ -300,6 +363,9 @@
         let supabaseClient;
         let charts = {};
         let currentPeriod = '7';
+        let allOrdersData = [];
+        let currentOrdersPage = 1;
+        const ordersPerPage = 10;
 
         function initSupabase() {
             if (window.supabase && window.SUPABASE_CONFIG) {
@@ -358,6 +424,7 @@
                     }
                 }
 
+                allOrdersData = allOrders;
                 updateDashboard(allOrders);
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
@@ -434,6 +501,186 @@
             renderShippingChart(orders);
             renderGatewayChart(orders);
             renderRegionChart(orders);
+            renderOrdersTable();
+        }
+
+        function formatPhone(phone) {
+            if (!phone) return 'N/A';
+            // Convert to string and handle potential .0 from numeric inputs
+            let str = String(phone).split('.')[0];
+            const cleaned = str.replace(/\D/g, '');
+
+            // Remove 55 if it's there at the start
+            let core = cleaned.startsWith('55') ? cleaned.substring(2) : cleaned;
+
+            if (core.length === 11) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 7)}-${core.substring(7)}`;
+            } else if (core.length === 10) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 6)}-${core.substring(6)}`;
+            }
+            return core;
+        }
+
+        function renderOrdersTable() {
+            const tbody = document.getElementById('orders-tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+
+            const searchTerm = (document.getElementById('orders-search')?.value || '').toLowerCase();
+            const filterValue = document.getElementById('shipping-filter')?.value || 'all';
+
+            // Multi-camadas de filtragem
+            const filteredOrders = allOrdersData.filter(item => {
+                const trk = item.shipping_tracking_number || item.shipping_traking_number;
+                const shippingStatus = (item.shipping_status || '').toLowerCase();
+
+                // 1. Filtro por status de pedido (shipping_status)
+                if (filterValue !== 'all') {
+                    if (filterValue === 'enviado') {
+                        if (shippingStatus !== 'enviado' && shippingStatus !== 'shipped') return false;
+                    } else if (filterValue === 'entregue') {
+                        if (shippingStatus !== 'entregue' && shippingStatus !== 'delivered') return false;
+                    } else if (shippingStatus !== filterValue) {
+                        return false;
+                    }
+                }
+
+                // 2. Filtro por termo de pesquisa
+                if (searchTerm) {
+                    const searchable = [
+                        item.customer_name,
+                        item.customer_email,
+                        item.customer_phone,
+                        item.product_name,
+                        item.produtct_name,
+                        item.shipping_status,
+                        trk
+                    ].join(' ').toLowerCase();
+                    if (!searchable.includes(searchTerm)) return false;
+                }
+
+                return true;
+            });
+
+            const startIndex = (currentOrdersPage - 1) * ordersPerPage;
+            const endIndex = startIndex + ordersPerPage;
+            const paginatedData = filteredOrders.slice(startIndex, endIndex);
+
+            if (paginatedData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
+                return;
+            }
+
+            paginatedData.forEach(item => {
+                const tr = document.createElement('tr');
+
+                // Clean phone number for WhatsApp
+                const rawPhone = item.customer_phone || '';
+                const strPhone = String(rawPhone).split('.')[0];
+                const cleanPhone = strPhone.replace(/\D/g, '');
+                const formattedPhone = formatPhone(rawPhone);
+
+                const rawTrk = item.shipping_tracking_number || item.shipping_traking_number;
+                const hasTracking = rawTrk && String(rawTrk).toLowerCase() !== 'null' && String(rawTrk).trim() !== '';
+                const trackingCode = hasTracking ? String(rawTrk) : 'Não enviado';
+
+                const productName = item.product_name || item.produtct_name || 'N/A';
+                const customerName = item.customer_name || 'N/A';
+                const shipStatusRaw = item.shipping_status || 'Desconhecido';
+
+                let statusClass = 'text-muted';
+                let shipStatusDisp = shipStatusRaw;
+                if (shipStatusRaw.toLowerCase().includes('entregue') || shipStatusRaw.toLowerCase() === 'delivered') {
+                    statusClass = 'text-success';
+                    shipStatusDisp = 'Entregues';
+                } else if (shipStatusRaw.toLowerCase().includes('enviado') || shipStatusRaw.toLowerCase() === 'shipped') {
+                    statusClass = 'text-primary'; // Purple color in this theme
+                    shipStatusDisp = 'Enviados';
+                } else if (shipStatusRaw.toLowerCase().includes('embalado')) {
+                    statusClass = 'text-warning';
+                    shipStatusDisp = 'A Enviar';
+                }
+
+                const date = new Date(item.created_at);
+                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                const message = `Olá ${customerName}, tudo bem? Sou da Cacife Brand! 🌟\n\nPassando para informar que seu pedido do produto *${productName}* já foi processado. ✅\n\nSeu código de rastreio é: *${trackingCode}*\n\nVocê pode acompanhar a entrega através do site da transportadora. Qualquer dúvida, estamos à disposição!`;
+
+                const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
+                const isAEnviar = shipStatusDisp === 'A Enviar';
+
+                tr.innerHTML = `
+                    <td>${customerName}</td>
+                    <td>${item.customer_email || 'N/A'}</td>
+                    <td style="white-space: nowrap;">${formattedPhone}</td>
+                    <td><span class="${statusClass}" style="font-weight: 600; font-size: 13px;">${shipStatusDisp}</span></td>
+                    <td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>
+                    <td>
+                        ${isAEnviar ? `
+                            <button class="apply-btn" disabled style="justify-content: center; gap: 8px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); border: none; width: auto; font-size: 12px; padding: 0 16px; white-space: nowrap; font-weight: 700; cursor: not-allowed; opacity: 0.6;">
+                                <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
+                            </button>
+                        ` : `
+                            <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: var(--primary-purple); color: black; border: none; width: auto; font-size: 12px; padding: 0 16px; white-space: nowrap; font-weight: 700;">
+                                <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
+                            </a>
+                        `}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update Pagination UI
+            const total = filteredOrders.length;
+            const countEl = document.getElementById('orders-title-count');
+            if (countEl) countEl.textContent = `(${total})`;
+
+            const startRange = total === 0 ? 0 : startIndex + 1;
+            const endRange = Math.min(endIndex, total);
+
+            document.getElementById('orders-range').textContent = `${startRange}-${endRange}`;
+            document.getElementById('total-orders-count').textContent = total;
+
+            const prevBtn = document.getElementById('prev-orders');
+            const nextBtn = document.getElementById('next-orders');
+            if (prevBtn) prevBtn.disabled = currentOrdersPage === 1;
+            if (nextBtn) nextBtn.disabled = endIndex >= total;
+
+            const pageNumbers = document.getElementById('orders-page-numbers');
+            if (pageNumbers) {
+                pageNumbers.innerHTML = '';
+                const totalPages = Math.ceil(total / ordersPerPage);
+
+                if (totalPages > 1) {
+                    let pages = [];
+                    if (totalPages <= 5) {
+                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                    } else {
+                        if (currentOrdersPage <= 3) pages = [1, 2, 3, 4, totalPages];
+                        else if (currentOrdersPage >= totalPages - 2) pages = [1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+                        else pages = [1, currentOrdersPage - 1, currentOrdersPage, currentOrdersPage + 1, totalPages];
+                    }
+
+                    pages.forEach((p, idx) => {
+                        if (idx > 0 && p - pages[idx - 1] > 1) {
+                            const dots = document.createElement('span');
+                            dots.textContent = '...';
+                            dots.style.opacity = '0.5';
+                            dots.style.padding = '0 8px';
+                            pageNumbers.appendChild(dots);
+                        }
+                        const btn = document.createElement('button');
+                        btn.className = `pagination-btn ${p === currentOrdersPage ? 'active' : ''}`;
+                        btn.textContent = p;
+                        btn.onclick = () => {
+                            currentOrdersPage = p;
+                            renderOrdersTable();
+                        };
+                        pageNumbers.appendChild(btn);
+                    });
+                }
+            }
         }
 
         function renderRevenueChart(orders) {
@@ -648,9 +895,9 @@
             orders.forEach(o => {
                 let s = o.shipping_status?.toLowerCase();
                 if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s === 'não está embalado') s = 'Não embalado';
-                else if (s === 'shipped' || s === 'enviado') s = 'Enviado';
-                else if (s === 'delivered' || s === 'entregue') s = 'Entregue';
+                else if (s === 'não está embalado') s = 'A Enviar';
+                else if (s === 'shipped' || s === 'enviado') s = 'Enviados';
+                else if (s === 'delivered' || s === 'entregue') s = 'Entregues';
                 else s = s.charAt(0).toUpperCase() + s.slice(1);
 
                 map[s] = (map[s] || 0) + 1;
@@ -660,9 +907,9 @@
             const data = Object.values(map);
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'não embalado') return '#ef4444'; // Red
-                if (l === 'enviado') return '#3b82f6'; // Blue
-                if (l === 'entregue') return '#22c55e'; // Green
+                if (l === 'a enviar') return '#ef4444'; // Red
+                if (l === 'enviados') return '#9b4dff'; // Purple
+                if (l === 'entregues') return '#22c55e'; // Green
                 return '#9b4dff'; // Default Purple
             });
 
@@ -797,9 +1044,36 @@
                         customPicker.style.display = 'flex';
                     } else {
                         customPicker.style.display = 'none';
+                        currentOrdersPage = 1;
                         fetchDashboardData(period);
                     }
                 });
+            });
+
+            // Listeners da Lista de Pedidos
+            document.getElementById('orders-search').addEventListener('input', () => {
+                currentOrdersPage = 1;
+                renderOrdersTable();
+            });
+
+            document.getElementById('shipping-filter').addEventListener('change', () => {
+                currentOrdersPage = 1;
+                renderOrdersTable();
+            });
+
+            // Pagination listeners
+            document.getElementById('prev-orders').addEventListener('click', () => {
+                if (currentOrdersPage > 1) {
+                    currentOrdersPage--;
+                    renderOrdersTable();
+                }
+            });
+
+            document.getElementById('next-orders').addEventListener('click', () => {
+                if ((currentOrdersPage * ordersPerPage) < allOrdersData.length) {
+                    currentOrdersPage++;
+                    renderOrdersTable();
+                }
             });
 
             // Apply custom date

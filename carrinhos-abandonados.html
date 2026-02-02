@@ -31,6 +31,10 @@
                     <i class="ph-fill ph-shopping-cart"></i>
                     <span class="link-text">Pedidos</span>
                 </a>
+                <a href="crm.html" class="nav-link">
+                    <i class="ph-fill ph-users-three"></i>
+                    <span class="link-text">Relacionamento (CRM)</span>
+                </a>
                 <a href="ranking-produtos.html" class="nav-link">
                     <i class="ph-fill ph-trophy"></i>
                     <span class="link-text">Ranking de Produtos</span>
@@ -434,6 +438,23 @@
             });
         }
 
+        function formatPhone(phone) {
+            if (!phone) return 'N/A';
+            // Convert to string and handle potential .0 from numeric inputs
+            let str = String(phone).split('.')[0];
+            const cleaned = str.replace(/\D/g, '');
+
+            // Remove 55 if it's there at the start
+            let core = cleaned.startsWith('55') ? cleaned.substring(2) : cleaned;
+
+            if (core.length === 11) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 7)}-${core.substring(7)}`;
+            } else if (core.length === 10) {
+                return `(${core.substring(0, 2)}) ${core.substring(2, 6)}-${core.substring(6)}`;
+            }
+            return core;
+        }
+
         function renderTable() {
             const tbody = document.getElementById('abandoned-tbody');
             tbody.innerHTML = '';
@@ -465,14 +486,9 @@
 
                 // Clean phone number for WhatsApp link and display
                 const rawPhone = item.contact_phone || '';
-                const cleanPhone = rawPhone.replace(/\D/g, '');
-
-                // Display phone without +55 for cleaner look
-                let displayPhone = rawPhone;
-                if (cleanPhone.startsWith('55')) {
-                    // Try to remove 55 if it's there
-                    displayPhone = rawPhone.replace('+55', '').replace('55', '').trim();
-                }
+                const strPhone = String(rawPhone).split('.')[0];
+                const cleanPhone = strPhone.replace(/\D/g, '');
+                const formattedPhone = formatPhone(rawPhone);
 
                 // Prepare product names for the message
                 const productNames = productList.length > 0 ? productList.map(p => p.name).join(', ') : 'alguns itens';
@@ -480,19 +496,19 @@
 
                 const message = `Olá ${item.contact_name || ''}, tudo bem? Vi que você deixou o(s) seguinte(s) produto(s) no seu carrinho da Cacife Brand: ${productNames}.\n\nPara te ajudar a finalizar seu pedido, preparamos um cupom de 5% de desconto exclusivo (válido por tempo ilimitado!): CACIFE05\n\nAproveite para garantir seus itens aqui: ${checkoutUrl}`;
 
-                const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}` : '#';
+                const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
 
                 const date = new Date(item.created_at);
-                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const formattedDate = date.toLocaleDateString('pt-BR');
 
                 tr.innerHTML = `
                     <td>${item.contact_name || 'N/A'}</td>
                     <td>${item.contact_email || 'N/A'}</td>
-                    <td>${displayPhone || 'N/A'}</td>
-                    <td style="font-size: 13px;">${formattedDate}</td>
-                    <td style="font-size: 12px; color: var(--text-gray); cursor: help;" title="${productList.map(p => p.name).join(', ')}">${productsDisplay}</td>
+                    <td style="white-space: nowrap;">${formattedPhone}</td>
+                    <td style="font-size: 13px; white-space: nowrap;">${formattedDate}</td>
+                    <td style="font-size: 12px; color: var(--text-gray); cursor: help; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productList.map(p => p.name).join(', ')}">${productsDisplay}</td>
                     <td>
-                        <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: #25D366; color: white; border: none;">
+                        <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: var(--primary-purple); color: black; border: none; font-weight: 700; font-size: 12px; white-space: nowrap;">
                             <i class="ph ph-whatsapp-logo"></i> Chamar
                         </a>
                     </td>
