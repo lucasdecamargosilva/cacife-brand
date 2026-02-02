@@ -6,15 +6,25 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 app.set('trust proxy', 1);
 
-const PORT = 3000;
-const CHATWOOT_URL = 'https://chatwoot.segredosdodrop.com';
-const PLATFORM_TOKEN = 'AXGGMhrWkqRShtLGFSSJyepr';
-const CHATWOOT_USER_ID = 1;
+// Configuração usando variáveis de ambiente (para Easypanel)
+const PORT = process.env.PORT || 3000;
+const CHATWOOT_URL = process.env.CHATWOOT_URL || 'https://chatwoot.segredosdodrop.com';
+const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN || 'AXGGMhrWkqRShtLGFSSJyepr';
+const CHATWOOT_USER_ID = process.env.CHATWOOT_USER_ID || 1;
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000'];
 
 // 1) CORS para seu site chamar /api/chatwoot/sso com fetch + credentials
 app.use((req, res, next) => {
-    // Se seu site roda em outra porta/domínio, troque aqui.
-    res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
+    const origin = req.headers.origin;
+
+    // Permite qualquer origem se estiver em produção, ou localhost em dev
+    if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*')) {
+        res.header('Access-Control-Allow-Origin', origin || ALLOWED_ORIGINS[0]);
+    } else {
+        res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
+    }
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
@@ -24,7 +34,16 @@ app.use((req, res, next) => {
     next();
 });
 
-// 2) Endpoint SSO (pega a URL de login do Chatwoot)
+// 2) Health check endpoint (para Easypanel verificar se está funcionando)
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        service: 'Cacife Brand - Chatwoot Integration'
+    });
+});
+
+// 3) Endpoint SSO (pega a URL de login do Chatwoot)
 app.get('/api/chatwoot/sso', async (req, res) => {
     try {
         const response = await axios.get(
