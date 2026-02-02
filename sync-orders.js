@@ -14,10 +14,11 @@ async function syncOrdersToCRM() {
     );
 
     try {
-        // 1. Fetch all recent orders (e.g., last 30 days to avoid huge fetch)
-        // Or just fetch all if volume is manageable. Let's try last 60 days for safety.
+        // 1. Fetch all recent orders (e.g., last 120 days)
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 60);
+        startDate.setDate(startDate.getDate() - 120);
+
+        if (window.showToast) window.showToast("Iniciando sincronização de pedidos...", "info");
 
         const { data: orders, error } = await client
             .from('cacife_orders')
@@ -52,7 +53,9 @@ async function syncOrdersToCRM() {
             const name = order.customer_name || 'Cliente Sem Nome';
             const phone = order.customer_phone || '---';
             const product = order.product_name || order.produtct_name || 'Produto Desconhecido';
-            const revenue = order.total || 0;
+            const rawTotal = order.total || '0';
+            // Parse revenue safely handling 'R$', commas, etc if needed. Assuming it's number-like or string number.
+            const revenue = parseFloat(String(rawTotal).replace(/[^0-9.-]+/g, "")) || 0;
 
             // Check if this specific order is already in CRM?
             // Since we don't have order_id in opps, we might duplicate if status changes?
@@ -92,11 +95,15 @@ async function syncOrdersToCRM() {
 
         console.log(`Sync complete. New: ${newCount}, Updated: ${updateCount}`);
         if (newCount > 0 || updateCount > 0) {
+            if (window.showToast) window.showToast(`Sincronização concluída! ${newCount} novos, ${updateCount} atualizados.`, "success");
             if (typeof loadData === 'function') loadData(); // Reload board if on CRM page
+        } else {
+            if (window.showToast) window.showToast("Sincronização finalizada. Nenhum dado novo.", "info");
         }
 
     } catch (err) {
         console.error('Error syncing orders:', err);
+        if (window.showToast) window.showToast("Erro na sincronização: " + err.message, "error");
     }
 }
 
