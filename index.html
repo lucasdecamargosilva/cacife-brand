@@ -938,7 +938,7 @@
             const gateMap = {};
             orders.forEach(o => {
                 let name = o.payment_method;
-                if (!name || name === 'not-provided') name = 'Desconhecida';
+                if (!name || name === 'not-provided') name = 'Outras Fontes';
                 gateMap[name] = (gateMap[name] || 0) + 1;
             });
 
@@ -948,13 +948,16 @@
             const ctx = document.getElementById('chart-gateways').getContext('2d');
             if (charts.gateways) charts.gateways.destroy();
 
-            const chartColors = [
-                'rgba(255, 255, 255, 0.8)', // White
-                'rgba(163, 163, 163, 0.8)', // Gray
-                'rgba(115, 115, 115, 0.8)', // Muted Gray
-                'rgba(255, 255, 255, 0.4)', // White transparent
-                'rgba(82, 82, 82, 0.8)'     // Dark Gray
-            ];
+            // Dynamic colors based on payment method name
+            const backgroundColor = labels.map(label => {
+                const l = label.toLowerCase();
+                if (l.includes('mercado pago')) return '#3b82f6'; // Blue for Mercado Pago
+                if (l === 'outras fontes') return '#60a5fa'; // Light Blue for Outras Fontes
+                if (l.includes('pix')) return '#22c55e'; // Green for PIX
+                if (l.includes('cartão') || l.includes('cartao') || l.includes('credit')) return '#9b4dff'; // Purple for cards
+                if (l.includes('boleto')) return '#f59e0b'; // Orange for Boleto
+                return '#ef4444'; // Red for others
+            });
 
             charts.gateways = new Chart(ctx, {
                 type: 'bar',
@@ -963,7 +966,7 @@
                     datasets: [{
                         label: 'Pedidos',
                         data: data,
-                        backgroundColor: chartColors,
+                        backgroundColor: backgroundColor,
                         borderRadius: 8
                     }]
                 },
