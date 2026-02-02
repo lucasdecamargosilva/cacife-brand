@@ -38,9 +38,9 @@ async function syncOrdersToCRM() {
         // Given current structure, we'll check by 'email' and 'stage' loosely, or just 'email'.
         // Actually, to avoid re-creating leads for the same order, we need a reliable dedupe.
         // We will try to match by Email + Company (Product Name in this context?).
-        
+
         // Fetch existing opps
-        const existingOpps = await window.CRM_LOGIC.fetchCrmData('cacife'); 
+        const existingOpps = await window.CRM_LOGIC.fetchCrmData('cacife');
         const existingMap = new Set(existingOpps.map(o => o.email + '|' + o.stage)); // Simple fingerprint
 
         let newCount = 0;
@@ -57,12 +57,12 @@ async function syncOrdersToCRM() {
             // Check if this specific order is already in CRM?
             // Since we don't have order_id in opps, we might duplicate if status changes?
             // Ideally: We should find an opp for this email and UPDATE stage if needed.
-            
+
             // Strategy: Find opp by email. If exists, update stage. If not, create.
             // Risk: User might have multiple orders. 
             // Better: Find opp by email AND product name? Or just assume 1 lead per person active?
             // Let's look for an opp with this Email.
-            
+
             const { data: existingLead, error: leadError } = await client
                 .from('contacts') // Check contact first
                 .select('id, opportunities(id, stage)')
@@ -75,8 +75,8 @@ async function syncOrdersToCRM() {
                     // Update latest opp stage if different
                     const opp = existingLead.opportunities[0];
                     if (opp.stage !== status) {
-                         await window.CRM_LOGIC.updateLeadStage(opp.id, status);
-                         updateCount++;
+                        await window.CRM_LOGIC.updateLeadStage(opp.id, status);
+                        updateCount++;
                     }
                 } else {
                     // Contact exists but no opp? Create opp.
@@ -85,14 +85,14 @@ async function syncOrdersToCRM() {
                 }
             } else {
                 // New Contact + New Opportunity
-               await createFullLead(client, name, email, phone, product, status, revenue);
-               newCount++;
+                await createFullLead(client, name, email, phone, product, status, revenue);
+                newCount++;
             }
         }
 
         console.log(`Sync complete. New: ${newCount}, Updated: ${updateCount}`);
-        if(newCount > 0 || updateCount > 0) {
-             if (typeof loadData === 'function') loadData(); // Reload board if on CRM page
+        if (newCount > 0 || updateCount > 0) {
+            if (typeof loadData === 'function') loadData(); // Reload board if on CRM page
         }
 
     } catch (err) {
@@ -101,22 +101,25 @@ async function syncOrdersToCRM() {
 }
 
 function mapStatusToStage(order) {
-    const payStatus = (order.payment_status || '').toLowerCase();
-    const shipStatus = (order.shipping_status || '').toLowerCase();
-    const status = (order.status || '').toLowerCase(); // General status
+    const shipStatus = (order.shipping_status || '').toLowerCase().trim();
+    const status = (order.status || '').toLowerCase().trim(); // Status geral do pedido
 
-    // Priority checks
-    if (status === 'cancelled' || status === 'cancelado') return 'Cancelados';
+    // 1. Regras explícitas de Shipping Status (Prioridade Alta)
+    if (shipStatus === 'entregue' || shipStatus === 'delivered') return 'Entregues';
+    if (shipStatus === 'enviado' || shipStatus === 'shipped') return 'Enviados';
+    if (shipStatus === 'não está embalado' || shipStatus === 'nao esta embalado' || shipStatus.includes('não esta embalado') || shipStatus.includes('nao está embalado')) return 'A Enviar';
+
+    // Alguns sistemas marcam cancelado no shipping, outros no status geral
+    if (shipStatus === 'cancelado' || shipStatus === 'cancelled' || status === 'cancelled' || status === 'cancelado') return 'Cancelados';
+
+    // 2. Outros status (Fallback)
     if (status === 'refunded' || status === 'reembolsado') return 'Trocas e Devoluções';
-    
-    if (shipStatus === 'delivered' || shipStatus === 'entregue') return 'Entregues';
-    if (shipStatus === 'shipped' || shipStatus === 'enviado') return 'Enviados';
-    if (shipStatus === 'não está embalado' || shipStatus.includes('embalar')) return 'A Enviar';
-    
-    // Default to Novo Pedido if paid
+
+    // 3. Se não caiu nas regras acima, verifica pagamento para 'Novo Pedido'
+    const payStatus = (order.payment_status || '').toLowerCase();
     if (payStatus === 'paid' || payStatus === 'approved' || payStatus === 'pago') return 'Novo Pedido';
-    
-    return 'Novo Pedido'; // Fallback
+
+    return 'Novo Pedido'; // Default final
 }
 
 async function createOpportunity(client, contactId, stage, pipeline = 'Cacife') {
