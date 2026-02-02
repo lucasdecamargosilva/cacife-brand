@@ -758,7 +758,7 @@ body {
 }
 
 .pagination-btn.active {
-    background: var(--primary-purple);
+    background: #9b4dff;
     color: white;
-    box-shadow: 0 0 15px var(--primary-purple-glow);
+    box-shadow: 0 0 15px rgba(155, 77, 255, 0.4);
 }
