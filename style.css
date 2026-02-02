@@ -7,8 +7,8 @@
     --bg-card: #0a0a0a;
     --bg-card-hover: #141414;
 
-    --primary-purple: #9b4dff;
-    --primary-purple-glow: rgba(155, 77, 255, 0.4);
+    --primary-purple: #ffffff;
+    --primary-purple-glow: rgba(255, 255, 255, 0.2);
     --accent-red: #ff4d4d;
     --accent-red-glow: rgba(255, 77, 77, 0.4);
     --accent-green: #22c55e;
@@ -126,7 +126,8 @@ body {
 
 .sidebar-nav {
     flex: 1;
-    padding: var(--spacing-md);
+    padding: 16px 24px;
+    /* Increased side padding to create more margin for the menu items */
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
@@ -157,9 +158,9 @@ body {
 }
 
 .nav-link.active {
-    background: var(--primary-purple);
+    background: var(--text-white);
     color: #000;
-    box-shadow: 0 4px 12px var(--primary-purple-glow);
+    font-weight: 700;
 }
 
 [data-theme="light"] .nav-link.active {

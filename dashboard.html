@@ -826,10 +826,10 @@
             // Map colors based on label name
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'aberto' || l === 'concluído' || l === 'concluido') return '#22c55e'; // Success Green
-                if (l === 'cancelado') return '#ef4444'; // Danger Red
-                if (l === 'pendente') return '#eab308'; // Warning Yellow
-                return '#9b4dff'; // Default Purple
+                if (l === 'aberto' || l === 'concluído' || l === 'concluido') return '#ffffff'; // White for success
+                if (l === 'cancelado') return '#ef4444'; // Keep Red for danger
+                if (l === 'pendente') return '#737373'; // Gray for pending
+                return '#ffffff'; // Default White
             });
 
             charts.status = new Chart(ctx, {
@@ -869,11 +869,11 @@
             const data = Object.values(map);
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'confirmado') return '#22c55e'; // Green
-                if (l === 'pendente') return '#3b82f6'; // Blue
-                if (l === 'recusado') return '#ef4444'; // Red
-                if (l === 'estornado') return '#ffffff'; // White
-                return '#9b4dff'; // Default Purple
+                if (l === 'confirmado') return '#ffffff'; // White for confirmed
+                if (l === 'pendente') return '#737373'; // Gray for pending
+                if (l === 'recusado') return '#ef4444'; // Keep Red for declined
+                if (l === 'estornado') return '#a3a3a3'; // Lighter gray for refunded
+                return '#ffffff'; // Default White
             });
 
             charts.payment = new Chart(ctx, {
@@ -912,9 +912,9 @@
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
                 if (l === 'a enviar') return '#ef4444'; // Red
-                if (l === 'enviados') return '#9b4dff'; // Purple
+                if (l === 'enviados') return '#ffffff'; // White
                 if (l === 'entregues') return '#22c55e'; // Green
-                return '#9b4dff'; // Default Purple
+                return '#ffffff'; // Default White
             });
 
             charts.shipping = new Chart(ctx, {
@@ -947,11 +947,11 @@
             if (charts.gateways) charts.gateways.destroy();
 
             const chartColors = [
-                'rgba(155, 77, 255, 0.8)', // Primary Purple
-                'rgba(192, 132, 252, 0.8)', // Light Purple
-                'rgba(124, 58, 237, 0.8)',  // Deep Purple
-                'rgba(167, 139, 250, 0.8)', // Muted Purple
-                'rgba(76, 29, 149, 0.8)'    // Dark Purple
+                'rgba(255, 255, 255, 0.8)', // White
+                'rgba(163, 163, 163, 0.8)', // Gray
+                'rgba(115, 115, 115, 0.8)', // Muted Gray
+                'rgba(255, 255, 255, 0.4)', // White transparent
+                'rgba(82, 82, 82, 0.8)'     // Dark Gray
             ];
 
             charts.gateways = new Chart(ctx, {

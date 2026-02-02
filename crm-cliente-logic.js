@@ -287,17 +287,17 @@ function renderMetrics(leads) {
 
     // Colors for stages (gradient roughly)
     const stageColors = {
-        "CONTATO": "#94a3b8",
-        "MENSAGEM QUALIFICAÇÃO 1": "#818cf8",
-        "MENSAGEM QUALIFICAÇÃO 2": "#6366f1",
-        "MENSAGEM QUALIFICAÇÃO 3": "#4f46e5",
-        "QUALIFICADO": "#c084fc",
-        "REUNIÃO AGENDADA": "#a855f7",
-        "REUNIÃO REALIZADA": "#9333ea",
-        "PROPOSTA ENVIADA": "#7e22ce",
-        "VENDA REALIZADA": "#10b981",
+        "CONTATO": "#525252",
+        "MENSAGEM QUALIFICAÇÃO 1": "#737373",
+        "MENSAGEM QUALIFICAÇÃO 2": "#a3a3a3",
+        "MENSAGEM QUALIFICAÇÃO 3": "#d4d4d4",
+        "QUALIFICADO": "#ffffff",
+        "REUNIÃO AGENDADA": "#ffffff",
+        "REUNIÃO REALIZADA": "#ffffff",
+        "PROPOSTA ENVIADA": "#ffffff",
+        "VENDA REALIZADA": "#ffffff",
         "DESQUALIFICADO": "#ef4444",
-        "VENDA PERDIDA": "#9ca3af"
+        "VENDA PERDIDA": "#404040"
     };
 
     barContainer.innerHTML = '';
