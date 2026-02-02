@@ -127,7 +127,7 @@
                             <div class="ai-insight-section"
                                 style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color);">
                                 <button id="btn-generate-insight" class="apply-btn"
-                                    style="width: 100%; justify-content: center; gap: 10px; background: var(--primary-purple); color: white; border: none; height: 46px; font-weight: 700; font-family: 'Outfit', sans-serif; box-shadow: 0 4px 15px var(--primary-purple-glow);">
+                                    style="width: 100%; justify-content: center; gap: 10px; background: #9b4dff; color: white; border: none; height: 46px; font-weight: 700; font-family: 'Outfit', sans-serif; box-shadow: 0 4px 15px rgba(155, 77, 255, 0.4);">
                                     <i class="ph-fill ph-sparkle"></i>
                                     Gerar Insight da IA
                                 </button>
@@ -217,7 +217,7 @@
         let allProductsData = [];
         let currentPage = 1;
         let currentPeriod = '7';
-        const itemsPerPage = 5;
+        const itemsPerPage = 10;
 
         function initSupabase() {
             if (window.supabase && window.SUPABASE_CONFIG) {
@@ -517,7 +517,7 @@
                     <td style="font-size: 13px; white-space: nowrap;">${formattedDate}</td>
                     <td style="font-size: 12px; color: var(--text-gray); cursor: help; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productList.map(p => p.name).join(', ')}">${productsDisplay}</td>
                     <td>
-                        <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: var(--primary-purple); color: black; border: none; font-weight: 700; font-size: 12px; white-space: nowrap;">
+                        <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: #9b4dff; color: white; border: none; font-weight: 700; font-size: 12px; white-space: nowrap;">
                             <i class="ph ph-whatsapp-logo"></i> Chamar
                         </a>
                     </td>
