@@ -63,7 +63,7 @@ body {
 }
 
 .sidebar {
-    width: 280px;
+    width: 320px;
     background: var(--bg-card);
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -137,7 +137,7 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding: 14px 24px;
+    padding: 12px 20px;
     color: var(--text-white);
     text-decoration: none;
     border-radius: var(--radius-md);
