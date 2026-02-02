@@ -633,10 +633,16 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    color: #ffffff;
+    text-shadow:
+        0 0 10px rgba(255, 255, 255, 0.8),
+        0 0 20px rgba(255, 255, 255, 0.6),
+        0 0 30px rgba(255, 255, 255, 0.4);
 }
 
 .card-header h3 i {
-    color: var(--primary-purple);
+    color: #ffffff;
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
 }
 
 /* Table Styles */
