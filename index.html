@@ -812,7 +812,7 @@
                 let s = o.status?.toLowerCase();
                 if (!s || s === 'not-provided') s = 'Desconhecido';
                 else if (s === 'cancelled' || s === 'cancelado') s = 'Cancelado';
-                else if (s === 'pending' || s === 'pendente' || s === 'aberto') s = 'Aberto';
+                else if (s === 'pending' || s === 'pendente' || s === 'aberto') s = 'Em Andamento';
                 else if (s === 'processing' || s === 'processando') s = 'Processando';
                 else if (s === 'completed' || s === 'concluido' || s === 'concluído') s = 'Concluído';
                 else s = s.charAt(0).toUpperCase() + s.slice(1);
@@ -826,7 +826,7 @@
             // Map colors based on label name
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'aberto') return '#9b4dff'; // Purple for open
+                if (l === 'em andamento') return '#9b4dff'; // Purple for in progress
                 if (l === 'concluído' || l === 'concluido') return '#22c55e'; // Green for completed
                 if (l === 'cancelado') return '#ef4444'; // Red for cancelled
                 if (l === 'pendente') return '#f59e0b'; // Orange for pending
