@@ -826,10 +826,12 @@
             // Map colors based on label name
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'aberto' || l === 'concluído' || l === 'concluido') return '#ffffff'; // White for success
-                if (l === 'cancelado') return '#ef4444'; // Keep Red for danger
-                if (l === 'pendente') return '#737373'; // Gray for pending
-                return '#ffffff'; // Default White
+                if (l === 'aberto') return '#9b4dff'; // Purple for open
+                if (l === 'concluído' || l === 'concluido') return '#22c55e'; // Green for completed
+                if (l === 'cancelado') return '#ef4444'; // Red for cancelled
+                if (l === 'pendente') return '#f59e0b'; // Orange for pending
+                if (l === 'processando') return '#3b82f6'; // Blue for processing
+                return '#9b4dff'; // Default Purple
             });
 
             charts.status = new Chart(ctx, {
@@ -869,11 +871,11 @@
             const data = Object.values(map);
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'confirmado') return '#ffffff'; // White for confirmed
-                if (l === 'pendente') return '#737373'; // Gray for pending
-                if (l === 'recusado') return '#ef4444'; // Keep Red for declined
-                if (l === 'estornado') return '#a3a3a3'; // Lighter gray for refunded
-                return '#ffffff'; // Default White
+                if (l === 'confirmado') return '#22c55e'; // Green for confirmed
+                if (l === 'pendente') return '#9b4dff'; // Purple for pending
+                if (l === 'recusado') return '#ef4444'; // Red for declined
+                if (l === 'estornado') return '#f59e0b'; // Orange for refunded
+                return '#9b4dff'; // Default Purple
             });
 
             charts.payment = new Chart(ctx, {
