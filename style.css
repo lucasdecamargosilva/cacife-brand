@@ -63,7 +63,7 @@ body {
 }
 
 .sidebar {
-    width: 350px;
+    width: 320px;
     background: var(--bg-card);
     border-right: 1px solid var(--border-color);
     display: flex;
@@ -137,16 +137,15 @@ body {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    padding: 12px 18px;
+    padding: 12px 20px;
     color: var(--text-white);
     text-decoration: none;
     border-radius: var(--radius-md);
     transition: all 0.2s;
     font-weight: 600;
+    white-space: nowrap;
     width: 100%;
     box-sizing: border-box;
-    font-size: 14px;
-    line-height: 1.4;
 }
 
 .nav-link i {
