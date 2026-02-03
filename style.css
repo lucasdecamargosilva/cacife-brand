@@ -97,6 +97,11 @@ body {
 
 .sidebar.collapsed .sidebar-logo {
     opacity: 0;
+    pointer-events: none;
+}
+
+.sidebar.collapsed .toggle-btn {
+    right: 24px;
 }
 
 .toggle-btn {
@@ -173,15 +178,18 @@ body {
     background: #000;
 }
 
-.sidebar.collapsed .link-text,
-.sidebar.collapsed .nav-link i {
+.sidebar.collapsed .link-text {
     display: none;
 }
 
-.sidebar.collapsed {
-    width: 0px;
-    border-right: none;
-    overflow: hidden;
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.sidebar.collapsed .nav-link i {
+    margin-right: 0;
 }
 
 .sidebar-footer {
