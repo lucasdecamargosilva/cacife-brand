@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Cacife Brand</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        body {
+            background-color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .login-card {
+            background: #0a0a0a;
+            /* var(--bg-card) */
+            border: 1px solid #262626;
+            /* var(--border-color) */
+            padding: 40px;
+            /* var(--spacing-xl) */
+            border-radius: 16px;
+            /* var(--radius-lg) */
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-logo {
+            height: 60px;
+            margin-bottom: 32px;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a3a3a3;
+            /* var(--text-gray) */
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            /* var(--radius-sm) */
+            color: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            /* var(--radius-sm) */
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            background: #e5e5e5;
+            transform: translateY(-1px);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            color: #ff4d4d;
+            /* var(--accent-red) */
+            font-size: 13px;
+            margin-top: 16px;
+            min-height: 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .error-msg.visible {
+            opacity: 1;
+        }
+
+        /* Background animated elements */
+        .bg-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0) 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-glow"></div>
+
+    <div class="login-card">
+        <img src="logo.png" alt="Cacife Brand" class="login-logo">
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email" class="form-label">E-mail</label>
+                <div style="position: relative;">
+                    <i class="ph ph-envelope" style="position: absolute; left: 14px; top: 14px; color: #555;"></i>
+                    <input type="email" id="email" class="form-input" style="padding-left: 40px;"
+                        placeholder="seu@email.com" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Senha</label>
+                <div style="position: relative;">
+                    <i class="ph ph-lock" style="position: absolute; left: 14px; top: 14px; color: #555;"></i>
+                    <input type="password" id="password" class="form-input" style="padding-left: 40px;"
+                        placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login" id="login-btn">Entrar</button>
+            <div id="error-message" class="error-msg"></div>
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMsg = document.getElementById('error-message');
+
+        const { createClient } = supabase;
+        const supabaseClient = createClient(window.SUPABASE_CONFIG.URL, window.SUPABASE_CONFIG.KEY);
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            errorMsg.classList.remove('visible');
+            errorMsg.textContent = '';
+            loginBtn.textContent = 'Entrando...';
+            loginBtn.disabled = true;
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+
+                // Sucesso!
+                loginBtn.textContent = 'Sucesso!';
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 500);
+
+            } catch (err) {
+                console.error("Login error:", err);
+                errorMsg.textContent = 'E-mail ou senha inválidos.';
+                errorMsg.classList.add('visible');
+                loginBtn.textContent = 'Entrar';
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Verificar se já está logado
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                window.location.href = 'index.html';
+            }
+        }
+        checkSession();
+
+    </script>
+</body>
+
+</html>
