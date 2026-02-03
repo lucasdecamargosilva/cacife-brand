@@ -71,22 +71,23 @@
                     <div class="header-left">
                         <h1 class="page-title">Controle de Estoque</h1>
                     </div>
-                    <div class="header-center" style="margin-left: auto;">
-                        <select id="status-filter" class="crm-input-compact"
-                            style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px;">
-                            <option value="all">Todos os Status</option>
-                            <option value="em_estoque">Em estoque (> 10)</option>
-                            <option value="repor">Repor Estoque (1-10)</option>
-                            <option value="fora">Fora de estoque (0)</option>
-                        </select>
-                    </div>
                 </header>
 
                 <main class="dashboard-grid">
                     <section class="dashboard-grid">
                         <div class="card chart-card">
-                            <div class="card-header">
+                            <div class="card-header"
+                                style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3><i class="ph-fill ph-package"></i> Itens em Estoque</h3>
+                                <div class="header-center">
+                                    <select id="status-filter" class="crm-input-compact"
+                                        style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px;">
+                                        <option value="all">Todos os Status</option>
+                                        <option value="em_estoque">Em estoque (> 10)</option>
+                                        <option value="repor">Repor Estoque (1-10)</option>
+                                        <option value="fora">Fora de estoque (0)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="table-container">
                                 <table class="custom-table" id="stock-table">
