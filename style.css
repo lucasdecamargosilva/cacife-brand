@@ -144,8 +144,11 @@ body {
     transition: all 0.2s;
     font-weight: 600;
     white-space: nowrap;
-    width: 100%;
+    width: 100% !important;
+    /* Force full width */
+    max-width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .nav-link i {
