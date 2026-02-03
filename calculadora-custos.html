@@ -522,6 +522,12 @@
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', async () => {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('toggleSidebar');
+            if (toggleBtn) {
+                toggleBtn.onclick = () => sidebar.classList.toggle('collapsed');
+            }
+
             if (initSupabase()) {
                 calculate();
                 await renderSaved();
