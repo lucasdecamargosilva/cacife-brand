@@ -109,6 +109,24 @@
                                     </tbody>
                                 </table>
                             </div>
+
+                            <!-- Pagination Controls -->
+                            <div class="pagination-controls"
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-top: 1px solid var(--border-color);">
+                                <span id="page-info"
+                                    style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Página 1 de
+                                    1</span>
+                                <div style="display: flex; gap: 8px;">
+                                    <button id="prev-page" onclick="changePage(-1)" disabled
+                                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center;">
+                                        <i class="ph ph-caret-left"></i>
+                                    </button>
+                                    <button id="next-page" onclick="changePage(1)" disabled
+                                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center;">
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </main>
@@ -128,6 +146,9 @@
     <script>
         let supabaseClient;
         let allStockItems = [];
+        let currentFilteredItems = [];
+        let currentPage = 1;
+        const ITEMS_PER_PAGE = 50;
 
         function initSupabase() {
             if (window.supabase && window.SUPABASE_CONFIG) {
@@ -158,11 +179,14 @@
 
                 if (!data || data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum item encontrado no estoque.</td></tr>';
+                    // Hide pagination if no data
+                    document.querySelector('.pagination-controls').style.display = 'none';
                     return;
                 }
 
                 allStockItems = data;
-                renderStockTable(allStockItems);
+                document.querySelector('.pagination-controls').style.display = 'flex';
+                filterStock(); // Initial render via filter
 
             } catch (err) {
                 console.error('Erro ao buscar estoque:', err);
@@ -173,7 +197,7 @@
         function filterStock() {
             const filterValue = document.getElementById('status-filter').value;
 
-            const filteredData = allStockItems.filter(item => {
+            currentFilteredItems = allStockItems.filter(item => {
                 const qty = item.estoque !== null && item.estoque !== undefined ? item.estoque : 0;
 
                 if (filterValue === 'all') return true;
@@ -183,7 +207,42 @@
                 return true;
             });
 
-            renderStockTable(filteredData);
+            // Reset to page 1 on filter change
+            currentPage = 1;
+            renderPage();
+        }
+
+        function changePage(delta) {
+            const maxPage = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE) || 1;
+            const newPage = currentPage + delta;
+
+            if (newPage >= 1 && newPage <= maxPage) {
+                currentPage = newPage;
+                renderPage();
+            }
+        }
+
+        function renderPage() {
+            const maxPage = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE) || 1;
+            const start = (currentPage - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            const pageData = currentFilteredItems.slice(start, end);
+
+            renderStockTable(pageData);
+
+            // Update UI
+            document.getElementById('page-info').textContent = `Página ${currentPage} de ${maxPage} (${currentFilteredItems.length} itens)`;
+
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+            prevBtn.style.cursor = currentPage === 1 ? 'not-allowed' : 'pointer';
+
+            nextBtn.disabled = currentPage === maxPage;
+            nextBtn.style.opacity = currentPage === maxPage ? '0.5' : '1';
+            nextBtn.style.cursor = currentPage === maxPage ? 'not-allowed' : 'pointer';
         }
 
         function renderStockTable(data) {
