@@ -37,15 +37,20 @@ async function initAuthGuard() {
     }
 
     // 2. Setup do Botão de Logout (se existir na página)
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            logoutBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Saindo...';
-            await client.auth.signOut();
-            window.location.href = 'login.html';
-        });
-    }
+    const setupLogout = () => {
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            console.log("Logout button found, adding listener...");
+            logoutBtn.onclick = async (e) => {
+                e.preventDefault();
+                console.log("Logging out...");
+                logoutBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Saindo...';
+                await client.auth.signOut();
+                window.location.href = 'login.html';
+            };
+        }
+    };
+    setupLogout();
 }
 
 // Executar assim que carregar (ou esperar o DOM se o script estiver no head)
