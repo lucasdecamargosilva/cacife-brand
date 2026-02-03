@@ -1,19 +1,14 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-
 const app = express();
 app.set('trust proxy', 1);
 
 // Configuração usando variáveis de ambiente (para Easypanel)
 const PORT = process.env.PORT || 3000;
-const CHATWOOT_URL = process.env.CHATWOOT_URL || 'https://chatwoot.segredosdodrop.com';
-const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN || 'AXGGMhrWkqRShtLGFSSJyepr';
-const CHATWOOT_USER_ID = process.env.CHATWOOT_USER_ID || 1;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000'];
+    : ['http://localhost:3000', 'http://72.61.128.136:3000'];
 
 // 1) CORS para seu site chamar /api/chatwoot/sso com fetch + credentials
 app.use((req, res, next) => {
@@ -43,20 +38,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// 3) Endpoint SSO (pega a URL de login do Chatwoot)
-app.get('/api/chatwoot/sso', async (req, res) => {
-    try {
-        const response = await axios.get(
-            `${CHATWOOT_URL}/platform/api/v1/users/${CHATWOOT_USER_ID}/login`,
-            { headers: { api_access_token: PLATFORM_TOKEN } }
-        );
 
-        res.json({ success: true, ssoUrl: response.data.url });
-    } catch (error) {
-        console.error('❌ Erro SSO:', error.response?.data || error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
 
 // 3) Servir seus arquivos locais (Quantic)
 // (Sem wildcard tipo /*.html — isso que estava quebrando) [web:43][web:46]
@@ -140,14 +122,10 @@ app.use(
             }
         },
 
-        onError: (err, req, res) => {
-            console.error('❌ Proxy error:', err.message);
-            if (!res.headersSent) res.status(500).send('Proxy error');
-        },
-    })
-);
+        // 3) Servir seus arquivos locais (Quantic)
+        app.use(express.static(__dirname, { index: false }));
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server em http://localhost:${PORT}`);
-    console.log(`📄 Abra: http://localhost:${PORT}/conversas.html`);
-});
+        app.listen(PORT, () => {
+            console.log(`🚀 Server em http://localhost:${PORT}`);
+            console.log(`📄 Abra: http://localhost:${PORT}/conversas.html`);
+        });
