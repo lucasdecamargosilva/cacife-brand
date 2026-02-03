@@ -110,21 +110,16 @@
                                 </table>
                             </div>
 
-                            <!-- Pagination Controls -->
+                            <!-- Pagination Controls (Advanced) -->
                             <div class="pagination-controls"
                                 style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-top: 1px solid var(--border-color);">
                                 <span id="page-info"
-                                    style="color: var(--text-muted); font-size: 14px; font-weight: 500;">Página 1 de
-                                    1</span>
-                                <div style="display: flex; gap: 8px;">
-                                    <button id="prev-page" onclick="changePage(-1)" disabled
-                                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center;">
-                                        <i class="ph ph-caret-left"></i>
-                                    </button>
-                                    <button id="next-page" onclick="changePage(1)" disabled
-                                        style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center;">
-                                        <i class="ph ph-caret-right"></i>
-                                    </button>
+                                    style="color: var(--text-muted); font-size: 14px; font-weight: 500;">
+                                    Mostrando 0-0 de 0
+                                </span>
+
+                                <div class="pagination-buttons" style="display: flex; gap: 6px; align-items: center;">
+                                    <!-- Dynamic Buttons will be inserted here -->
                                 </div>
                             </div>
                         </div>
@@ -170,23 +165,20 @@
                 const { data, error } = await supabaseClient
                     .from('cacife_estoque')
                     .select('id, nome, estoque')
-                    .order('estoque', { ascending: false }); // Sort by stock descending
+                    .order('estoque', { ascending: false });
 
                 console.log('📦 Resposta do Supabase (Estoque):', data);
-                console.log('❌ Erro (se houver):', error);
-
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum item encontrado no estoque.</td></tr>';
-                    // Hide pagination if no data
                     document.querySelector('.pagination-controls').style.display = 'none';
                     return;
                 }
 
                 allStockItems = data;
                 document.querySelector('.pagination-controls').style.display = 'flex';
-                filterStock(); // Initial render via filter
+                filterStock();
 
             } catch (err) {
                 console.error('Erro ao buscar estoque:', err);
@@ -207,42 +199,116 @@
                 return true;
             });
 
-            // Reset to page 1 on filter change
             currentPage = 1;
             renderPage();
         }
 
-        function changePage(delta) {
-            const maxPage = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE) || 1;
-            const newPage = currentPage + delta;
-
-            if (newPage >= 1 && newPage <= maxPage) {
-                currentPage = newPage;
-                renderPage();
-            }
+        function changePage(page) {
+            currentPage = page;
+            renderPage();
         }
 
         function renderPage() {
-            const maxPage = Math.ceil(currentFilteredItems.length / ITEMS_PER_PAGE) || 1;
-            const start = (currentPage - 1) * ITEMS_PER_PAGE;
-            const end = start + ITEMS_PER_PAGE;
-            const pageData = currentFilteredItems.slice(start, end);
+            const totalItems = currentFilteredItems.length;
+            const maxPage = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
 
+            // Ensure bounds
+            if (currentPage < 1) currentPage = 1;
+            if (currentPage > maxPage) currentPage = maxPage;
+
+            const start = (currentPage - 1) * ITEMS_PER_PAGE;
+            const end = Math.min(start + ITEMS_PER_PAGE, totalItems);
+
+            // Data render
+            const pageData = currentFilteredItems.slice(start, end);
             renderStockTable(pageData);
 
-            // Update UI
-            document.getElementById('page-info').textContent = `Página ${currentPage} de ${maxPage} (${currentFilteredItems.length} itens)`;
+            // Left text update
+            const startDisplay = totalItems === 0 ? 0 : start + 1;
+            document.getElementById('page-info').textContent = `Mostrando ${startDisplay}-${end} de ${totalItems}`;
 
-            const prevBtn = document.getElementById('prev-page');
-            const nextBtn = document.getElementById('next-page');
+            renderPaginationButtons(maxPage);
+        }
 
-            prevBtn.disabled = currentPage === 1;
-            prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
-            prevBtn.style.cursor = currentPage === 1 ? 'not-allowed' : 'pointer';
+        function renderPaginationButtons(maxPage) {
+            const container = document.querySelector('.pagination-buttons');
+            container.innerHTML = '';
 
-            nextBtn.disabled = currentPage === maxPage;
-            nextBtn.style.opacity = currentPage === maxPage ? '0.5' : '1';
-            nextBtn.style.cursor = currentPage === maxPage ? 'not-allowed' : 'pointer';
+            // Helper to create button
+            const createBtn = (text, page, isActive = false, isDisabled = false) => {
+                const btn = document.createElement('button');
+                btn.innerHTML = text; // allow HTML for icons
+
+                // Base styles
+                btn.style.minWidth = '32px';
+                btn.style.height = '32px';
+                btn.style.display = 'flex';
+                btn.style.alignItems = 'center';
+                btn.style.justifyContent = 'center';
+                btn.style.borderRadius = '6px';
+                btn.style.border = '1px solid var(--border-color)';
+                btn.style.background = 'rgba(255,255,255,0.05)';
+                btn.style.color = 'var(--text-white)';
+                btn.style.cursor = 'pointer';
+                btn.style.fontSize = '13px';
+                btn.style.transition = 'all 0.2s';
+                btn.style.padding = '0 6px';
+
+                if (isActive) {
+                    btn.style.background = '#8b5cf6'; // Purple highlight
+                    btn.style.borderColor = '#8b5cf6';
+                    btn.style.fontWeight = '600';
+                }
+
+                if (isDisabled) {
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                    btn.disabled = true;
+                } else {
+                    btn.onclick = () => changePage(page);
+                }
+
+                return btn;
+            };
+
+            // Previous Button
+            container.appendChild(createBtn('<i class="ph ph-caret-left"></i>', currentPage - 1, false, currentPage === 1));
+
+            // Logic for ellipsis
+            // Always show 1
+            // Always show maxPage
+            // Show currentPage - 1, currentPage, currentPage + 1
+
+            const range = [];
+            const delta = 1;
+
+            for (let i = 1; i <= maxPage; i++) {
+                if (i === 1 || i === maxPage || (i >= currentPage - delta && i <= currentPage + delta)) {
+                    range.push(i);
+                }
+            }
+
+            let lastPage = 0;
+            range.forEach(i => {
+                if (lastPage > 0) {
+                    if (i - lastPage === 2) {
+                        // Gap is small, just fill it
+                        container.appendChild(createBtn(lastPage + 1, lastPage + 1, (lastPage + 1) === currentPage));
+                    } else if (i - lastPage > 2) {
+                        // Big gap, add ellipsis
+                        const dots = document.createElement('span');
+                        dots.textContent = '...';
+                        dots.style.color = 'var(--text-muted)';
+                        dots.style.padding = '0 4px';
+                        container.appendChild(dots);
+                    }
+                }
+                container.appendChild(createBtn(i, i, i === currentPage));
+                lastPage = i;
+            });
+
+            // Next Button
+            container.appendChild(createBtn('<i class="ph ph-caret-right"></i>', currentPage + 1, false, currentPage === maxPage));
         }
 
         function renderStockTable(data) {
