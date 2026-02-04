@@ -79,6 +79,7 @@
 
                     <div class="header-center">
                         <div class="filter-group">
+                            <button class="period-btn" data-period="today">Hoje</button>
                             <button class="period-btn active" data-period="7">7 Dias</button>
                             <button class="period-btn" data-period="30">30 Dias</button>
                             <button class="period-btn" data-period="all">Tudo</button>
@@ -129,9 +130,9 @@
                         </div>
                     </section>
 
-                    <!-- Operational KPI Row (Compact) -->
+                    <!-- Operational KPI Group 1: General & Financial -->
                     <section class="kpi-grid"
-                        style="grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
+                        style="grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
                         <div class="card kpi-card kpi-card-filter active-filter" id="card-filter-all"
                             onclick="setRevenueFilter('all')" style="padding: 15px;">
                             <div class="card-content">
@@ -140,9 +141,70 @@
                                     <i class="ph-fill ph-receipt" style="font-size: 20px;"></i>
                                     <span>---</span>
                                 </h3>
+                                <span class="subtext" style="font-size: 11px;">(Confirmados, Pendentes e
+                                    Cancelados)</span>
                             </div>
                         </div>
 
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-paid"
+                            onclick="setRevenueFilter('paid')" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Pedidos Pagos</span>
+                                <h3 id="kpi-paid-confirmed-orders" class="value text-success"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-check-circle" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-paid-confirmed-percent" class="subtext"
+                                    style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-pending"
+                            onclick="setRevenueFilter('pending')" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Pagamentos Pendentes</span>
+                                <h3 id="kpi-pending-status-orders" class="value text-warning"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-clock" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-pending-status-percent" class="subtext"
+                                    style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-rejected"
+                            onclick="setRevenueFilter('rejected')" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Pagamento Recusado</span>
+                                <h3 id="kpi-rejected-status-orders" class="value text-danger"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-warning-circle" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-rejected-status-percent" class="subtext"
+                                    style="font-size: 11px;">---%</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-cancelled"
+                            onclick="setRevenueFilter('cancelled')" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Cancelados</span>
+                                <h3 id="kpi-cancelled-orders" class="value text-danger"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-x-circle" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <div id="kpi-cancelled-percent" class="subtext" style="font-size: 11px;">---%</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Operational KPI Group 2: Logistics -->
+                    <section class="kpi-grid"
+                        style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
                         <div class="card kpi-card kpi-card-filter" id="card-filter-to_send"
                             onclick="setRevenueFilter('to_send')" style="padding: 15px;">
                             <div class="card-content">
@@ -179,19 +241,6 @@
                                     <span>---</span>
                                 </h3>
                                 <span id="kpi-delivered-percent" class="subtext" style="font-size: 11px;">---%</span>
-                            </div>
-                        </div>
-
-                        <div class="card kpi-card kpi-card-filter" id="card-filter-cancelled"
-                            onclick="setRevenueFilter('cancelled')" style="padding: 15px;">
-                            <div class="card-content">
-                                <span class="label" style="font-size: 12px;">Cancelados</span>
-                                <h3 id="kpi-cancelled-orders" class="value text-danger"
-                                    style="font-size: 24px; gap: 8px;">
-                                    <i class="ph-fill ph-x-circle" style="font-size: 20px;"></i>
-                                    <span>---</span>
-                                </h3>
-                                <div id="kpi-cancelled-percent" class="subtext" style="font-size: 11px;">---%</div>
                             </div>
                         </div>
                     </section>
@@ -332,6 +381,66 @@
         </div>
     </div>
 
+    <!-- Modal de Detalhes do Pedido -->
+    <div id="order-modal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title">Detalhes do Pedido</h3>
+                <button class="close-modal" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="order-detail-grid">
+                    <div class="detail-item">
+                        <label>Cliente</label>
+                        <span id="modal-customer-name">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Email</label>
+                        <span id="modal-customer-email">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>WhatsApp</label>
+                        <span id="modal-customer-phone">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Data do Pedido</label>
+                        <span id="modal-order-date">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status de Pagamento</label>
+                        <span id="modal-payment-status">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Status de Entrega</label>
+                        <span id="modal-shipping-status">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Código de Rastreio</label>
+                        <span id="modal-tracking-code">---</span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Cidade</label>
+                        <span id="modal-shipping-city">---</span>
+                    </div>
+                </div>
+
+                <div class="products-section">
+                    <h4>Produtos Adquiridos</h4>
+                    <div id="modal-products-list">
+                        <!-- Produtos serão inseridos aqui -->
+                    </div>
+                </div>
+
+                <div class="order-total-section">
+                    <div class="total-display">
+                        <div class="total-label">Total do Pedido</div>
+                        <div id="modal-order-total" class="total-value">R$ 0,00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -364,10 +473,16 @@
             endDate = now.toISOString();
 
             if (period === 'custom' && customStart && customEnd) {
-                startDate = new Date(customStart).toISOString();
-                endDate = new Date(customEnd + 'T23:59:59').toISOString();
+                // Ensure we use UTC to avoid local timezone shifts
+                startDate = `${customStart}T00:00:00.000Z`;
+                endDate = `${customEnd}T23:59:59.999Z`;
             } else if (period === 'all') {
                 startDate = '2000-01-01T00:00:00Z';
+                endDate = now.toISOString();
+            } else if (period === 'today') {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                startDate = today.toISOString();
                 endDate = now.toISOString();
             } else {
                 const days = parseInt(period);
@@ -411,23 +526,23 @@
         function updateDashboard(orders) {
             const total = orders.length;
 
-            // KPIs
-            const paid = orders.filter(o => {
-                const s = o.payment_status?.toLowerCase();
-                return s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado';
-            }).length;
+            // Vendas: Confirmado E NÃO Cancelado
+            const salesOrders = orders.filter(o => {
+                const payStatus = o.payment_status?.toLowerCase();
+                const orderStatus = o.status?.toLowerCase();
+                return payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+            });
 
-            const revenue = orders.reduce((acc, curr) => {
-                const s = curr.payment_status?.toLowerCase();
-                if (s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado' || s === 'confirmado') {
-                    return acc + (parseFloat(curr.total) || 0);
-                }
-                return acc;
-            }, 0);
+            const paidConfirmed = salesOrders.length;
+            const revenue = salesOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
             const toSend = orders.filter(o => {
-                const s = o.shipping_status?.toLowerCase();
-                return s === 'não está embalado';
+                const shipStatus = o.shipping_status?.toLowerCase();
+                const payStatus = o.payment_status?.toLowerCase();
+                const orderStatus = o.status?.toLowerCase();
+                // A enviar: Seguindo regra de venda (Confirmado e não cancelado) + não embalado
+                const isSale = payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                return shipStatus === 'não está embalado' && isSale;
             }).length;
 
             const shipped = orders.filter(o => {
@@ -445,10 +560,19 @@
                 return s === 'cancelled' || s === 'cancelado';
             }).length;
 
-            const pendingOrders = orders.filter(o => {
+            // Recusados: payment_status == 'recusado'
+            const rejectedStatus = orders.filter(o => {
                 const s = o.payment_status?.toLowerCase();
-                return s === 'pending' || s === 'pendente';
+                return s === 'recusado';
+            }).length;
+
+            // Pagamentos Pendentes: Pagamento 'pendente' E pedido NÃO cancelado
+            const pendingOrders = orders.filter(o => {
+                const payStatus = o.payment_status?.toLowerCase();
+                const orderStatus = o.status?.toLowerCase();
+                return payStatus === 'pendente' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
             });
+            const pendingStatus = pendingOrders.length;
             const pendingCount = pendingOrders.length;
             const pendingSum = pendingOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
@@ -469,6 +593,16 @@
             document.querySelector('#kpi-cancelled-orders span').textContent = cancelled;
             document.getElementById('kpi-cancelled-percent').textContent = total > 0 ? ((cancelled / total) * 100).toFixed(1) + '% do total' : '0% do total';
 
+            // New KPIs
+            document.querySelector('#kpi-paid-confirmed-orders span').textContent = paidConfirmed;
+            document.getElementById('kpi-paid-confirmed-percent').textContent = total > 0 ? ((paidConfirmed / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-pending-status-orders span').textContent = pendingStatus;
+            document.getElementById('kpi-pending-status-percent').textContent = total > 0 ? ((pendingStatus / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-rejected-status-orders span').textContent = rejectedStatus;
+            document.getElementById('kpi-rejected-status-percent').textContent = total > 0 ? ((rejectedStatus / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
 
 
             // Charts (Now dynamic based on user column requests)
@@ -479,6 +613,25 @@
             renderGatewayChart(orders);
             renderRegionChart(orders);
             renderOrdersTable();
+        }
+
+        function formatBrasilianDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return 'N/A';
+
+            // Usamos UTC para garantir que a data YYYY-MM-DD não sofra deslocamento de fuso
+            return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        }
+
+        function cleanTrackingCode(trk) {
+            if (!trk) return '';
+            let s = String(trk).trim();
+            // Remove pattern like ="CODE"
+            if (s.startsWith('="') && s.endsWith('"')) {
+                s = s.substring(2, s.length - 1);
+            }
+            return s;
         }
 
         function formatPhone(phone) {
@@ -540,9 +693,57 @@
                 return true;
             });
 
+            // Agrupar pedidos por id_pedido (para consolidar produtos do mesmo pedido)
+            const groupedList = [];
+            const orderMap = new Map();
+
+            filteredOrders.forEach(item => {
+                // Tenta pegar o ID do pedido de várias formas possíveis
+                let orderId = item.id_pedido || item.id_order || item.order_id;
+
+                // Força string para evitar problemas de tipos diferentes no Map
+                let key;
+                if (orderId !== undefined && orderId !== null && String(orderId).trim() !== '') {
+                    key = String(orderId).trim();
+                } else {
+                    // Fallback para email + data se não houver ID
+                    const datePart = item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : 'no-date';
+                    key = `${item.customer_email || 'sem-email'}_${datePart}`;
+                }
+
+                const pName = (item.product_name || item.produtct_name || 'Produto não especificado').trim();
+
+                // Limpeza básica do valor total (remove R$, espaços, etc para somar corretamente)
+                const parseTotal = (val) => {
+                    if (typeof val === 'number') return val;
+                    if (!val) return 0;
+                    return parseFloat(String(val).replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+                };
+
+                const itemTotal = parseTotal(item.total);
+
+                if (orderMap.has(key)) {
+                    const existing = orderMap.get(key);
+                    // Adiciona o produto na lista deste pedido
+                    existing.all_products.push(pName);
+                    // Somar o total
+                    existing.calculated_total += itemTotal;
+                } else {
+                    // Criamos um novo objeto de pedido agrupado
+                    const newItem = {
+                        ...item,
+                        all_products: [pName],
+                        calculated_total: itemTotal
+                    };
+                    orderMap.set(key, newItem);
+                    groupedList.push(newItem);
+                }
+            });
+
+
             const startIndex = (currentOrdersPage - 1) * ordersPerPage;
             const endIndex = startIndex + ordersPerPage;
-            const paginatedData = filteredOrders.slice(startIndex, endIndex);
+            const paginatedData = groupedList.slice(startIndex, endIndex);
 
             if (paginatedData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
@@ -559,8 +760,9 @@
                 const formattedPhone = formatPhone(rawPhone);
 
                 const rawTrk = item.shipping_tracking_number || item.shipping_traking_number;
-                const hasTracking = rawTrk && String(rawTrk).toLowerCase() !== 'null' && String(rawTrk).trim() !== '';
-                const trackingCode = hasTracking ? String(rawTrk) : 'Não enviado';
+                const cleanTrk = cleanTrackingCode(rawTrk);
+                const hasTracking = cleanTrk && cleanTrk.toLowerCase() !== 'null' && cleanTrk.trim() !== '';
+                const trackingCode = hasTracking ? cleanTrk : 'Não enviado';
 
                 const productName = item.product_name || item.produtct_name || 'N/A';
                 const customerName = item.customer_name || 'N/A';
@@ -579,10 +781,19 @@
                     shipStatusDisp = 'A Enviar';
                 }
 
-                const date = new Date(item.created_at);
-                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const formattedDate = formatBrasilianDate(item.created_at);
 
-                const message = `Olá ${customerName}, tudo bem? Sou da Cacife Brand! 🌟\n\nPassando para informar que seu pedido do produto *${productName}* já foi processado. ✅\n\nSeu código de rastreio é: *${trackingCode}*\n\nVocê pode acompanhar a entrega através do site da transportadora. Qualquer dúvida, estamos à disposição!`;
+                tr.onclick = (e) => {
+                    // Don't open modal if clicking the action button
+                    if (e.target.closest('.apply-btn')) return;
+                    openOrderModal(item);
+                };
+
+                const productDisplay = item.all_products.length > 1
+                    ? `${item.all_products[0]} (+${item.all_products.length - 1})`
+                    : item.all_products[0];
+
+                const message = `Olá ${customerName}, tudo bem? Sou da Cacife Brand! 🌟\n\nPassando para informar que seu pedido dos produtos: *${item.all_products.join(', ')}* já foi processado. ✅\n\nSeu código de rastreio é: *${trackingCode}*\n\nVocê pode acompanhar a entrega através do site da transportadora. Qualquer dúvida, estamos à disposição!`;
 
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
                 const isAEnviar = shipStatusDisp === 'A Enviar';
@@ -609,7 +820,7 @@
             });
 
             // Update Pagination UI
-            const total = filteredOrders.length;
+            const total = groupedList.length;
             const countEl = document.getElementById('orders-title-count');
             if (countEl) countEl.textContent = `(${total})`;
 
@@ -679,6 +890,10 @@
                 else if (status === 'shipped') suffix = ' (Enviados)';
                 else if (status === 'delivered') suffix = ' (Entregues)';
                 else if (status === 'cancelled') suffix = ' (Cancelados)';
+                else if (status === 'paid') suffix = ' (Pagos)';
+                else if (status === 'pending') suffix = ' (Pendentes)';
+                else if (status === 'rejected') suffix = ' (Recusados)';
+                else if (status === 'all') suffix = ' (Visão Geral)';
 
                 chartTitle.innerHTML = `<i class="ph-fill ph-chart-line"></i> Evolução de Faturamento${suffix}`;
             }
@@ -690,102 +905,116 @@
             const ctx = document.getElementById('chart-revenue-evolution').getContext('2d');
             if (charts.revenue) charts.revenue.destroy();
 
-            const dateMap = {};
+            const statuses = [
+                { id: 'all', label: 'Total', color: '#3b82f6' },
+                { id: 'paid', label: 'Pagos', color: '#22c55e' },
+                { id: 'pending', label: 'Pendentes', color: '#f59e0b' },
+                { id: 'rejected', label: 'Recusados', color: '#ef4444' },
+                { id: 'to_send', label: 'A Enviar', color: '#eab308' },
+                { id: 'shipped', label: 'Enviados', color: '#9b4dff' },
+                { id: 'delivered', label: 'Entregues', color: '#10b981' },
+                { id: 'cancelled', label: 'Cancelados', color: '#ef4444' }
+            ];
 
-            // Filter orders based on selection
-            const filteredOrders = orders.filter(o => {
-                const payStatus = (o.payment_status || '').toLowerCase();
-                const isPaid = payStatus === 'paid' || payStatus === 'pago' || payStatus === 'approved' || payStatus === 'aprovado' || payStatus === 'confirmado';
+            const allDates = new Set();
+            const dataSetsMap = {};
 
-                // Base filter: only consider valid revenue for 'all', but maybe we want to see lost revenue for 'cancelled'?
-                // Request says 'faturamento', usually means confirmed money.
-
-                const shipStatus = (o.shipping_status || '').toLowerCase();
-                const status = (o.status || '').toLowerCase();
-
-                if (currentRevenueFilter === 'all') {
-                    return isPaid;
-                } else if (currentRevenueFilter === 'to_send') {
-                    return isPaid && shipStatus === 'não está embalado';
-                } else if (currentRevenueFilter === 'shipped') {
-                    return isPaid && (shipStatus === 'shipped' || shipStatus === 'enviado');
-                } else if (currentRevenueFilter === 'delivered') {
-                    return isPaid && (shipStatus === 'delivered' || shipStatus === 'entregue');
-                } else if (currentRevenueFilter === 'cancelled') {
-                    // For cancelled, usually revenue is 0 or refunded, but let's show order totals for cancelled orders 
-                    // that MIGHT have been paid or just to show the volume of separate "cancelled revenue" (lost)
-                    // If strictly revenue, maybe only paid ones? Assuming user wants to see the value of cancelled orders.
-                    return status === 'cancelled' || status === 'cancelado';
-                }
-                return isPaid;
+            statuses.forEach(s => {
+                dataSetsMap[s.id] = {};
             });
 
-            filteredOrders.forEach(o => {
+            orders.forEach(o => {
                 if (!o.created_at) return;
                 const dateObj = new Date(o.created_at);
                 if (isNaN(dateObj.getTime())) return;
 
                 let dateKey;
                 if (currentPeriod === 'all') {
-                    // Group by Month: YYYY-MM
                     const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
                     const y = dateObj.getFullYear();
                     dateKey = `${y}-${m}`;
                 } else {
-                    // Group by Day: YYYY-MM-DD
                     const d = dateObj.getDate().toString().padStart(2, '0');
                     const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
                     const y = dateObj.getFullYear();
                     dateKey = `${y}-${m}-${d}`;
                 }
+                allDates.add(dateKey);
 
-                dateMap[dateKey] = (dateMap[dateKey] || 0) + (parseFloat(o.total) || 0);
+                const payStatus = (o.payment_status || '').toLowerCase();
+                const shipStatus = (o.shipping_status || '').toLowerCase();
+                const orderStatus = (o.status || '').toLowerCase();
+                const val = parseFloat(o.total) || 0;
+
+                // Venda (Vendas): Confirmado e não cancelado
+                const isSale = payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                // Recusado: payment_status == 'recusado'
+                const isRejected = payStatus === 'recusado';
+                // Cancelado: status == 'cancelado'
+                const isCancelled = orderStatus === 'cancelled' || orderStatus === 'cancelado';
+
+                // All (Total order volume - no status filter)
+                dataSetsMap['all'][dateKey] = (dataSetsMap['all'][dateKey] || 0) + val;
+
+                // Specifics mapping to user's new rules
+                if (isSale) dataSetsMap['paid'][dateKey] = (dataSetsMap['paid'][dateKey] || 0) + val;
+
+                // Pendentes: Pagamento 'pendente' E NÃO cancelado
+                if (payStatus === 'pendente' && !isCancelled) dataSetsMap['pending'][dateKey] = (dataSetsMap['pending'][dateKey] || 0) + val;
+
+                if (isRejected) dataSetsMap['rejected'][dateKey] = (dataSetsMap['rejected'][dateKey] || 0) + val;
+                if (isCancelled) dataSetsMap['cancelled'][dateKey] = (dataSetsMap['cancelled'][dateKey] || 0) + val;
+
+                // Logistics still based on Sales status
+                if (isSale && shipStatus === 'não está embalado') dataSetsMap['to_send'][dateKey] = (dataSetsMap['to_send'][dateKey] || 0) + val;
+                if (isSale && (shipStatus === 'shipped' || shipStatus === 'enviado')) dataSetsMap['shipped'][dateKey] = (dataSetsMap['shipped'][dateKey] || 0) + val;
+                if (isSale && (shipStatus === 'delivered' || shipStatus === 'entregue')) dataSetsMap['delivered'][dateKey] = (dataSetsMap['delivered'][dateKey] || 0) + val;
             });
 
-            const sortedKeys = Object.keys(dateMap).sort();
-            const labels = sortedKeys.map(key => {
+            const sortedDates = Array.from(allDates).sort();
+            const labels = sortedDates.map(key => {
                 const p = key.split('-');
-                if (p.length === 2) return `${p[1]}/${p[0]}`; // MM/YYYY
-                return `${p[2]}/${p[1]}`; // DD/MM
+                if (p.length === 2) return `${p[1]}/${p[0]}`;
+                return `${p[2]}/${p[1]}`;
             });
-            const data = sortedKeys.map(key => dateMap[key]);
 
-            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(155, 77, 255, 0.4)');
-            gradient.addColorStop(1, 'rgba(155, 77, 255, 0)');
+            const datasets = statuses.map(s => {
+                const isHidden = currentRevenueFilter !== 'all' && currentRevenueFilter !== s.id;
 
-            let lineColor = '#9b4dff';
-            if (currentRevenueFilter === 'cancelled') lineColor = '#ef4444';
-            else if (currentRevenueFilter === 'delivered') lineColor = '#22c55e';
-            else if (currentRevenueFilter === 'to_send') lineColor = '#f59e0b';
+                return {
+                    label: s.label,
+                    data: sortedDates.map(date => dataSetsMap[s.id][date] || 0),
+                    borderColor: s.color,
+                    backgroundColor: 'transparent',
+                    borderWidth: currentRevenueFilter === s.id ? 4 : 2,
+                    pointBackgroundColor: s.color,
+                    pointRadius: currentRevenueFilter === s.id ? 5 : 3,
+                    tension: 0.4,
+                    hidden: isHidden // Oculta os outros dataset se um filtro específico estiver ativo, ou mostra tudo se 'all'
+                };
+            });
 
             charts.revenue = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'Faturamento (R$)',
-                        data: data,
-                        borderColor: lineColor,
-                        backgroundColor: gradient,
-                        borderWidth: 3,
-                        pointBackgroundColor: lineColor,
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4,
-                        tension: 0.4,
-                        fill: true
-                    }]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#fff', usePointStyle: true, padding: 15 }
+                        },
                         tooltip: {
+                            mode: 'index',
+                            intersect: false,
                             callbacks: {
                                 label: (context) => {
-                                    return 'Valor: ' + context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                                 }
                             }
                         }
@@ -806,6 +1035,63 @@
                     }
                 }
             });
+        }
+
+        function openOrderModal(order) {
+            const modal = document.getElementById('order-modal');
+            const formattedDate = formatBrasilianDate(order.created_at);
+
+            document.getElementById('modal-customer-name').textContent = order.customer_name || 'N/A';
+            document.getElementById('modal-customer-email').textContent = order.customer_email || 'N/A';
+            document.getElementById('modal-customer-phone').textContent = formatPhone(order.customer_phone);
+            document.getElementById('modal-order-date').textContent = formattedDate;
+            document.getElementById('modal-payment-status').textContent = (order.payment_status || 'N/A').toUpperCase();
+            document.getElementById('modal-shipping-status').textContent = (order.shipping_status || 'N/A').toUpperCase();
+            const rawTrk = order.shipping_tracking_number || order.shipping_traking_number;
+            const cleanTrk = cleanTrackingCode(rawTrk);
+            document.getElementById('modal-tracking-code').textContent = (cleanTrk && cleanTrk.toLowerCase() !== 'null') ? cleanTrk : 'Não disponível';
+            document.getElementById('modal-shipping-city').textContent = order.shipping_city || 'N/A';
+
+            const totalValue = order.calculated_total || parseFloat(order.total) || 0;
+            document.getElementById('modal-order-total').textContent = totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Render Products
+            const productsList = document.getElementById('modal-products-list');
+            productsList.innerHTML = '';
+
+            console.log('[Modal] Abrindo pedido:', order);
+            console.log('[Modal] all_products:', order.all_products);
+
+            // Prioriza o array all_products criado no agrupamento
+            const products = order.all_products && order.all_products.length > 0
+                ? order.all_products
+                : [order.product_name || order.produtct_name || 'Produto não especificado'];
+
+            console.log('[Modal] Renderizando', products.length, 'produtos:', products);
+
+            products.forEach((pName, index) => {
+                const productItem = document.createElement('div');
+                productItem.className = 'product-item';
+                productItem.innerHTML = `
+                    <div class="product-info">
+                        <i class="ph-fill ph-package" style="font-size: 24px; color: #9B4DFF;"></i>
+                        <span class="product-name">${pName}</span>
+                    </div>
+                `;
+                productsList.appendChild(productItem);
+                console.log(`[Modal] Produto ${index + 1} adicionado: ${pName}`);
+            });
+
+            modal.classList.add('active');
+
+            // Close modal when clicking outside
+            modal.onclick = (e) => {
+                if (e.target === modal) closeOrderModal();
+            };
+        }
+
+        function closeOrderModal() {
+            document.getElementById('order-modal').classList.remove('active');
         }
 
         function getChartColors() {
