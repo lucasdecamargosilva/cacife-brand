@@ -658,9 +658,34 @@ body {
 }
 
 .card-header h3 i {
-    color: #ffffff;
-    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+    font-size: 20px;
+    color: var(--accent-primary);
 }
+
+.chart-filters-container {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px 12px;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-filter-label {
+    transition: all 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.chart-filter-label:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
+}
+
+.revenue-filter-checkbox {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+}
+
 
 /* Table Styles */
 .table-container {

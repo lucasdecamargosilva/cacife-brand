@@ -132,7 +132,7 @@
 
                     <!-- Operational KPI Group 1: General & Financial -->
                     <section class="kpi-grid"
-                        style="grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
+                        style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px;">
                         <div class="card kpi-card kpi-card-filter active-filter" id="card-filter-all"
                             onclick="setRevenueFilter('all')" style="padding: 15px;">
                             <div class="card-content">
@@ -175,6 +175,20 @@
                                     style="font-size: 11px;">---%</span>
                                 <span class="subtext" style="font-size: 11px; display: block;">(Apenas pedidos
                                     abertos)</span>
+                            </div>
+                        </div>
+
+                        <div class="card kpi-card kpi-card-filter" id="card-filter-partial_refund"
+                            onclick="setRevenueFilter('partial_refund')" style="padding: 15px;">
+                            <div class="card-content">
+                                <span class="label" style="font-size: 12px;">Parcialmente Estornado</span>
+                                <h3 id="kpi-partial-refund-orders" class="value text-warning"
+                                    style="font-size: 24px; gap: 8px;">
+                                    <i class="ph-fill ph-circle-wavy-warning" style="font-size: 20px;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span id="kpi-partial-refund-percent" class="subtext"
+                                    style="font-size: 11px;">---%</span>
                             </div>
                         </div>
 
@@ -222,6 +236,7 @@
                             </div>
                         </div>
 
+
                         <div class="card kpi-card kpi-card-filter" id="card-filter-shipped"
                             onclick="setRevenueFilter('shipped')" style="padding: 15px;">
                             <div class="card-content">
@@ -252,9 +267,10 @@
                     <!-- New Revenue Evolution Section -->
                     <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
                         <div class="card chart-card" style="min-height: 400px;">
-                            <div class="card-header">
-                                <h3><i class="ph-fill ph-chart-line"></i> Evolução de Faturamento</h3>
-
+                            <h3><i class="ph-fill ph-chart-line"></i> Evolução de Faturamento</h3>
+                            <div id="revenue-chart-filters" class="chart-filters-container"
+                                style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                                <!-- Filters will be generated dynamically -->
                             </div>
                             <div class="chart-container" style="min-height: 300px;">
                                 <canvas id="chart-revenue-evolution"></canvas>
@@ -573,7 +589,6 @@
                 return s === 'recusado';
             }).length;
 
-            // Pagamentos Pendentes: Pagamento ('pendente' OU 'pending') E pedido NÃO cancelado
             const pendingOrders = orders.filter(o => {
                 const payStatus = o.payment_status?.toLowerCase();
                 const orderStatus = o.status?.toLowerCase();
@@ -583,6 +598,13 @@
             const pendingStatus = pendingOrders.length;
             const pendingCount = pendingOrders.length;
             const pendingSum = pendingOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
+
+            // Parcialmente Estornado
+            const partialRefundOrders = orders.filter(o => {
+                const s = o.payment_status?.toLowerCase() || '';
+                return s.includes('parcialmente estornado');
+            });
+            const partialRefundStatus = partialRefundOrders.length;
 
             document.querySelector('#kpi-total-orders span').textContent = total;
             document.querySelector('#top-revenue-value span').textContent = revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -600,6 +622,9 @@
 
             document.querySelector('#kpi-cancelled-orders span').textContent = cancelled;
             document.getElementById('kpi-cancelled-percent').textContent = total > 0 ? ((cancelled / total) * 100).toFixed(1) + '% do total' : '0% do total';
+
+            document.querySelector('#kpi-partial-refund-orders span').textContent = partialRefundStatus;
+            document.getElementById('kpi-partial-refund-percent').textContent = total > 0 ? ((partialRefundStatus / total) * 100).toFixed(1) + '% do total' : '0% do total';
 
             // New KPIs
             document.querySelector('#kpi-paid-confirmed-orders span').textContent = paidConfirmed;
@@ -879,35 +904,45 @@
             }
         }
 
-        let currentRevenueFilter = 'all';
+        let activeRevenueFilters = new Set(['all', 'paid', 'pending', 'rejected']); // Default active lines
+
+        function toggleRevenueFilter(status) {
+            if (status === 'all_toggle') {
+                const allActive = Array.from(document.querySelectorAll('.revenue-filter-checkbox')).every(cb => cb.checked);
+                document.querySelectorAll('.revenue-filter-checkbox').forEach(cb => {
+                    cb.checked = !allActive;
+                    if (!allActive) activeRevenueFilters.add(cb.dataset.status);
+                    else activeRevenueFilters.delete(cb.dataset.status);
+                });
+            } else {
+                if (activeRevenueFilters.has(status)) {
+                    activeRevenueFilters.delete(status);
+                } else {
+                    activeRevenueFilters.add(status);
+                }
+            }
+            renderRevenueChart(allOrdersData);
+        }
 
         function setRevenueFilter(status) {
-            currentRevenueFilter = status;
+            // This function is still called by KPI cards
+            // If user clicks a KPI card, we can either:
+            // 1. Reset filters to ONLY show that one
+            // 2. Toggle that one
+            // Let's go with (1) for clearer intent when clicking a specific card
 
-            // Update UI
-            document.querySelectorAll('.kpi-card-filter').forEach(card => card.classList.remove('active-filter'));
-            const cardId = `card-filter-${status}`;
-            const card = document.getElementById(cardId);
-            if (card) card.classList.add('active-filter');
+            activeRevenueFilters.clear();
+            activeRevenueFilters.add(status);
 
-            // Find current chart title element and update it
-            const chartTitle = document.querySelector('#chart-revenue-evolution').parentElement.previousElementSibling.querySelector('h3');
-            if (chartTitle) {
-                let suffix = '';
-                if (status === 'to_send') suffix = ' (A Enviar)';
-                else if (status === 'shipped') suffix = ' (Enviados)';
-                else if (status === 'delivered') suffix = ' (Entregues)';
-                else if (status === 'cancelled') suffix = ' (Cancelados)';
-                else if (status === 'paid') suffix = ' (Pagos)';
-                else if (status === 'pending') suffix = ' (Pendentes)';
-                else if (status === 'rejected') suffix = ' (Recusados)';
-                else if (status === 'all') suffix = ' (Visão Geral)';
-
-                chartTitle.innerHTML = `<i class="ph-fill ph-chart-line"></i> Evolução de Faturamento${suffix}`;
-            }
+            // Sync checkboxes UI
+            document.querySelectorAll('.revenue-filter-checkbox').forEach(cb => {
+                cb.checked = activeRevenueFilters.has(cb.dataset.status);
+            });
 
             renderRevenueChart(allOrdersData);
         }
+
+        renderRevenueChart(allOrdersData);
 
         function renderRevenueChart(orders) {
             const ctx = document.getElementById('chart-revenue-evolution').getContext('2d');
@@ -921,7 +956,8 @@
                 { id: 'to_send', label: 'A Enviar', color: '#eab308' },
                 { id: 'shipped', label: 'Enviados', color: '#9b4dff' },
                 { id: 'delivered', label: 'Entregues', color: '#10b981' },
-                { id: 'cancelled', label: 'Cancelados', color: '#ef4444' }
+                { id: 'cancelled', label: 'Cancelados', color: '#ef4444' },
+                { id: 'partial_refund', label: 'Parcial Estorno', color: '#f59e0b' }
             ];
 
             const allDates = new Set();
@@ -977,6 +1013,7 @@
 
                 if (isRejected) dataSetsMap['rejected'][dateKey] = (dataSetsMap['rejected'][dateKey] || 0) + val;
                 if (isCancelled) dataSetsMap['cancelled'][dateKey] = (dataSetsMap['cancelled'][dateKey] || 0) + val;
+                if (payStatus.includes('parcialmente estornado')) dataSetsMap['partial_refund'][dateKey] = (dataSetsMap['partial_refund'][dateKey] || 0) + val;
 
                 // Logistics still based on Sales status
                 const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
@@ -992,19 +1029,41 @@
                 return `${p[2]}/${p[1]}`;
             });
 
+            // Render Filter Checkboxes if container empty
+            const filterContainer = document.getElementById('revenue-chart-filters');
+            if (filterContainer && filterContainer.children.length === 0) {
+                statuses.forEach(s => {
+                    const label = document.createElement('label');
+                    label.className = 'chart-filter-label';
+                    label.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: #a3a3a3; user-select: none;';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'revenue-filter-checkbox';
+                    cb.dataset.status = s.id;
+                    cb.checked = activeRevenueFilters.has(s.id);
+                    cb.style.cssText = 'accent-color: ' + s.color;
+                    cb.onchange = () => toggleRevenueFilter(s.id);
+
+                    label.appendChild(cb);
+                    label.appendChild(document.createTextNode(s.label));
+                    filterContainer.appendChild(label);
+                });
+            }
+
             const datasets = statuses.map(s => {
-                const isHidden = currentRevenueFilter !== 'all' && currentRevenueFilter !== s.id;
+                const isHidden = !activeRevenueFilters.has(s.id);
 
                 return {
                     label: s.label,
                     data: sortedDates.map(date => dataSetsMap[s.id][date] || 0),
                     borderColor: s.color,
                     backgroundColor: 'transparent',
-                    borderWidth: currentRevenueFilter === s.id ? 4 : 2,
+                    borderWidth: isHidden ? 0 : 2,
                     pointBackgroundColor: s.color,
-                    pointRadius: currentRevenueFilter === s.id ? 5 : 3,
+                    pointRadius: isHidden ? 0 : 3,
                     tension: 0.4,
-                    hidden: isHidden // Oculta os outros dataset se um filtro específico estiver ativo, ou mostra tudo se 'all'
+                    hidden: isHidden
                 };
             });
 
