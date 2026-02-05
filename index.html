@@ -530,11 +530,12 @@
         function updateDashboard(orders) {
             const total = orders.length;
 
-            // Vendas: Confirmado E NÃO Cancelado
+            // Vendas: (Confirmado OU paid) E NÃO Cancelado
             const salesOrders = orders.filter(o => {
                 const payStatus = o.payment_status?.toLowerCase();
                 const orderStatus = o.status?.toLowerCase();
-                return payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+                return isPaid && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
             });
 
             const paidConfirmed = salesOrders.length;
@@ -544,9 +545,10 @@
                 const shipStatus = o.shipping_status?.toLowerCase();
                 const payStatus = o.payment_status?.toLowerCase();
                 const orderStatus = o.status?.toLowerCase();
-                // A enviar: Seguindo regra de venda (Confirmado e não cancelado) + não embalado
-                const isSale = payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
-                return shipStatus === 'não está embalado' && isSale;
+                // A enviar: Seguindo regra de venda (Confirmado/paid e não cancelado) + (não embalado/unpacked)
+                const isSale = (payStatus === 'confirmado' || payStatus === 'paid') && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
+                return isUnpacked && isSale;
             }).length;
 
             const shipped = orders.filter(o => {
@@ -570,11 +572,12 @@
                 return s === 'recusado';
             }).length;
 
-            // Pagamentos Pendentes: Pagamento 'pendente' E pedido NÃO cancelado
+            // Pagamentos Pendentes: Pagamento ('pendente' OU 'pending') E pedido NÃO cancelado
             const pendingOrders = orders.filter(o => {
                 const payStatus = o.payment_status?.toLowerCase();
                 const orderStatus = o.status?.toLowerCase();
-                return payStatus === 'pendente' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                const isPending = payStatus === 'pendente' || payStatus === 'pending';
+                return isPending && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
             });
             const pendingStatus = pendingOrders.length;
             const pendingCount = pendingOrders.length;
@@ -950,8 +953,8 @@
                 const orderStatus = (o.status || '').toLowerCase();
                 const val = parseFloat(o.total) || 0;
 
-                // Venda (Vendas): Confirmado e não cancelado
-                const isSale = payStatus === 'confirmado' && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                // Venda (Vendas): (Confirmado ou paid) e não cancelado
+                const isSale = (payStatus === 'confirmado' || payStatus === 'paid') && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
                 // Recusado: payment_status == 'recusado'
                 const isRejected = payStatus === 'recusado';
                 // Cancelado: status == 'cancelado'
@@ -963,14 +966,16 @@
                 // Specifics mapping to user's new rules
                 if (isSale) dataSetsMap['paid'][dateKey] = (dataSetsMap['paid'][dateKey] || 0) + val;
 
-                // Pendentes: Pagamento 'pendente' E NÃO cancelado
-                if (payStatus === 'pendente' && !isCancelled) dataSetsMap['pending'][dateKey] = (dataSetsMap['pending'][dateKey] || 0) + val;
+                // Pendentes: Pagamento ('pendente' ou 'pending') E NÃO cancelado
+                const isPending = payStatus === 'pendente' || payStatus === 'pending';
+                if (isPending && !isCancelled) dataSetsMap['pending'][dateKey] = (dataSetsMap['pending'][dateKey] || 0) + val;
 
                 if (isRejected) dataSetsMap['rejected'][dateKey] = (dataSetsMap['rejected'][dateKey] || 0) + val;
                 if (isCancelled) dataSetsMap['cancelled'][dateKey] = (dataSetsMap['cancelled'][dateKey] || 0) + val;
 
                 // Logistics still based on Sales status
-                if (isSale && shipStatus === 'não está embalado') dataSetsMap['to_send'][dateKey] = (dataSetsMap['to_send'][dateKey] || 0) + val;
+                const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
+                if (isSale && isUnpacked) dataSetsMap['to_send'][dateKey] = (dataSetsMap['to_send'][dateKey] || 0) + val;
                 if (isSale && (shipStatus === 'shipped' || shipStatus === 'enviado')) dataSetsMap['shipped'][dateKey] = (dataSetsMap['shipped'][dateKey] || 0) + val;
                 if (isSale && (shipStatus === 'delivered' || shipStatus === 'entregue')) dataSetsMap['delivered'][dateKey] = (dataSetsMap['delivered'][dateKey] || 0) + val;
             });
@@ -1223,7 +1228,7 @@
             orders.forEach(o => {
                 let s = o.shipping_status?.toLowerCase();
                 if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s === 'não está embalado') s = 'A Enviar';
+                else if (s === 'não está embalado' || s === 'unpacked') s = 'A Enviar';
                 else if (s === 'shipped' || s === 'enviado') s = 'Enviados';
                 else if (s === 'delivered' || s === 'entregue') s = 'Entregues';
                 else s = s.charAt(0).toUpperCase() + s.slice(1);
