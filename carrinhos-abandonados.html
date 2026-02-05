@@ -148,7 +148,6 @@
                                             <th>Email</th>
                                             <th>WhatsApp</th>
                                             <th>Data</th>
-                                            <th>Produto(s)</th>
                                             <th>Ação</th>
                                         </tr>
                                     </thead>
@@ -175,15 +174,6 @@
                             </div>
                         </div>
 
-                        <!-- Chart Products Section (Last) -->
-                        <div class="card chart-card card-gold">
-                            <div class="card-header">
-                                <h3><i class="ph-fill ph-package"></i> Abandono por Produto</h3>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="chart-abandoned-products"></canvas>
-                            </div>
-                        </div>
                     </section>
                 </main>
 
@@ -205,10 +195,8 @@
 
     <script>
         let supabaseClient;
-        let chartProducts = null;
         let chartEvolution = null;
         let allAbandonedData = [];
-        let allProductsData = [];
         let currentPage = 1;
         let currentPeriod = '7';
         const itemsPerPage = 10;
@@ -274,26 +262,6 @@
 
                 allAbandonedData = abandoned;
 
-                // Fetch products (linked by checkout_id or id) in chunks
-                const checkoutIds = abandoned.map(a => a.id);
-                let productsData = [];
-
-                if (checkoutIds.length > 0) {
-                    // Chunk the checkoutIds to avoid URL length issues or IN clause limits
-                    const chunkSize = 100;
-                    for (let i = 0; i < checkoutIds.length; i += chunkSize) {
-                        const chunk = checkoutIds.slice(i, i + chunkSize);
-                        const { data, error } = await supabaseClient
-                            .from('abandoned_checkout_products')
-                            .select('*')
-                            .in('checkout_id', chunk);
-
-                        if (error) throw error;
-                        productsData = [...productsData, ...data];
-                    }
-                }
-
-                allProductsData = productsData;
                 updateDashboard();
             } catch (error) {
                 console.error('Error fetching abandoned data:', error);
@@ -312,7 +280,6 @@
             document.querySelector('#kpi-total-value span').textContent = formatBRL(sumValue);
 
             renderEvolutionChart();
-            renderProductsChart();
             renderTable();
         }
 
@@ -397,55 +364,6 @@
             });
         }
 
-        function renderProductsChart() {
-            const ctx = document.getElementById('chart-abandoned-products').getContext('2d');
-            if (chartProducts) chartProducts.destroy();
-
-            const productCounts = {};
-            allProductsData.forEach(p => {
-                const name = p.name || 'Desconhecido';
-                productCounts[name] = (productCounts[name] || 0) + 1;
-            });
-
-            const sortedProducts = Object.entries(productCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5);
-
-            const labels = sortedProducts.map(s => s[0]);
-            const data = sortedProducts.map(s => s[1]);
-
-            chartProducts = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Abandono (Qtd)',
-                        data: data,
-                        backgroundColor: [
-                            '#9b4dff', // Roxo
-                            '#3b82f6', // Azul
-                            '#10b981', // Verde
-                            '#f59e0b', // Laranja
-                            '#ec4899'  // Rosa
-                        ],
-                        borderRadius: 8,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: { ticks: { color: '#fff' }, grid: { display: false } },
-                        x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } }
-                    }
-                }
-            });
-        }
 
         function formatPhone(phone) {
             if (!phone) return 'N/A';
@@ -480,18 +398,6 @@
             paginatedData.forEach(item => {
                 const tr = document.createElement('tr');
 
-                // Find products for this checkout using item.id (which is mapped to checkout_id in products table)
-                const productList = allProductsData.filter(p => p.checkout_id === item.id);
-                let productsDisplay = 'Nenhum informado';
-
-                if (productList.length > 0) {
-                    const firstProduct = productList[0].name || 'Desconhecido';
-                    if (productList.length > 1) {
-                        productsDisplay = `${firstProduct} + ${productList.length - 1} itens`;
-                    } else {
-                        productsDisplay = firstProduct;
-                    }
-                }
 
                 // Clean phone number for WhatsApp link and display
                 const rawPhone = item.contact_phone || '';
@@ -499,11 +405,10 @@
                 const cleanPhone = strPhone.replace(/\D/g, '');
                 const formattedPhone = formatPhone(rawPhone);
 
-                // Prepare product names for the message
-                const productNames = productList.length > 0 ? productList.map(p => p.name).join(', ') : 'alguns itens';
+                const productNames = 'seu carrinho';
                 const checkoutUrl = item.abandoned_checkout_url || '';
 
-                const message = `Olá ${item.contact_name || ''}, tudo bem? Vi que você deixou o(s) seguinte(s) produto(s) no seu carrinho da Cacife Brand: ${productNames}.\n\nPara te ajudar a finalizar seu pedido, preparamos um cupom de 5% de desconto exclusivo (válido por tempo ilimitado!): CACIFE05\n\nAproveite para garantir seus itens aqui: ${checkoutUrl}`;
+                const message = `Olá ${item.contact_name || ''}, tudo bem? Vi que você deixou itens no seu carrinho da Cacife Brand.\n\nPara te ajudar a finalizar seu pedido, preparamos um cupom de 5% de desconto exclusivo (válido por tempo ilimitado!): CACIFE05\n\nAproveite para garantir seus itens aqui: ${checkoutUrl}`;
 
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
 
@@ -515,7 +420,6 @@
                     <td>${item.contact_email || 'N/A'}</td>
                     <td style="white-space: nowrap;">${formattedPhone}</td>
                     <td style="font-size: 13px; white-space: nowrap;">${formattedDate}</td>
-                    <td style="font-size: 12px; color: var(--text-gray); cursor: help; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${productList.map(p => p.name).join(', ')}">${productsDisplay}</td>
                     <td>
                         <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: #9b4dff; color: white; border: none; font-weight: 700; font-size: 12px; white-space: nowrap;">
                             <i class="ph ph-whatsapp-logo"></i> Chamar
@@ -664,8 +568,8 @@
             const totalAbandoned = allAbandonedData.length;
             const sumValue = allAbandonedData.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
-            const labels = chartEvolution.data.labels;
-            const evolutionData = chartEvolution.data.datasets[0].data;
+            const labels = (chartEvolution && chartEvolution.data.labels) || [];
+            const evolutionData = (chartEvolution && chartEvolution.data.datasets[0].data) || [];
             const evolutionSummary = labels.map((l, i) => `${l}: ${evolutionData[i]}`).join(', ');
 
             const prompt = `Analise os seguintes dados de carrinhos abandonados de um e-commerce:
