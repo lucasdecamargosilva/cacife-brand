@@ -273,10 +273,8 @@
                     <!-- New Revenue Evolution Section -->
                     <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
                         <div class="card chart-card" style="min-height: 400px;">
-                            <h3><i class="ph-fill ph-chart-line"></i> Evolução de Faturamento</h3>
-                            <div id="revenue-chart-filters" class="chart-filters-container"
-                                style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-                                <!-- Filters will be generated dynamically -->
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-chart-line"></i> Evolução de Faturamento</h3>
                             </div>
                             <div class="chart-container" style="min-height: 300px;">
                                 <canvas id="chart-revenue-evolution"></canvas>
@@ -910,40 +908,33 @@
             }
         }
 
-        let activeRevenueFilters = new Set(['all', 'paid', 'pending', 'rejected']); // Default active lines
-
-        function toggleRevenueFilter(status) {
-            if (status === 'all_toggle') {
-                const allActive = Array.from(document.querySelectorAll('.revenue-filter-checkbox')).every(cb => cb.checked);
-                document.querySelectorAll('.revenue-filter-checkbox').forEach(cb => {
-                    cb.checked = !allActive;
-                    if (!allActive) activeRevenueFilters.add(cb.dataset.status);
-                    else activeRevenueFilters.delete(cb.dataset.status);
-                });
-            } else {
-                if (activeRevenueFilters.has(status)) {
-                    activeRevenueFilters.delete(status);
-                } else {
-                    activeRevenueFilters.add(status);
-                }
-            }
-            renderRevenueChart(allOrdersData);
-        }
+        let currentRevenueFilter = 'all';
 
         function setRevenueFilter(status) {
-            // This function is still called by KPI cards
-            // If user clicks a KPI card, we can either:
-            // 1. Reset filters to ONLY show that one
-            // 2. Toggle that one
-            // Let's go with (1) for clearer intent when clicking a specific card
+            currentRevenueFilter = status;
 
-            activeRevenueFilters.clear();
-            activeRevenueFilters.add(status);
+            // Update UI
+            document.querySelectorAll('.kpi-card-filter').forEach(card => card.classList.remove('active-filter'));
+            const cardId = `card-filter-${status}`;
+            const card = document.getElementById(cardId);
+            if (card) card.classList.add('active-filter');
 
-            // Sync checkboxes UI
-            document.querySelectorAll('.revenue-filter-checkbox').forEach(cb => {
-                cb.checked = activeRevenueFilters.has(cb.dataset.status);
-            });
+            // Find current chart title element and update it
+            const chartTitle = document.querySelector('#chart-revenue-evolution').parentElement.previousElementSibling.querySelector('h3');
+            if (chartTitle) {
+                let suffix = '';
+                if (status === 'to_send') suffix = ' (A Enviar)';
+                else if (status === 'shipped') suffix = ' (Enviados)';
+                else if (status === 'delivered') suffix = ' (Entregues)';
+                else if (status === 'cancelled') suffix = ' (Cancelados)';
+                else if (status === 'paid') suffix = ' (Pagos)';
+                else if (status === 'pending') suffix = ' (Pendentes)';
+                else if (status === 'rejected') suffix = ' (Recusados)';
+                else if (status === 'partial_refund') suffix = ' (Parcialmente Estornados)';
+                else if (status === 'all') suffix = ' (Visão Geral)';
+
+                chartTitle.innerHTML = `<i class="ph-fill ph-chart-line"></i> Evolução de Faturamento${suffix}`;
+            }
 
             renderRevenueChart(allOrdersData);
         }
@@ -1035,41 +1026,19 @@
                 return `${p[2]}/${p[1]}`;
             });
 
-            // Render Filter Checkboxes if container empty
-            const filterContainer = document.getElementById('revenue-chart-filters');
-            if (filterContainer && filterContainer.children.length === 0) {
-                statuses.forEach(s => {
-                    const label = document.createElement('label');
-                    label.className = 'chart-filter-label';
-                    label.style.cssText = 'display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: #a3a3a3; user-select: none;';
-
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox';
-                    cb.className = 'revenue-filter-checkbox';
-                    cb.dataset.status = s.id;
-                    cb.checked = activeRevenueFilters.has(s.id);
-                    cb.style.cssText = 'accent-color: ' + s.color;
-                    cb.onchange = () => toggleRevenueFilter(s.id);
-
-                    label.appendChild(cb);
-                    label.appendChild(document.createTextNode(s.label));
-                    filterContainer.appendChild(label);
-                });
-            }
-
             const datasets = statuses.map(s => {
-                const isHidden = !activeRevenueFilters.has(s.id);
+                const isHidden = currentRevenueFilter !== 'all' && currentRevenueFilter !== s.id;
 
                 return {
                     label: s.label,
                     data: sortedDates.map(date => dataSetsMap[s.id][date] || 0),
                     borderColor: s.color,
                     backgroundColor: 'transparent',
-                    borderWidth: isHidden ? 0 : 2,
+                    borderWidth: currentRevenueFilter === s.id ? 4 : 2,
                     pointBackgroundColor: s.color,
-                    pointRadius: isHidden ? 0 : 3,
+                    pointRadius: currentRevenueFilter === s.id ? 5 : 3,
                     tension: 0.4,
-                    hidden: isHidden
+                    hidden: isHidden // Oculta os outros dataset se um filtro específico estiver ativo, ou mostra tudo se 'all'
                 };
             });
 
