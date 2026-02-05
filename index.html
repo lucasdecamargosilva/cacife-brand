@@ -530,12 +530,13 @@
         function updateDashboard(orders) {
             const total = orders.length;
 
-            // Vendas: (Confirmado OU paid) E NÃO Cancelado
+            // Vendas: (Confirmado OU paid) E NÃO Cancelado/Estornado
             const salesOrders = orders.filter(o => {
-                const payStatus = o.payment_status?.toLowerCase();
-                const orderStatus = o.status?.toLowerCase();
+                const payStatus = o.payment_status?.toLowerCase() || '';
+                const orderStatus = o.status?.toLowerCase() || '';
                 const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
-                return isPaid && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                const isCancelOrRefund = orderStatus.includes('cancel') || orderStatus.includes('estorno') || orderStatus.includes('refund');
+                return isPaid && !isCancelOrRefund;
             });
 
             const paidConfirmed = salesOrders.length;
@@ -953,12 +954,16 @@
                 const orderStatus = (o.status || '').toLowerCase();
                 const val = parseFloat(o.total) || 0;
 
-                // Venda (Vendas): (Confirmado ou paid) e não cancelado
-                const isSale = (payStatus === 'confirmado' || payStatus === 'paid') && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+                // Venda (Vendas): (Confirmado ou paid) e não cancelado/estornado
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+                const isCancelOrRefund = orderStatus.includes('cancel') || orderStatus.includes('estorno') || orderStatus.includes('refund');
+                const isSale = isPaid && !isCancelOrRefund;
+
                 // Recusado: payment_status == 'recusado'
                 const isRejected = payStatus === 'recusado';
-                // Cancelado: status == 'cancelado'
-                const isCancelled = orderStatus === 'cancelled' || orderStatus === 'cancelado';
+
+                // Cancelado: Qualquer variação de cancelado ou estornado
+                const isCancelled = isCancelOrRefund;
 
                 // All (Total order volume - no status filter)
                 dataSetsMap['all'][dateKey] = (dataSetsMap['all'][dateKey] || 0) + val;
