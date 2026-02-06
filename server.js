@@ -31,11 +31,8 @@ try {
 
     app.use((req, res, next) => {
         const origin = req.headers.origin;
-        if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || !origin) {
-            res.header('Access-Control-Allow-Origin', origin || ALLOWED_ORIGINS[0]);
-        } else {
-            res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
-        }
+        // Permite a origem da requisição ou fallback para wildcard
+        res.header('Access-Control-Allow-Origin', origin || '*');
         res.header('Access-Control-Allow-Credentials', 'true');
         res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
