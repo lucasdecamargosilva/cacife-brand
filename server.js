@@ -54,10 +54,11 @@ try {
             }
 
             // Nota: Em um cenário real, você pegaria o userId do usuário logado na sessão.
-            // Por enquanto, usaremos o ID 1 (admin padrão) para permitir o acesso.
-            const userId = 4;
+            // Por enquanto, usaremos o ID 11 conforme solicitado.
+            const userId = 11;
+            const accountId = 4;
 
-            console.log(`🔗 Generating SSO link for user ${userId} at ${CHATWOOT_URL}`);
+            console.log(`🔗 Generating SSO link for user ${userId} (Account ${accountId}) at ${CHATWOOT_URL}`);
 
             const response = await axios.get(
                 `${CHATWOOT_URL}/platform/api/v1/users/${userId}/login`,
@@ -68,9 +69,16 @@ try {
                 }
             );
 
+            // Adiciona o redirecionamento para a conta específica na URL de SSO
+            let ssoUrl = response.data.url;
+            if (ssoUrl) {
+                const separator = ssoUrl.includes('?') ? '&' : '?';
+                ssoUrl += `${separator}redirect_url=/app/accounts/${accountId}/dashboard`;
+            }
+
             res.json({
                 success: true,
-                ssoUrl: response.data.url
+                ssoUrl: ssoUrl
             });
         } catch (error) {
             console.error('❌ Error generating Chatwoot SSO:', error.response?.data || error.message);
