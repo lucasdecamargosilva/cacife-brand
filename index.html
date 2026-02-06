@@ -181,14 +181,14 @@
                         <div class="card kpi-card kpi-card-filter" id="card-filter-partial_refund"
                             onclick="setRevenueFilter('partial_refund')" style="padding: 15px;">
                             <div class="card-content">
-                                <span class="label" style="font-size: 12px;">Parcialmente Estornado</span>
-                                <h3 id="kpi-partial-refund-orders" class="value text-warning"
+                                <span class="label" style="font-size: 12px;">Estornados / Parcial</span>
+                                <h3 id="kpi-refunded-total-value" class="value text-warning"
                                     style="font-size: 24px; gap: 8px;">
                                     <i class="ph-fill ph-circle-wavy-warning" style="font-size: 20px;"></i>
                                     <span>---</span>
                                 </h3>
-                                <span id="kpi-partial-refund-percent" class="subtext"
-                                    style="font-size: 11px;">---%</span>
+                                <span id="kpi-refunded-combined-counts" class="subtext" style="font-size: 11px;">---
+                                    Estornados | --- Parciais</span>
                             </div>
                         </div>
 
@@ -555,7 +555,12 @@
                 const payStatus = o.payment_status?.toLowerCase() || '';
                 const orderStatus = o.status?.toLowerCase() || '';
                 const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
-                const isCancelOrRefund = orderStatus.includes('cancel') || orderStatus.includes('estorno') || orderStatus.includes('refund');
+
+                // Estrito: Qualquer menção a cancelamento ou estorno em qualquer coluna de status exclui do faturamento
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
                 return isPaid && !isCancelOrRefund;
             });
 
@@ -603,12 +608,21 @@
             const pendingCount = pendingOrders.length;
             const pendingSum = pendingOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
-            // Parcialmente Estornado
+            // Estornados e Parcialmente Estornado
+            const totalRefundOrders = orders.filter(o => {
+                const ps = o.payment_status?.toLowerCase() || '';
+                const os = o.status?.toLowerCase() || '';
+                // Estorno total: status exato ou contém palavras chave mas não é parcial
+                return (ps === 'estornado' || ps === 'refunded' || ps === 'reembolsado' || os === 'estornado' || os === 'refunded') && !ps.includes('parcial');
+            });
             const partialRefundOrders = orders.filter(o => {
                 const s = o.payment_status?.toLowerCase() || '';
                 return s.includes('parcialmente estornado');
             });
-            const partialRefundStatus = partialRefundOrders.length;
+
+            const totalRefundCount = totalRefundOrders.length;
+            const partialRefundCount = partialRefundOrders.length;
+            const combinedRefundCount = totalRefundCount + partialRefundCount;
 
             document.querySelector('#kpi-total-orders span').textContent = total;
             document.querySelector('#top-revenue-value span').textContent = revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -627,8 +641,8 @@
             document.querySelector('#kpi-cancelled-orders span').textContent = cancelled;
             document.getElementById('kpi-cancelled-percent').textContent = total > 0 ? ((cancelled / total) * 100).toFixed(1) + '% do total' : '0% do total';
 
-            document.querySelector('#kpi-partial-refund-orders span').textContent = partialRefundStatus;
-            document.getElementById('kpi-partial-refund-percent').textContent = total > 0 ? ((partialRefundStatus / total) * 100).toFixed(1) + '% do total' : '0% do total';
+            document.querySelector('#kpi-refunded-total-value span').textContent = combinedRefundCount;
+            document.getElementById('kpi-refunded-combined-counts').textContent = `${totalRefundCount} Estornados | ${partialRefundCount} Parciais`;
 
             // New KPIs
             document.querySelector('#kpi-paid-confirmed-orders span').textContent = paidConfirmed;
@@ -930,7 +944,7 @@
                 else if (status === 'paid') suffix = ' (Pagos)';
                 else if (status === 'pending') suffix = ' (Pendentes)';
                 else if (status === 'rejected') suffix = ' (Recusados)';
-                else if (status === 'partial_refund') suffix = ' (Parcialmente Estornados)';
+                else if (status === 'partial_refund') suffix = ' (Estornados)';
                 else if (status === 'all') suffix = ' (Visão Geral)';
 
                 chartTitle.innerHTML = `<i class="ph-fill ph-chart-line"></i> Evolução de Faturamento${suffix}`;
@@ -954,7 +968,7 @@
                 { id: 'shipped', label: 'Enviados', color: '#9b4dff' },
                 { id: 'delivered', label: 'Entregues', color: '#10b981' },
                 { id: 'cancelled', label: 'Cancelados', color: '#ef4444' },
-                { id: 'partial_refund', label: 'Parcial Estorno', color: '#f59e0b' }
+                { id: 'partial_refund', label: 'Estornados', color: '#f59e0b' }
             ];
 
             const allDates = new Set();
@@ -989,7 +1003,10 @@
 
                 // Venda (Vendas): (Confirmado ou paid) e não cancelado/estornado
                 const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
-                const isCancelOrRefund = orderStatus.includes('cancel') || orderStatus.includes('estorno') || orderStatus.includes('refund');
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
                 const isSale = isPaid && !isCancelOrRefund;
 
                 // Recusado: payment_status == 'recusado'
@@ -1010,7 +1027,11 @@
 
                 if (isRejected) dataSetsMap['rejected'][dateKey] = (dataSetsMap['rejected'][dateKey] || 0) + val;
                 if (isCancelled) dataSetsMap['cancelled'][dateKey] = (dataSetsMap['cancelled'][dateKey] || 0) + val;
-                if (payStatus.includes('parcialmente estornado')) dataSetsMap['partial_refund'][dateKey] = (dataSetsMap['partial_refund'][dateKey] || 0) + val;
+
+                // Refund data set (now includes both total and partial)
+                if (isCancelOrRefund && (orderStatus.includes('estornado') || orderStatus.includes('refund') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado'))) {
+                    dataSetsMap['partial_refund'][dateKey] = (dataSetsMap['partial_refund'][dateKey] || 0) + val;
+                }
 
                 // Logistics still based on Sales status
                 const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
@@ -1223,9 +1244,9 @@
             orders.forEach(o => {
                 let s = o.payment_status?.toLowerCase();
                 if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s.includes('parcialmente estornado')) return; // Ignore this status
                 else if (s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado' || s === 'confirmado') s = 'Confirmado';
                 else if (s === 'pending' || s === 'pendente') s = 'Pendente';
+                else if (s.includes('parcialmente estornado')) s = 'Parcialmente Estornado';
                 else if (s === 'refunded' || s === 'reembolsado' || s === 'estornado') s = 'Estornado';
                 else if (s === 'failed' || s === 'falhou' || s === 'recusado' || s === 'rejected') s = 'Recusado';
                 else s = s.charAt(0).toUpperCase() + s.slice(1);
@@ -1240,7 +1261,7 @@
                 if (l === 'confirmado') return '#22c55e'; // Green for confirmed
                 if (l === 'pendente') return '#9b4dff'; // Purple for pending
                 if (l === 'recusado') return '#ef4444'; // Red for declined
-                if (l === 'estornado') return '#f59e0b'; // Orange for refunded
+                if (l === 'estornado' || l === 'parcialmente estornado') return '#f59e0b'; // Orange for refunded
                 return '#9b4dff'; // Default Purple
             });
 

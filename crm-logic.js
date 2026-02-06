@@ -15,48 +15,126 @@ function initCrmSupabase() {
 async function fetchCrmData(pipelineName = 'starter') {
     if (!crmClient) return [];
 
-    // Normalize pipeline name
-    let dbPipeline = pipelineName;
-    if (pipelineName === 'cacife') dbPipeline = 'Cacife';
-
     try {
-        const { data, error } = await crmClient
-            .from('opportunities')
-            .select(`
-                id,
-                stage,
-                pipeline,
-                responsible_name,
-                tags,
-                lead_status,
-                contacts (
-                    id,
-                    full_name,
-                    company_name,
-                    phone,
-                    email,
-                    monthly_revenue,
-                    business_type,
-                    audience_type,
-                    acquisition_channels,
-                    client_volume,
-                    biggest_difficulty,
-                    website
-                )
-            `)
-            .eq('pipeline', dbPipeline);
+        if (pipelineName === 'abandoned') {
+            let allAbandoned = [];
+            let from = 0;
+            let to = 999;
+            let hasMore = true;
 
-        if (error) {
-            console.error('Error fetching CRM data:', error);
-            return [];
+            while (hasMore) {
+                const { data, error } = await crmClient
+                    .from('abandoned_checkouts')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(from, to);
+
+                if (error) {
+                    console.error('Error fetching abandoned CRM data:', error);
+                    break;
+                }
+
+                allAbandoned = [...allAbandoned, ...data];
+
+                if (data.length < 1000) {
+                    hasMore = false;
+                } else {
+                    from += 1000;
+                    to += 1000;
+                }
+            }
+
+            return allAbandoned.map(item => {
+                let stage = 'Carrinho Abandonado';
+                const note = (item.note || '').toLowerCase();
+
+                if (item.recovered_at) {
+                    stage = 'Carrinho Recuperado';
+                } else if (note.includes('msg_3')) {
+                    stage = 'Mensagem 3';
+                } else if (note.includes('msg_2')) {
+                    stage = 'Mensagem 2';
+                } else if (note.includes('msg_1')) {
+                    stage = 'Mensagem 1';
+                }
+
+                return {
+                    id: item.id,
+                    contactId: null,
+                    name: item.contact_name || 'Sem Nome',
+                    company: 'Carrinho Abandonado',
+                    revenue: parseFloat(item.total) || 0,
+                    phone: item.contact_phone || '---',
+                    email: item.contact_email || '---',
+                    stage: stage,
+                    note: item.note,
+                    checkoutUrl: item.abandoned_checkout_url,
+                    created_at: item.created_at,
+                    tags: ['Abandono'],
+                    responsible: 'Automático',
+                    isAbandoned: true
+                };
+            });
         }
 
-        return data.map(opp => ({
+        // Normalize pipeline name
+        let dbPipeline = pipelineName;
+        if (pipelineName === 'cacife') dbPipeline = 'Cacife';
+
+        let allOpps = [];
+        let from = 0;
+        let to = 999;
+        let hasMore = true;
+
+        while (hasMore) {
+            const { data, error } = await crmClient
+                .from('opportunities')
+                .select(`
+                    id,
+                    stage,
+                    pipeline,
+                    responsible_name,
+                    tags,
+                    lead_status,
+                    contacts (
+                        id,
+                        full_name,
+                        company_name,
+                        phone,
+                        email,
+                        monthly_revenue,
+                        business_type,
+                        audience_type,
+                        acquisition_channels,
+                        client_volume,
+                        biggest_difficulty,
+                        website
+                    )
+                `)
+                .eq('pipeline', dbPipeline)
+                .range(from, to);
+
+            if (error) {
+                console.error('Error fetching CRM data:', error);
+                break;
+            }
+
+            allOpps = [...allOpps, ...data];
+
+            if (data.length < 1000) {
+                hasMore = false;
+            } else {
+                from += 1000;
+                to += 1000;
+            }
+        }
+
+        return allOpps.map(opp => ({
             id: opp.id,
             contactId: opp.contacts ? opp.contacts.id : null,
             name: opp.contacts ? opp.contacts.full_name : 'Sem Nome',
             company: opp.contacts ? opp.contacts.company_name : 'Sem Empresa',
-            revenue: opp.contacts ? opp.contacts.monthly_revenue : 'R$ 0,00',
+            revenue: opp.contacts ? (typeof opp.contacts.monthly_revenue === 'string' ? parseFloat(opp.contacts.monthly_revenue.replace(/[^0-9.-]+/g, "")) : opp.contacts.monthly_revenue) : 0,
             phone: opp.contacts ? opp.contacts.phone : '---',
             email: opp.contacts ? opp.contacts.email : '---',
             stage: opp.stage,
@@ -68,13 +146,15 @@ async function fetchCrmData(pipelineName = 'starter') {
             site: opp.contacts ? opp.contacts.website : '---',
             responsible: opp.responsible_name || 'Não atribuído',
             tags: opp.tags || [],
-            lead_status: opp.lead_status || 'frio'
+            lead_status: opp.lead_status || 'frio',
+            isAbandoned: false
         }));
     } catch (err) {
         console.error('Fetch CRM data catch error:', err);
         return [];
     }
 }
+
 
 async function updateOpportunityDetails(oppId, contactId, details) {
     if (!crmClient) return;
@@ -109,43 +189,77 @@ async function updateOpportunityDetails(oppId, contactId, details) {
     }
 }
 
-async function updateLeadStage(leadId, newStage) {
+async function updateLeadStage(leadId, newStage, isAbandoned = false) {
     if (!crmClient) return;
 
     try {
-        const { error } = await crmClient
-            .from('opportunities')
-            .update({ stage: newStage, updated_at: new Date().toISOString() })
-            .eq('id', leadId);
+        if (isAbandoned) {
+            const updateObj = {};
 
-        if (error) {
-            console.error('Error updating stage in DB:', error);
-            if (window.showToast) window.showToast("Erro ao atualizar etapa", "error");
+            if (newStage === 'Carrinho Recuperado') {
+                updateObj.recovered_at = new Date().toISOString();
+            } else if (newStage === 'Mensagem 1') {
+                updateObj.note = 'msg_1';
+            } else if (newStage === 'Mensagem 2') {
+                updateObj.note = 'msg_1, msg_2';
+            } else if (newStage === 'Mensagem 3') {
+                updateObj.note = 'msg_1, msg_2, msg_3';
+            } else if (newStage === 'Carrinho Abandonado') {
+                updateObj.note = '';
+                updateObj.recovered_at = null;
+            }
+
+            const { error } = await crmClient
+                .from('abandoned_checkouts')
+                .update(updateObj)
+                .eq('id', leadId);
+
+            if (error) throw error;
         } else {
-            if (window.showToast) window.showToast("Etapa atualizada!", "success");
+            const { error } = await crmClient
+                .from('opportunities')
+                .update({ stage: newStage, updated_at: new Date().toISOString() })
+                .eq('id', leadId);
+
+            if (error) throw error;
         }
+
+        if (window.showToast) window.showToast("Etapa atualizada!", "success");
     } catch (err) {
         console.error('Update stage catch error:', err);
+        if (window.showToast) window.showToast("Erro ao atualizar etapa", "error");
     }
 }
 
-async function batchUpdateLeadStages(leadIds, newStage) {
+async function batchUpdateLeadStages(leadIds, newStage, isAbandoned = false) {
     if (!crmClient || !leadIds || leadIds.length === 0) return;
 
     try {
-        const { error } = await crmClient
-            .from('opportunities')
-            .update({ stage: newStage, updated_at: new Date().toISOString() })
-            .in('id', leadIds);
+        if (isAbandoned) {
+            const updateObj = {};
+            if (newStage === 'Carrinho Recuperado') updateObj.recovered_at = new Date().toISOString();
+            else if (newStage === 'Mensagem 1') updateObj.note = 'msg_1';
+            else if (newStage === 'Mensagem 2') updateObj.note = 'msg_1, msg_2';
+            else if (newStage === 'Mensagem 3') updateObj.note = 'msg_1, msg_2, msg_3';
+            else if (newStage === 'Carrinho Abandonado') { updateObj.note = ''; updateObj.recovered_at = null; }
 
-        if (error) {
-            console.error('Error batch updating stages:', error);
-            if (window.showToast) window.showToast("Erro na atualização em massa", "error");
+            const { error } = await crmClient
+                .from('abandoned_checkouts')
+                .update(updateObj)
+                .in('id', leadIds);
+            if (error) throw error;
         } else {
-            if (window.showToast) window.showToast(`${leadIds.length} leads atualizados!`, "success");
+            const { error } = await crmClient
+                .from('opportunities')
+                .update({ stage: newStage, updated_at: new Date().toISOString() })
+                .in('id', leadIds);
+            if (error) throw error;
         }
+
+        if (window.showToast) window.showToast(`${leadIds.length} leads atualizados!`, "success");
     } catch (err) {
         console.error('Batch update catch error:', err);
+        if (window.showToast) window.showToast("Erro na atualização em massa", "error");
     }
 }
 

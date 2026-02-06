@@ -119,8 +119,9 @@
                         </div>
                     </section>
 
-                    <!-- Chart Evolution Section -->
-                    <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
+                    <!-- Chart Evolution & Funnel Section -->
+                    <section class="dashboard-grid"
+                        style="margin-bottom: var(--spacing-lg); display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
                         <div class="card chart-card card-gold" style="min-height: 480px;">
                             <div class="card-header">
                                 <h3><i class="ph-fill ph-chart-line"></i> Evolução de Abandonos</h3>
@@ -128,10 +129,18 @@
                             <div class="chart-container" style="min-height: 250px;">
                                 <canvas id="chart-abandoned-evolution"></canvas>
                             </div>
+                        </div>
 
-
+                        <div class="card chart-card card-gold" style="min-height: 480px;">
+                            <div class="card-header">
+                                <h3><i class="ph-fill ph-funnel"></i> Funil de Recuperação</h3>
+                            </div>
+                            <div class="chart-container" style="min-height: 250px;">
+                                <canvas id="chart-abandoned-funnel"></canvas>
+                            </div>
                         </div>
                     </section>
+
 
                     <!-- Data Section -->
                     <section class="dashboard-grid">
@@ -196,10 +205,12 @@
     <script>
         let supabaseClient;
         let chartEvolution = null;
+        let chartFunnel = null;
         let allAbandonedData = [];
         let currentPage = 1;
         let currentPeriod = '7';
         const itemsPerPage = 10;
+        const STAGES = ["Carrinho Abandonado", "Mensagem 1", "Mensagem 2", "Mensagem 3", "Carrinho Recuperado"];
 
         function initSupabase() {
             if (window.supabase && window.SUPABASE_CONFIG) {
@@ -280,6 +291,7 @@
             document.querySelector('#kpi-total-value span').textContent = formatBRL(sumValue);
 
             renderEvolutionChart();
+            renderFunnelChart();
             renderTable();
         }
 
@@ -356,6 +368,65 @@
                             grid: { color: 'rgba(255,255,255,0.05)' }
                         },
                         x: {
+                            ticks: { color: '#fff' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderFunnelChart() {
+            const chartEl = document.getElementById('chart-abandoned-funnel');
+            if (!chartEl) return;
+            const ctx = chartEl.getContext('2d');
+            if (chartFunnel) chartFunnel.destroy();
+
+            // Map data based on the 'note' logic
+            const mappedStages = allAbandonedData.map(item => {
+                const note = (item.note || '').toLowerCase();
+                if (item.recovered_at) return 'Carrinho Recuperado';
+                if (note.includes('msg_3')) return 'Mensagem 3';
+                if (note.includes('msg_2')) return 'Mensagem 2';
+                if (note.includes('msg_1')) return 'Mensagem 1';
+                return 'Carrinho Abandonado';
+            });
+
+            const data = STAGES.map(s => mappedStages.filter(stage => stage === s).length);
+
+            chartFunnel = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: STAGES,
+                    datasets: [{
+                        label: 'Checkouts',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(155, 77, 255, 0.2)',
+                            'rgba(155, 77, 255, 0.4)',
+                            'rgba(155, 77, 255, 0.6)',
+                            'rgba(155, 77, 255, 0.8)',
+                            'rgba(34, 197, 94, 0.8)'
+                        ],
+                        borderColor: '#9b4dff',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { color: '#fff', stepSize: 1 },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
                             ticks: { color: '#fff' },
                             grid: { display: false }
                         }

@@ -127,6 +127,33 @@
             /* Azul Claro */
         }
 
+        /* Abandoned Checkout Stages */
+        .crm-column[data-stage="Carrinho Abandonado"] .column-header {
+            border-bottom-color: #64748b;
+            /* Gray */
+        }
+
+        .crm-column[data-stage="Mensagem 1"] .column-header {
+            border-bottom-color: #fbbf24;
+            /* Yellow */
+        }
+
+        .crm-column[data-stage="Mensagem 2"] .column-header {
+            border-bottom-color: #f59e0b;
+            /* Orange */
+        }
+
+        .crm-column[data-stage="Mensagem 3"] .column-header {
+            border-bottom-color: #ef4444;
+            /* Red */
+        }
+
+        .crm-column[data-stage="Carrinho Recuperado"] .column-header {
+            border-bottom-color: #22c55e;
+            /* Green */
+        }
+
+
         .column-header h3 {
             font-size: 14px;
             text-transform: uppercase;
@@ -597,6 +624,13 @@
 
                 <div class="board-controls"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 20px; flex-wrap: wrap;">
+                    <div class="pipeline-selector">
+                        <button class="pipeline-btn" id="btn-pipeline-cacife" onclick="switchPipeline('cacife')">Cacife
+                            Brand</button>
+                        <button class="pipeline-btn active" id="btn-pipeline-abandoned"
+                            onclick="switchPipeline('abandoned')">Carrinhos Abandonados</button>
+                    </div>
+
                     <div class="crm-filters"
                         style="display: flex; gap: 16px; align-items: center; flex: 1; max-width: 600px;">
                         <input type="text" id="crmSearch" class="crm-input-compact"
@@ -606,7 +640,7 @@
                             style="background: rgba(255,255,255,0.05); width: 220px;">
                             <option value="all">Todos os Operadores</option>
                         </select>
-                        <button onclick="syncOrdersToCRM()" class="pipeline-btn active"
+                        <button onclick="syncOrdersToCRM()" id="sync-btn" class="pipeline-btn active"
                             style="padding: 8px 16px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
                             <i class="ph-bold ph-arrows-clockwise"></i> Sincronizar
                         </button>
@@ -617,26 +651,42 @@
                     <!-- Columns will be injected here -->
                 </div>
 
+                <div id="funnel-section" style="display: none; margin-top: 40px; margin-bottom: 40px;">
+                    <div class="section-header" style="margin-bottom: 20px;">
+                        <h2><i class="ph-fill ph-funnel"></i> Funil de Conversão</h2>
+                    </div>
+                    <div class="chart-card"
+                        style="height: 350px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px;">
+                        <canvas id="funnelChart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Pipeline Summary -->
                 <div class="section-header" style="margin-top: 48px; margin-bottom: 24px;">
                     <h2><i class="ph-fill ph-presentation-chart"></i> Resumo Geral do Fluxo</h2>
                 </div>
-                <div class="crm-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                <div class="crm-summary" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
                     <div class="summary-card">
                         <div class="summary-info">
-                            <span class="summary-label">Total de Pedidos</span>
+                            <span class="summary-label">Total de Registros</span>
                             <span class="summary-value" id="total-general">0</span>
                         </div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-info">
-                            <span class="summary-label">Pedidos Pendentes</span>
+                            <span class="summary-label">Pendentes</span>
                             <span class="summary-value" id="total-pending">0</span>
                         </div>
                     </div>
                     <div class="summary-card">
                         <div class="summary-info">
-                            <span class="summary-label">Taxa de Entrega</span>
+                            <span class="summary-label">Recuperados</span>
+                            <span class="summary-value" id="total-converted">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-info">
+                            <span class="summary-label">Taxa de Conversão</span>
                             <span class="summary-value" id="delivery-rate">0%</span>
                         </div>
                     </div>
@@ -674,7 +724,7 @@
                         </div>
                     </div>
 
-                    <div class="sidebar-group">
+                    <div class="sidebar-group" id="mgmt-group">
                         <span class="sidebar-label">Gestão</span>
                         <input type="text" id="modal-responsible" class="crm-input-compact" placeholder="Responsável"
                             style="margin-bottom: 8px;">
@@ -702,9 +752,12 @@
                                 <span class="ai-label">Observações</span>
                                 <p class="ai-content" id="modal-ia-obs">---</p>
                             </div>
-                            <div class="ai-box">
-                                <span class="ai-label">Canais de Aquisição</span>
-                                <p class="ai-content" id="modal-channels">---</p>
+                            <div class="ai-box" id="wa-action-box">
+                                <span class="ai-label">Ação Rápida</span>
+                                <a id="modal-wa-link" href="#" target="_blank" class="save-btn-sidebar"
+                                    style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; background: #22c55e; color: white;">
+                                    <i class="ph-bold ph-whatsapp-logo"></i> Chamar no WhatsApp
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -715,7 +768,7 @@
 
     <!-- Bulk Action Bar -->
     <div class="bulk-action-bar" id="bulk-action-bar">
-        <div style="color: white; font-weight: 600;"><span id="selected-count-badge">0</span> Leads Selecionados</div>
+        <div style="color: white; font-weight: 600;"><span id="selected-count-badge">0</span> Selecionados</div>
         <select id="bulk-stage-select" class="crm-input-compact" style="width: 180px;"></select>
         <button id="bulk-apply-btn" class="save-btn-sidebar" style="margin: 0; padding: 8px 16px;">Mover</button>
         <button onclick="clearSelection()"
@@ -726,18 +779,51 @@
     <script src="crm-logic.js"></script>
     <script src="script.js"></script>
     <script src="sync-orders.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const stages = ["Novo Pedido", "A Enviar", "Enviados", "Entregues", "Cancelados", "Trocas e Devoluções", "Suporte Humanizado"];
+        const PIPELINES = {
+            cacife: {
+                name: "Cacife Brand",
+                stages: ["Novo Pedido", "A Enviar", "Enviados", "Entregues", "Cancelados", "Trocas e Devoluções", "Suporte Humanizado"]
+            },
+            abandoned: {
+                name: "Carrinhos Abandonados",
+                stages: ["Carrinho Abandonado", "Mensagem 1", "Mensagem 2", "Mensagem 3", "Carrinho Recuperado"]
+            }
+        };
+
         let currentPipeline = 'cacife';
         let selectedLeads = new Set();
         let allLeads = [];
+        let funnelChartInstance = null;
 
-        function safeListId(stage) { return 'list-' + (stage || 'Contato').replace(/\s+/g, '-'); }
+        function safeListId(stage) { return 'list-' + (stage || 'Contato').replace(/\s+/g, '-').toLowerCase(); }
+
+        async function switchPipeline(p) {
+            currentPipeline = p;
+            document.querySelectorAll('.pipeline-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-pipeline-${p}`).classList.add('active');
+
+            // Toggle sync button (only for cacife)
+            document.getElementById('sync-btn').style.display = (p === 'cacife') ? 'flex' : 'none';
+
+            // Toggle funnel section (only for abandoned)
+            document.getElementById('funnel-section').style.display = (p === 'abandoned') ? 'block' : 'none';
+
+            // Re-render bulk select options
+            const s = document.getElementById('bulk-stage-select');
+            s.innerHTML = '';
+            PIPELINES[currentPipeline].stages.forEach(st => { const o = document.createElement('option'); o.value = st; o.textContent = st; s.appendChild(o); });
+
+            renderBoard();
+            await loadData();
+        }
 
         function renderBoard() {
-            // ... existing code ...
             const board = document.getElementById('crm-board');
             board.innerHTML = '';
+            const stages = PIPELINES[currentPipeline].stages;
+
             stages.forEach(stage => {
                 const column = document.createElement('div');
                 column.className = 'crm-column';
@@ -749,7 +835,7 @@
                             <div class="select-all-column" id="select-all-${listId}" onclick="selectAllInStage('${stage}', event)"><i class="ph ph-check-square"></i></div>
                             <h3>${stage}</h3>
                         </div>
-                        <span class="opportunity-count">0</span>
+                        <span class="opportunity-count" id="count-${listId}">0</span>
                     </div>
                     <div class="opportunity-list" id="${listId}" ondragover="event.preventDefault(); this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event, '${stage}')"></div>
                 `;
@@ -757,36 +843,244 @@
             });
         }
 
-        // ... existing functions ...
+        async function loadData() {
+            const container = document.getElementById('crm-board');
+            container.style.opacity = '0.5';
+
+            allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline);
+            renderLeads(allLeads);
+            container.style.opacity = '1';
+        }
+
+        function renderLeads(leads) {
+            document.querySelectorAll('.opportunity-list').forEach(l => l.innerHTML = '');
+            const filterText = document.getElementById('crmSearch').value.toLowerCase();
+            const filterResp = document.getElementById('responsibleFilter').value;
+
+            const filtered = leads.filter(l => {
+                const matchText = l.name.toLowerCase().includes(filterText) || l.email.toLowerCase().includes(filterText) || l.company.toLowerCase().includes(filterText);
+                const matchResp = filterResp === 'all' || l.responsible === filterResp;
+                return matchText && matchResp;
+            });
+
+            const counts = {};
+            PIPELINES[currentPipeline].stages.forEach(s => counts[s] = 0);
+
+            filtered.forEach(lead => {
+                const listId = safeListId(lead.stage);
+                const list = document.getElementById(listId);
+                if (!list) return;
+
+                counts[lead.stage] = (counts[lead.stage] || 0) + 1;
+
+                const card = document.createElement('div');
+                card.className = `opportunity-card ${selectedLeads.has(lead.id) ? 'selected' : ''}`;
+                if (lead.isAbandoned) card.style.borderRightColor = '#9b4dff';
+
+                card.draggable = true;
+                card.onclick = (e) => {
+                    if (e.target.closest('.select-all-column')) return;
+                    showLeadModal(lead);
+                };
+                card.ondragstart = (e) => {
+                    e.dataTransfer.setData('leadId', lead.id);
+                    card.classList.add('dragging');
+                };
+                card.ondragend = () => card.classList.remove('dragging');
+
+                const revenue = lead.revenue ? lead.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
+
+                card.innerHTML = `
+                    <span class="client-name">${lead.name}</span>
+                    <span class="company-name">${lead.company}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: var(--text-white);">${revenue}</span>
+                        <div class="tags-container">
+                            ${lead.tags.map(t => `<span class="tag ${t === 'Hot' ? 'tag-hot' : ''}">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            // Update counts
+            Object.keys(counts).forEach(s => {
+                const badge = document.getElementById(`count-${safeListId(s)}`);
+                if (badge) badge.textContent = counts[s];
+            });
+
+            // Update Summary and Chart with filtered data
+            updateSummary(filtered);
+            if (currentPipeline === 'abandoned') {
+                renderFunnelChart(filtered);
+            }
+        }
+
+        async function handleDrop(e, stage) {
+            e.preventDefault();
+            const leadId = e.dataTransfer.getData('leadId');
+            const list = e.target.closest('.opportunity-list');
+            list.classList.remove('drag-over');
+
+            await CRM_LOGIC.updateLeadStage(leadId, stage, currentPipeline === 'abandoned');
+            loadData();
+        }
+
+        function showLeadModal(lead) {
+            const modal = document.getElementById('leadModal');
+            document.getElementById('modal-client-name').textContent = lead.name;
+            document.getElementById('modal-company-name').textContent = lead.company;
+            document.getElementById('modal-phone').value = lead.phone;
+            document.getElementById('modal-email').value = lead.email;
+            document.getElementById('modal-responsible').value = lead.responsible;
+            document.getElementById('modal-tags').value = lead.tags.join(', ');
+
+            document.getElementById('mgmt-group').style.display = lead.isAbandoned ? 'none' : 'block';
+
+            if (lead.isAbandoned) {
+                document.getElementById('wa-action-box').style.display = 'block';
+                const msg = `Olá ${lead.name}, tudo bem? Vi que você deixou itens no carrinho da Cacife. Use o cupom CACIFE05 para 5% OFF! Link: ${lead.checkoutUrl || ''}`;
+                document.getElementById('modal-wa-link').href = `https://wa.me/${lead.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`;
+            } else {
+                document.getElementById('wa-action-box').style.display = 'none';
+            }
+
+            modal.style.display = 'flex';
+            document.body.classList.add('modal-open');
+
+            document.getElementById('saveLeadDetails').onclick = async () => {
+                const details = {
+                    contactData: {
+                        phone: document.getElementById('modal-phone').value,
+                        email: document.getElementById('modal-email').value
+                    }
+                };
+                if (!lead.isAbandoned) {
+                    details.oppData = {
+                        responsible_name: document.getElementById('modal-responsible').value,
+                        tags: document.getElementById('modal-tags').value.split(',').map(t => t.trim())
+                    };
+                }
+                const success = await CRM_LOGIC.updateOpportunityDetails(lead.id, lead.contactId, details);
+                if (success) { modal.style.display = 'none'; document.body.classList.remove('modal-open'); loadData(); }
+            };
+
+            document.getElementById('deleteLeadBtn').onclick = async () => {
+                if (confirm('Excluir este registro permanentemente?')) {
+                    const success = await CRM_LOGIC.deleteOpportunity(lead.id);
+                    if (success) { modal.style.display = 'none'; document.body.classList.remove('modal-open'); loadData(); }
+                }
+            };
+        }
+
+        function updateSummary(leads = allLeads) {
+            const total = leads.length;
+            const stages = PIPELINES[currentPipeline].stages;
+
+            // Define success stage index based on pipeline
+            let successStageIndex = stages.length - 1; // Default to last stage (e.g. Carrinho Recuperado)
+            if (currentPipeline === 'cacife') {
+                const deliveryIndex = stages.indexOf("Entregues");
+                if (deliveryIndex !== -1) successStageIndex = deliveryIndex;
+            }
+
+            const pendingStages = stages.slice(0, successStageIndex);
+            const pending = leads.filter(l => pendingStages.includes(l.stage)).length;
+            const converted = leads.filter(l => l.stage === stages[successStageIndex]).length;
+            const rate = total > 0 ? Math.round((converted / total) * 100) : 0;
+
+            document.getElementById('total-general').textContent = total;
+            document.getElementById('total-pending').textContent = pending;
+            document.getElementById('total-converted').textContent = converted;
+            document.getElementById('delivery-rate').textContent = rate + '%';
+        }
+
+        function renderFunnelChart(leads = allLeads) {
+            const chartEl = document.getElementById('funnelChart');
+            if (!chartEl) return;
+            const ctx = chartEl.getContext('2d');
+            const stages = PIPELINES.abandoned.stages;
+            const data = stages.map(s => leads.filter(l => l.stage === s).length);
+
+            if (funnelChartInstance) funnelChartInstance.destroy();
+
+            funnelChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: stages,
+                    datasets: [{
+                        label: 'Leads no Estágio',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(155, 77, 255, 0.2)',
+                            'rgba(155, 77, 255, 0.4)',
+                            'rgba(155, 77, 255, 0.6)',
+                            'rgba(155, 77, 255, 0.8)',
+                            'rgba(34, 197, 94, 0.8)'
+                        ],
+                        borderColor: '#9b4dff',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.9
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#fff' } },
+                        y: { grid: { display: false }, ticks: { color: '#fff' } }
+                    }
+                }
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            initBulk();
-            renderBoard();
             if (CRM_LOGIC.initCrmSupabase()) {
-                // Auto-sync orders on load
-                if (typeof syncOrdersToCRM === 'function') {
-                    console.log('Starting auto-sync...');
-                    await syncOrdersToCRM();
-                }
-                loadData();
+                await switchPipeline('abandoned');
             }
 
             document.getElementById('crmSearch').oninput = () => renderLeads(allLeads);
             document.getElementById('responsibleFilter').onchange = () => renderLeads(allLeads);
+            document.getElementById('closeModal').onclick = () => {
+                document.getElementById('leadModal').style.display = 'none';
+                document.body.classList.remove('modal-open');
+            };
         });
 
-        function initBulk() {
-            const s = document.getElementById('bulk-stage-select');
-            stages.forEach(st => { const o = document.createElement('option'); o.value = st; o.textContent = st; s.appendChild(o); });
-            document.getElementById('bulk-apply-btn').onclick = async () => {
-                await CRM_LOGIC.batchUpdateLeadStages(Array.from(selectedLeads), s.value);
-                selectedLeads.clear();
-                document.getElementById('bulk-action-bar').classList.remove('visible');
-                loadData();
-            };
+        function selectAllInStage(stage, e) {
+            e.stopPropagation();
+            const listId = safeListId(stage);
+            const stageLeads = allLeads.filter(l => l.stage === stage);
+            const allSelected = stageLeads.every(l => selectedLeads.has(l.id));
+
+            if (allSelected) stageLeads.forEach(l => selectedLeads.delete(l.id));
+            else stageLeads.forEach(l => selectedLeads.add(l.id));
+
+            updateBulkBar();
+            renderLeads(allLeads);
         }
 
-        function clearSelection() { selectedLeads.clear(); document.getElementById('bulk-action-bar').classList.remove('visible'); renderLeads(allLeads); }
+        function updateBulkBar() {
+            const bar = document.getElementById('bulk-action-bar');
+            const badge = document.getElementById('selected-count-badge');
+            badge.textContent = selectedLeads.size;
+            if (selectedLeads.size > 0) bar.classList.add('visible');
+            else bar.classList.remove('visible');
+        }
+
+        function clearSelection() { selectedLeads.clear(); updateBulkBar(); renderLeads(allLeads); }
+
+        document.getElementById('bulk-apply-btn').onclick = async () => {
+            const newStage = document.getElementById('bulk-stage-select').value;
+            await CRM_LOGIC.batchUpdateLeadStages(Array.from(selectedLeads), newStage, currentPipeline === 'abandoned');
+            selectedLeads.clear();
+            updateBulkBar();
+            loadData();
+        };
     </script>
 </body>
 
