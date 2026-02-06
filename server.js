@@ -55,7 +55,7 @@ try {
 
             // Nota: Em um cenário real, você pegaria o userId do usuário logado na sessão.
             // Por enquanto, usaremos o ID 1 (admin padrão) para permitir o acesso.
-            const userId = 1;
+            const userId = 4;
 
             console.log(`🔗 Generating SSO link for user ${userId} at ${CHATWOOT_URL}`);
 
