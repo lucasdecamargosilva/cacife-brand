@@ -31,10 +31,9 @@ try {
 
     app.use((req, res, next) => {
         const origin = req.headers.origin;
-        if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*')) {
+        if (ALLOWED_ORIGINS.includes(origin) || ALLOWED_ORIGINS.includes('*') || !origin) {
             res.header('Access-Control-Allow-Origin', origin || ALLOWED_ORIGINS[0]);
         } else {
-            // Em desenvolvimento ou fallback, permite o primeiro da lista
             res.header('Access-Control-Allow-Origin', ALLOWED_ORIGINS[0]);
         }
         res.header('Access-Control-Allow-Credentials', 'true');
@@ -44,6 +43,45 @@ try {
 
         if (req.method === 'OPTIONS') return res.sendStatus(200);
         next();
+    });
+
+    // --- Chatwoot SSO Integration ---
+    const CHATWOOT_URL = process.env.CHATWOOT_URL || 'https://chatwoot.segredosdodrop.com';
+    const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN;
+
+    app.get('/api/chatwoot/sso', async (req, res) => {
+        try {
+            if (!PLATFORM_TOKEN) {
+                console.error('❌ CHATWOOT_PLATFORM_TOKEN is not configured in environment variables');
+                return res.status(500).json({ success: false, error: 'Configuração do servidor incompleta' });
+            }
+
+            // Nota: Em um cenário real, você pegaria o userId do usuário logado na sessão.
+            // Por enquanto, usaremos o ID 1 (admin padrão) para permitir o acesso.
+            const userId = 1;
+
+            console.log(`🔗 Generating SSO link for user ${userId} at ${CHATWOOT_URL}`);
+
+            const response = await axios.get(
+                `${CHATWOOT_URL}/platform/api/v1/users/${userId}/login`,
+                {
+                    headers: {
+                        'api_access_token': PLATFORM_TOKEN
+                    }
+                }
+            );
+
+            res.json({
+                success: true,
+                ssoUrl: response.data.url
+            });
+        } catch (error) {
+            console.error('❌ Error generating Chatwoot SSO:', error.response?.data || error.message);
+            res.status(500).json({
+                success: false,
+                error: 'Falha ao gerar link de acesso ao Chatwoot'
+            });
+        }
     });
 
     // Health check endpoint
