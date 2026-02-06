@@ -55,7 +55,7 @@ try {
 
             // Nota: Em um cenário real, você pegaria o userId do usuário logado na sessão.
             // Por enquanto, usaremos o ID 11 conforme solicitado.
-            const userId = 11;
+            const userId = 1;
             const accountId = 4;
 
             console.log(`🔗 Generating SSO link for user ${userId} (Account ${accountId}) at ${CHATWOOT_URL}`);
