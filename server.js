@@ -1,34 +1,21 @@
+require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
-
-// Logs iniciais para debug
-console.log('##################################################');
-console.log('🚀 Starting Server Initialization...');
-console.log(`⌚ Time: ${new Date().toISOString()}`);
-console.log('##################################################');
 
 try {
     const app = express();
     app.set('trust proxy', 1);
 
     const PORT = process.env.PORT || 3000;
-    console.log(`ℹ️ Environment PORT: ${process.env.PORT}`);
-    console.log(`ℹ️ Selected Configured Port: ${PORT}`);
 
-    // Middleware Global de Logs
-    app.use((req, res, next) => {
-        console.log(`📝 [${new Date().toISOString()}] ${req.method} ${req.url} - IP: ${req.ip}`);
-        next();
-    });
 
     // Configuração de CORS
     const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',')
         : ['http://localhost:3000', 'http://72.61.128.136:3000', 'https://cacife.quanticsolutions.com.br'];
 
-    console.log('ℹ️ Allowed Origins configured:', ALLOWED_ORIGINS);
 
     app.use((req, res, next) => {
         const origin = req.headers.origin;
@@ -43,104 +30,86 @@ try {
         next();
     });
 
-    // --- Chatwoot SSO Integration ---
-    const CHATWOOT_URL = process.env.CHATWOOT_URL || 'https://chatwoot.segredosdodrop.com';
-    const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN;
-
+    // --- SSO Chatwoot Endpoint ---
     app.get('/api/chatwoot/sso', async (req, res) => {
         try {
-            if (!PLATFORM_TOKEN) {
-                console.error('❌ CHATWOOT_PLATFORM_TOKEN is not configured in environment variables');
-                return res.status(500).json({ success: false, error: 'Configuração do servidor incompleta' });
+            const CHATWOOT_URL = process.env.CHATWOOT_URL;
+            const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN;
+            const USER_ID = process.env.CHATWOOT_USER_ID || 11;
+            const ACCOUNT_ID = process.env.CHATWOOT_ACCOUNT_ID || 4;
+
+            if (!PLATFORM_TOKEN || !CHATWOOT_URL) {
+                console.error('❌ Chatwoot configuration missing in .env');
+                return res.status(500).json({ success: false, error: 'Configuração incompleta' });
             }
 
-            // Nota: Em um cenário real, você pegaria o userId do usuário logado na sessão.
-            // Por enquanto, usaremos o ID 11 conforme solicitado.
-            const userId = 1;
-            const accountId = 4;
-
-            console.log(`🔗 Generating SSO link for user ${userId} (Account ${accountId}) at ${CHATWOOT_URL}`);
-
+            // Requesting SSO URL from Chatwoot Platform API
             const response = await axios.get(
-                `${CHATWOOT_URL}/platform/api/v1/users/${userId}/login`,
+                `${CHATWOOT_URL}/platform/api/v1/users/${USER_ID}/login`,
                 {
-                    headers: {
-                        'api_access_token': PLATFORM_TOKEN
-                    }
+                    headers: { 'api_access_token': PLATFORM_TOKEN }
                 }
             );
 
-            // Adiciona o redirecionamento para a conta específica na URL de SSO
             let ssoUrl = response.data.url;
-            if (ssoUrl) {
-                const separator = ssoUrl.includes('?') ? '&' : '?';
-                ssoUrl += `${separator}redirect_url=/app/accounts/${accountId}/dashboard`;
+
+            // Force redirection to the specific account dashboard
+            if (ACCOUNT_ID) {
+                ssoUrl += `&redirect_to=/app/accounts/${ACCOUNT_ID}/dashboard`;
             }
+
 
             res.json({
                 success: true,
                 ssoUrl: ssoUrl
             });
         } catch (error) {
-            console.error('❌ Error generating Chatwoot SSO:', error.response?.data || error.message);
-            res.status(500).json({
+            console.error('❌ Chatwoot SSO Error:', error.response?.data || error.message);
+            const status = error.response?.status || 500;
+            res.status(status).json({
                 success: false,
-                error: 'Falha ao gerar link de acesso ao Chatwoot'
+                error: error.response?.data?.error || 'Falha ao autenticar no Chatwoot'
             });
         }
     });
 
-    // Health check endpoint
+    // --- Health Check ---
     app.get('/health', (req, res) => {
-        console.log('❤️ Health check passed');
-        res.status(200).json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            service: 'Cacife Brand - Dashboard (No Chatwoot)'
-        });
+        res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
     });
 
-    // --- PROXY REVERSO PARA CHATWOOT (Solução para X-Frame-Options) ---
-    // Este proxy intercepta TODAS as requisições para o Chatwoot e remove os cabeçalhos
-    // que impedem o iframe de funcionar
-    app.use('/chatwoot', createProxyMiddleware({
-        target: CHATWOOT_URL,
+    // --- Servir Arquivos Estáticos do Dashboard ---
+    // Fazemos isso ANTES do proxy para que as rotas locais tenham prioridade
+    app.use(express.static(__dirname));
+
+    // --- Proxy Reverso Híbrido para Chatwoot ---
+    // Todas as rotas que não foram capturadas acima serão enviadas ao Chatwoot
+    app.use('/', createProxyMiddleware({
+        target: process.env.CHATWOOT_URL,
         changeOrigin: true,
-        ws: true, // Suporte para WebSocket (necessário para o Chatwoot)
-        pathRewrite: {
-            '^/chatwoot': '' // Remove /chatwoot do caminho
-        },
-        onProxyReq: (proxyReq, req, res) => {
-            console.log(`🔄 [PROXY] ${req.method} ${req.url} -> ${CHATWOOT_URL}${proxyReq.path}`);
-        },
-        onProxyRes: (proxyRes, req, res) => {
-            // Remove os cabeçalhos que bloqueiam o iframe
+        ws: true, // Suporte a WebSockets
+        onProxyRes: (proxyRes) => {
+            // Remove headers restritivos de segurança para permitir o Iframe
             delete proxyRes.headers['x-frame-options'];
             delete proxyRes.headers['content-security-policy'];
             delete proxyRes.headers['content-security-policy-report-only'];
 
-            console.log(`✅ [PROXY] Response ${proxyRes.statusCode} for ${req.url}`);
+            // Adiciona permissões
+            proxyRes.headers['X-Frame-Options'] = 'ALLOWALL';
+            proxyRes.headers['Access-Control-Allow-Origin'] = '*';
         },
         onError: (err, req, res) => {
-            console.error(`❌ [PROXY ERROR] ${err.message}`);
-            res.status(500).send('Erro ao conectar com o Chatwoot');
+            console.error('❌ Erro no Proxy:', err.message);
+            res.status(500).send('Erro ao conectar com o servidor de chat');
         }
     }));
 
-    // Servir arquivos estáticos (Frontend)
-    console.log(`📂 Configuring static file serving from: ${__dirname}`);
-    app.use(express.static(__dirname));
-
     // Iniciar o servidor
-    app.listen(PORT, (err) => {
-        if (err) {
-            console.error('❌ FATAL ERROR starting server:', err);
-            process.exit(1);
-        }
+    app.listen(PORT, () => {
         console.log('--------------------------------------------------');
-        console.log(`✅ Server is running successfully!`);
-        console.log(`🌍 Listening on port: ${PORT}`);
-        console.log(`🏠 Local URL: http://localhost:${PORT}`);
+        console.log(`✅ Servidor Rodando na Porta: ${PORT}`);
+        console.log(`🌍 Dashboard: http://localhost:${PORT}`);
+        console.log(`💬 Chatwoot Tunnel: ${process.env.CHATWOOT_URL}`);
         console.log('--------------------------------------------------');
     });
 

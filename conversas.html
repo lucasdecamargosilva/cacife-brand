@@ -218,21 +218,26 @@
 
                     loadingText.textContent = 'Carregando interface...';
 
-                    // Converte a URL do Chatwoot para usar nosso proxy local
-                    // De: https://chatwoot.segredosdodrop.com/app/login?email=...
-                    // Para: /chatwoot/app/login?email=...
-                    const proxiedUrl = data.ssoUrl.replace('https://chatwoot.segredosdodrop.com', '/chatwoot');
+                    // O proxy agora está na raiz (/), então removemos o domínio original da URL de SSO
+                    // para que a requisição passe pelo nosso servidor Express (mesma origem)
+                    const urlObj = new URL(data.ssoUrl);
+                    const localSsoUrl = urlObj.pathname + urlObj.search;
 
-                    console.log('🔗 URL com proxy:', proxiedUrl);
+                    console.log('🔗 URL Local do SSO:', localSsoUrl);
 
                     // Define a URL no iframe
-                    iframe.src = proxiedUrl;
+                    iframe.src = localSsoUrl;
 
-                    // Esconde o loading após 3 segundos (tempo para o Chatwoot carregar)
-                    setTimeout(() => {
+                    // Esconde o loading após carregar
+                    iframe.onload = () => {
                         overlay.classList.add('hidden');
                         console.log('✅ Chatwoot carregado com sucesso!');
-                    }, 3000);
+                    };
+
+                    // Fallback para esconder o loading caso o iframe.onload demore muito
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                    }, 5000);
 
                 } catch (error) {
                     console.error('❌ Erro ao carregar Chatwoot:', error);

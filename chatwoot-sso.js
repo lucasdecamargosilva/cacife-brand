@@ -20,10 +20,16 @@ router.get('/chatwoot/sso/:userId', async (req, res) => {
             }
         );
 
+        let ssoUrl = response.data.url;
+        // Se houver um accountId na query, redireciona para ele
+        if (req.query.accountId) {
+            ssoUrl += `&redirect_to=/app/accounts/${req.query.accountId}/dashboard`;
+        }
+
         // Retorna a URL de SSO
         res.json({
             success: true,
-            ssoUrl: response.data.url
+            ssoUrl: ssoUrl
         });
     } catch (error) {
         console.error('Erro ao gerar SSO:', error);
