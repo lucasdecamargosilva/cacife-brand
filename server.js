@@ -107,13 +107,14 @@ try {
         '/favicon-', '/apple-icon-', '/manifest.json', '/logo_', '/favicon.ico'
     ];
 
-    app.use(createProxyMiddleware((path, req) => {
-        return chatwootPaths.some(p => path.startsWith(p));
-    }, {
+    app.use(createProxyMiddleware({
         target: CHATWOOT_URL,
         changeOrigin: true,
         autoRewrite: true,
         secure: false,
+        filter: (path, req) => {
+            return chatwootPaths.some(p => path.startsWith(p));
+        },
         pathRewrite: (path) => path.replace(/^\/chatwoot-proxy/, ''),
         onProxyRes: (proxyRes) => {
             delete proxyRes.headers['x-frame-options'];
