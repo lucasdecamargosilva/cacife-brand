@@ -100,21 +100,18 @@ try {
         });
     });
 
-    // --- Proxy para o Chatwoot (Resolve erro de SAMEORIGIN) ---
-    app.use('/chatwoot-proxy', createProxyMiddleware({
+    // --- Proxy para o Chatwoot (Resolução Completa de SAMEORIGIN e Assets) ---
+    const chatwootProxy = createProxyMiddleware({
         target: CHATWOOT_URL,
         changeOrigin: true,
         autoRewrite: true,
-        secure: false, // Útil se houver problema com certificados SSL
-        pathRewrite: {
-            '^/chatwoot-proxy': '',
-        },
+        secure: false,
         onProxyRes: (proxyRes, req, res) => {
             // Remove as travas de segurança
             delete proxyRes.headers['x-frame-options'];
             delete proxyRes.headers['content-security-policy'];
 
-            // Corrige cookies se houver
+            // Corrige cookies
             if (proxyRes.headers['set-cookie']) {
                 proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie =>
                     cookie.replace(/Domain=[^; ]+; /gi, '')
@@ -122,7 +119,11 @@ try {
             }
         },
         cookieDomainRewrite: ""
-    }));
+    });
+
+    // Aplicamos o proxy para a rota principal e para as pastas de arquivos do Chatwoot
+    app.use('/chatwoot-proxy', chatwootProxy);
+    app.use(['/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1'], chatwootProxy);
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
