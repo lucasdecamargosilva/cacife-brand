@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Logs iniciais para debug
 console.log('##################################################');
@@ -98,6 +99,33 @@ try {
             service: 'Cacife Brand - Dashboard (No Chatwoot)'
         });
     });
+
+    // --- PROXY REVERSO PARA CHATWOOT (Solução para X-Frame-Options) ---
+    // Este proxy intercepta TODAS as requisições para o Chatwoot e remove os cabeçalhos
+    // que impedem o iframe de funcionar
+    app.use('/chatwoot', createProxyMiddleware({
+        target: CHATWOOT_URL,
+        changeOrigin: true,
+        ws: true, // Suporte para WebSocket (necessário para o Chatwoot)
+        pathRewrite: {
+            '^/chatwoot': '' // Remove /chatwoot do caminho
+        },
+        onProxyReq: (proxyReq, req, res) => {
+            console.log(`🔄 [PROXY] ${req.method} ${req.url} -> ${CHATWOOT_URL}${proxyReq.path}`);
+        },
+        onProxyRes: (proxyRes, req, res) => {
+            // Remove os cabeçalhos que bloqueiam o iframe
+            delete proxyRes.headers['x-frame-options'];
+            delete proxyRes.headers['content-security-policy'];
+            delete proxyRes.headers['content-security-policy-report-only'];
+
+            console.log(`✅ [PROXY] Response ${proxyRes.statusCode} for ${req.url}`);
+        },
+        onError: (err, req, res) => {
+            console.error(`❌ [PROXY ERROR] ${err.message}`);
+            res.status(500).send('Erro ao conectar com o Chatwoot');
+        }
+    }));
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
