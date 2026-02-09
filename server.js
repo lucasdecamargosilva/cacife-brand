@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Logs iniciais para debug
 console.log('##################################################');
@@ -98,6 +99,22 @@ try {
             service: 'Cacife Brand - Dashboard (No Chatwoot)'
         });
     });
+
+    // --- Proxy para o Chatwoot (Resolve erro de SAMEORIGIN) ---
+    app.use('/chatwoot-proxy', createProxyMiddleware({
+        target: CHATWOOT_URL,
+        changeOrigin: true,
+        pathRewrite: {
+            '^/chatwoot-proxy': '', // remove /chatwoot-proxy da URL final
+        },
+        onProxyRes: (proxyRes) => {
+            // Remove as travas de segurança que impedem o Iframe
+            delete proxyRes.headers['x-frame-options'];
+            delete proxyRes.headers['content-security-policy'];
+        },
+        // Garante que o cookie funcione no domínio do dashboard
+        cookieDomainRewrite: ""
+    }));
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
