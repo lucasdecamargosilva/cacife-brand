@@ -25,7 +25,7 @@ try {
     // Configuração de CORS
     const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',')
-        : ['http://localhost:3000', 'http://72.61.128.136:3000'];
+        : ['http://localhost:3000', 'http://72.61.128.136:3000', 'https://cacife.quanticsolutions.com.br'];
 
     console.log('ℹ️ Allowed Origins configured:', ALLOWED_ORIGINS);
 
