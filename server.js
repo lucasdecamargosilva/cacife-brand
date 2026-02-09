@@ -100,44 +100,32 @@ try {
         });
     });
 
-    // --- Proxy para o Chatwoot (Resolução Completa de SAMEORIGIN e Assets) ---
-    // 1. Proxy para a URL de Entrada (com reescrita de caminho)
-    app.use('/chatwoot-proxy', createProxyMiddleware({
+    // --- Proxy para o Chatwoot (Resolução Definitiva) ---
+    const chatwootPaths = [
+        '/chatwoot-proxy', '/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1',
+        '/brand-assets', '/login', '/dashboard', '/app', '/android-icon-',
+        '/favicon-', '/apple-icon-', '/manifest.json', '/logo_', '/favicon.ico'
+    ];
+
+    app.use(createProxyMiddleware((path, req) => {
+        return chatwootPaths.some(p => path.startsWith(p));
+    }, {
         target: CHATWOOT_URL,
         changeOrigin: true,
         autoRewrite: true,
         secure: false,
-        pathRewrite: {
-            '^/chatwoot-proxy': '',
+        pathRewrite: (path) => path.replace(/^\/chatwoot-proxy/, ''),
+        onProxyRes: (proxyRes) => {
+            delete proxyRes.headers['x-frame-options'];
+            delete proxyRes.headers['content-security-policy'];
+            if (proxyRes.headers['set-cookie']) {
+                proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie =>
+                    cookie.replace(/Domain=[^; ]+; /gi, '')
+                );
+            }
         },
-        onProxyRes: (proxyRes) => {
-            delete proxyRes.headers['x-frame-options'];
-            delete proxyRes.headers['content-security-policy'];
-        }
+        cookieDomainRewrite: ""
     }));
-
-    // 2. Proxy para todos os arquivos e dependências do Chatwoot
-    const assetsProxy = createProxyMiddleware({
-        target: CHATWOOT_URL,
-        changeOrigin: true,
-        secure: false,
-        onProxyRes: (proxyRes) => {
-            delete proxyRes.headers['x-frame-options'];
-            delete proxyRes.headers['content-security-policy'];
-        }
-    });
-
-    // Lista exaustiva de caminhos que o Chatwoot usa para carregar a interface
-    app.use([
-        '/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1',
-        '/brand-assets', '/login', '/dashboard', '/app'
-    ], assetsProxy);
-
-    // Proxy para ícones e manifestos que ficam na raiz do Chatwoot
-    // O app.use com string já funciona como "começa com", evitando o erro de sintaxe do asterisco
-    app.use([
-        '/android-icon-', '/favicon-', '/apple-icon-', '/manifest.json', '/logo_', '/favicon.ico'
-    ], assetsProxy);
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
