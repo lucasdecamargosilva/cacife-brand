@@ -104,15 +104,23 @@ try {
     app.use('/chatwoot-proxy', createProxyMiddleware({
         target: CHATWOOT_URL,
         changeOrigin: true,
+        autoRewrite: true,
+        secure: false, // Útil se houver problema com certificados SSL
         pathRewrite: {
-            '^/chatwoot-proxy': '', // remove /chatwoot-proxy da URL final
+            '^/chatwoot-proxy': '',
         },
-        onProxyRes: (proxyRes) => {
-            // Remove as travas de segurança que impedem o Iframe
+        onProxyRes: (proxyRes, req, res) => {
+            // Remove as travas de segurança
             delete proxyRes.headers['x-frame-options'];
             delete proxyRes.headers['content-security-policy'];
+
+            // Corrige cookies se houver
+            if (proxyRes.headers['set-cookie']) {
+                proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie =>
+                    cookie.replace(/Domain=[^; ]+; /gi, '')
+                );
+            }
         },
-        // Garante que o cookie funcione no domínio do dashboard
         cookieDomainRewrite: ""
     }));
 

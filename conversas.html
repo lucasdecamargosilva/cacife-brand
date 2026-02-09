@@ -265,12 +265,15 @@
                     const data = await response.json();
                     if (!data.success || !data.ssoUrl) throw new Error('SSO URL inválida');
 
+                    console.log('📦 Chatwoot SSO Original URL:', data.ssoUrl);
+                    console.log('🏠 Current Dashboard Origin:', window.location.origin);
+
                     statusText.textContent = 'Carregando inbox...';
 
                     // Converte a URL do Chatwoot para usar o nosso PROXY local
-                    // De: https://chatwoot.segredosdodrop.com/app/...
-                    // Para: /chatwoot-proxy/app/...
                     const proxiedUrl = data.ssoUrl.replace('https://chatwoot.segredosdodrop.com', window.location.origin + '/chatwoot-proxy');
+
+                    console.log('🔗 URL final enviada para o Iframe:', proxiedUrl);
 
                     openBtn.href = proxiedUrl;
                     iframe.src = proxiedUrl;
