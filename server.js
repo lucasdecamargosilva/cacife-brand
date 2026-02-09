@@ -134,8 +134,9 @@ try {
     ], assetsProxy);
 
     // Proxy para ícones e manifestos que ficam na raiz do Chatwoot
-    app.get([
-        '/android-icon-*', '/favicon-*', '/apple-icon-*', '/manifest.json', '/logo_*.svg'
+    // O app.use com string já funciona como "começa com", evitando o erro de sintaxe do asterisco
+    app.use([
+        '/android-icon-', '/favicon-', '/apple-icon-', '/manifest.json', '/logo_', '/favicon.ico'
     ], assetsProxy);
 
     // Servir arquivos estáticos (Frontend)
