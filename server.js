@@ -101,29 +101,42 @@ try {
     });
 
     // --- Proxy para o Chatwoot (Resolução Completa de SAMEORIGIN e Assets) ---
-    const chatwootProxy = createProxyMiddleware({
+    // 1. Proxy para a URL de Entrada (com reescrita de caminho)
+    app.use('/chatwoot-proxy', createProxyMiddleware({
         target: CHATWOOT_URL,
         changeOrigin: true,
         autoRewrite: true,
         secure: false,
-        onProxyRes: (proxyRes, req, res) => {
-            // Remove as travas de segurança
+        pathRewrite: {
+            '^/chatwoot-proxy': '',
+        },
+        onProxyRes: (proxyRes) => {
             delete proxyRes.headers['x-frame-options'];
             delete proxyRes.headers['content-security-policy'];
+        }
+    }));
 
-            // Corrige cookies
-            if (proxyRes.headers['set-cookie']) {
-                proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie =>
-                    cookie.replace(/Domain=[^; ]+; /gi, '')
-                );
-            }
-        },
-        cookieDomainRewrite: ""
+    // 2. Proxy para todos os arquivos e dependências do Chatwoot
+    const assetsProxy = createProxyMiddleware({
+        target: CHATWOOT_URL,
+        changeOrigin: true,
+        secure: false,
+        onProxyRes: (proxyRes) => {
+            delete proxyRes.headers['x-frame-options'];
+            delete proxyRes.headers['content-security-policy'];
+        }
     });
 
-    // Aplicamos o proxy para a rota principal e para as pastas de arquivos do Chatwoot
-    app.use('/chatwoot-proxy', chatwootProxy);
-    app.use(['/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1'], chatwootProxy);
+    // Lista exaustiva de caminhos que o Chatwoot usa para carregar a interface
+    app.use([
+        '/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1',
+        '/brand-assets', '/login', '/dashboard', '/app'
+    ], assetsProxy);
+
+    // Proxy para ícones e manifestos que ficam na raiz do Chatwoot
+    app.get([
+        '/android-icon-*', '/favicon-*', '/apple-icon-*', '/manifest.json', '/logo_*.svg'
+    ], assetsProxy);
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
