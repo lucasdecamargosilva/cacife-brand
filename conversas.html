@@ -223,6 +223,14 @@
                     <div id="loading-overlay" class="loading-overlay">
                         <div class="spinner"></div>
                         <p id="loading-text">Carregando central de mensagens...</p>
+                        <div id="iframe-fallback" style="display: none; margin-top: 20px; text-align: center;">
+                            <p style="margin-bottom: 15px; color: var(--text-gray);">O painel está demorando a responder
+                                ou bloqueou o acesso.</p>
+                            <a id="open-new-tab" target="_blank" class="apply-btn"
+                                style="height: 45px; padding: 0 25px; margin: 0 auto;">
+                                <i class="ph ph-arrow-square-out" style="margin-right: 8px;"></i> Abrir Chat em Nova Aba
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -239,6 +247,8 @@
             const overlay = document.getElementById('loading-overlay');
             const loadingText = document.getElementById('loading-text');
             const statusText = document.getElementById('status-text');
+            const fallback = document.getElementById('iframe-fallback');
+            const openBtn = document.getElementById('open-new-tab');
 
             async function initChatwoot() {
                 try {
@@ -256,9 +266,9 @@
                     if (!data.success || !data.ssoUrl) throw new Error('SSO URL inválida');
 
                     statusText.textContent = 'Carregando inbox...';
+                    openBtn.href = data.ssoUrl;
 
-                    // SEM GAMBIARRA: Usamos a URL direta do Chatwoot
-                    // Nota: Para isso funcionar, o Chatwoot deve permitir iframe
+                    // Carrega a URL do SSO diretamente no iframe
                     iframe.src = data.ssoUrl;
 
                     iframe.onload = () => {
@@ -266,8 +276,15 @@
                         setTimeout(() => overlay.classList.add('hidden'), 800);
                     };
 
-                    // Timeout de segurança para caso o iframe demore a disparar o onload
-                    setTimeout(() => overlay.classList.add('hidden'), 15000);
+                    // Timer para mostrar o fallback se o iframe falhar (ex: erro SameOrigin)
+                    setTimeout(() => {
+                        if (!overlay.classList.contains('hidden')) {
+                            statusText.textContent = 'Atenção';
+                            loadingText.style.display = 'none';
+                            fallback.style.display = 'block';
+                        }
+                    }, 6000);
+
                 } catch (err) {
                     statusText.textContent = 'Erro';
                     loadingText.innerHTML = `
