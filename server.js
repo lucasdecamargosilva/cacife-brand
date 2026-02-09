@@ -1,7 +1,6 @@
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
-const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Logs iniciais para debug
 console.log('##################################################');
@@ -99,34 +98,6 @@ try {
             service: 'Cacife Brand - Dashboard (No Chatwoot)'
         });
     });
-
-    // --- Proxy para o Chatwoot (Resolução Definitiva) ---
-    const chatwootPaths = [
-        '/chatwoot-proxy', '/vite', '/assets', '/packs', '/rails', '/cable', '/api/v1',
-        '/brand-assets', '/login', '/dashboard', '/app', '/android-icon-',
-        '/favicon-', '/apple-icon-', '/manifest.json', '/logo_', '/favicon.ico'
-    ];
-
-    app.use(createProxyMiddleware({
-        target: CHATWOOT_URL,
-        changeOrigin: true,
-        autoRewrite: true,
-        secure: false,
-        filter: (path, req) => {
-            return chatwootPaths.some(p => path.startsWith(p));
-        },
-        pathRewrite: (path) => path.replace(/^\/chatwoot-proxy/, ''),
-        onProxyRes: (proxyRes) => {
-            delete proxyRes.headers['x-frame-options'];
-            delete proxyRes.headers['content-security-policy'];
-            if (proxyRes.headers['set-cookie']) {
-                proxyRes.headers['set-cookie'] = proxyRes.headers['set-cookie'].map(cookie =>
-                    cookie.replace(/Domain=[^; ]+; /gi, '')
-                );
-            }
-        },
-        cookieDomainRewrite: ""
-    }));
 
     // Servir arquivos estáticos (Frontend)
     console.log(`📂 Configuring static file serving from: ${__dirname}`);
