@@ -17,8 +17,9 @@
 
     <link rel="stylesheet" href="style.css" />
     <!-- Supabase Core & Configuration -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
+    <script src="auth-guard.js"></script>
 
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
@@ -79,15 +80,15 @@
             gap: 6px;
             font-size: 12px;
             font-weight: 600;
-            color: var(--text-white);
+            color: var(--accent-green);
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
-            background: var(--text-white);
+            background: var(--accent-green);
             border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 8px var(--accent-green-glow);
         }
 
         .chatwoot-iframe {
@@ -256,7 +257,8 @@
 
                     statusText.textContent = 'Carregando inbox...';
 
-                    // Carrega a URL do SSO diretamente no iframe
+                    // SEM GAMBIARRA: Usamos a URL direta do Chatwoot
+                    // Nota: Para isso funcionar, o Chatwoot deve permitir iframe
                     iframe.src = data.ssoUrl;
 
                     iframe.onload = () => {
