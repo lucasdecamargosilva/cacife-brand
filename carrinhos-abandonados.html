@@ -388,11 +388,11 @@
 
             // Map data based on the 'note' logic
             const mappedStages = allAbandonedData.map(item => {
-                const note = (item.note || '').toLowerCase();
+                const stageRec = (item.stage_recuperacao || '').toLowerCase();
                 if (item.recovered_at) return 'Carrinho Recuperado';
-                if (note.includes('msg_3')) return 'Mensagem 3';
-                if (note.includes('msg_2')) return 'Mensagem 2';
-                if (note.includes('msg_1')) return 'Mensagem 1';
+                if (stageRec.includes('msg3')) return 'Mensagem 3';
+                if (stageRec.includes('msg2')) return 'Mensagem 2';
+                if (stageRec.includes('msg1')) return 'Mensagem 1';
                 return 'Carrinho Abandonado';
             });
 

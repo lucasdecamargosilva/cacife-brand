@@ -46,15 +46,15 @@ async function fetchCrmData(pipelineName = 'starter') {
 
             return allAbandoned.map(item => {
                 let stage = 'Carrinho Abandonado';
-                const note = (item.note || '').toLowerCase();
+                const stageRec = (item.stage_recuperacao || '').toLowerCase();
 
                 if (item.recovered_at) {
                     stage = 'Carrinho Recuperado';
-                } else if (note.includes('msg_3')) {
+                } else if (stageRec.includes('msg3')) {
                     stage = 'Mensagem 3';
-                } else if (note.includes('msg_2')) {
+                } else if (stageRec.includes('msg2')) {
                     stage = 'Mensagem 2';
-                } else if (note.includes('msg_1')) {
+                } else if (stageRec.includes('msg1')) {
                     stage = 'Mensagem 1';
                 }
 
@@ -199,13 +199,13 @@ async function updateLeadStage(leadId, newStage, isAbandoned = false) {
             if (newStage === 'Carrinho Recuperado') {
                 updateObj.recovered_at = new Date().toISOString();
             } else if (newStage === 'Mensagem 1') {
-                updateObj.note = 'msg_1';
+                updateObj.stage_recuperacao = 'msg1';
             } else if (newStage === 'Mensagem 2') {
-                updateObj.note = 'msg_1, msg_2';
+                updateObj.stage_recuperacao = 'msg1, msg2';
             } else if (newStage === 'Mensagem 3') {
-                updateObj.note = 'msg_1, msg_2, msg_3';
+                updateObj.stage_recuperacao = 'msg1, msg2, msg3';
             } else if (newStage === 'Carrinho Abandonado') {
-                updateObj.note = '';
+                updateObj.stage_recuperacao = '';
                 updateObj.recovered_at = null;
             }
 
@@ -238,10 +238,10 @@ async function batchUpdateLeadStages(leadIds, newStage, isAbandoned = false) {
         if (isAbandoned) {
             const updateObj = {};
             if (newStage === 'Carrinho Recuperado') updateObj.recovered_at = new Date().toISOString();
-            else if (newStage === 'Mensagem 1') updateObj.note = 'msg_1';
-            else if (newStage === 'Mensagem 2') updateObj.note = 'msg_1, msg_2';
-            else if (newStage === 'Mensagem 3') updateObj.note = 'msg_1, msg_2, msg_3';
-            else if (newStage === 'Carrinho Abandonado') { updateObj.note = ''; updateObj.recovered_at = null; }
+            else if (newStage === 'Mensagem 1') updateObj.stage_recuperacao = 'msg1';
+            else if (newStage === 'Mensagem 2') updateObj.stage_recuperacao = 'msg1, msg2';
+            else if (newStage === 'Mensagem 3') updateObj.stage_recuperacao = 'msg1, msg2, msg3';
+            else if (newStage === 'Carrinho Abandonado') { updateObj.stage_recuperacao = ''; updateObj.recovered_at = null; }
 
             const { error } = await crmClient
                 .from('abandoned_checkouts')
