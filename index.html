@@ -237,8 +237,8 @@
                         <div class="card kpi-card kpi-card-filter" id="card-filter-to_send"
                             onclick="setRevenueFilter('to_send')" style="padding: 15px;">
                             <div class="card-content">
-                                <span class="label" style="font-size: 12px;">A enviar</span>
-                                <h3 id="kpi-to-send-orders" class="value text-warning"
+                                <span class="label" style="font-size: 12px;">Não Enviado</span>
+                                <h3 id="kpi-to-send-orders" class="value text-danger"
                                     style="font-size: 24px; gap: 8px;">
                                     <i class="ph-fill ph-package" style="font-size: 20px;"></i>
                                     <span>---</span>
@@ -350,7 +350,7 @@
                                 <select id="shipping-filter" class="date-input"
                                     style="height: 36px; padding: 0 12px; min-width: 140px;">
                                     <option value="all" selected>Todos os Status</option>
-                                    <option value="não está embalado">A Enviar</option>
+                                    <option value="não está embalado">Não Enviado</option>
                                     <option value="enviado">Enviados</option>
                                     <option value="entregue">Entregues</option>
                                 </select>
@@ -744,6 +744,21 @@
             return core;
         }
 
+        function extractCity(order) {
+            if (order.shipping_city && order.shipping_city !== 'null' && order.shipping_city.trim() !== '') {
+                return order.shipping_city;
+            }
+            if (order.shipping_address) {
+                try {
+                    const addr = typeof order.shipping_address === 'string'
+                        ? JSON.parse(order.shipping_address)
+                        : order.shipping_address;
+                    if (addr && addr.city) return addr.city;
+                } catch (e) { }
+            }
+            return null;
+        }
+
         function renderOrdersTable() {
             const tbody = document.getElementById('orders-tbody');
             if (!tbody) return;
@@ -760,7 +775,10 @@
 
                 // 1. Filtro por status de pedido (shipping_status)
                 if (filterValue !== 'all') {
-                    if (filterValue === 'enviado') {
+                    if (filterValue === 'não está embalado') {
+                        // Captura todas as variações de não enviado
+                        if (shippingStatus !== 'não está embalado' && shippingStatus !== 'unpacked' && shippingStatus !== 'unshipped') return false;
+                    } else if (filterValue === 'enviado') {
                         if (shippingStatus !== 'enviado' && shippingStatus !== 'shipped') return false;
                     } else if (filterValue === 'entregue') {
                         if (shippingStatus !== 'entregue' && shippingStatus !== 'delivered') return false;
@@ -869,9 +887,9 @@
                 } else if (shipStatusRaw.toLowerCase().includes('enviado') || shipStatusRaw.toLowerCase() === 'shipped') {
                     statusClass = 'text-purple'; // Purple color for shipped status
                     shipStatusDisp = 'Enviados';
-                } else if (shipStatusRaw.toLowerCase().includes('embalado')) {
-                    statusClass = 'text-warning';
-                    shipStatusDisp = 'A Enviar';
+                } else if (shipStatusRaw.toLowerCase().includes('embalado') || shipStatusRaw.toLowerCase().includes('não enviado') || shipStatusRaw.toLowerCase() === 'unshipped' || shipStatusRaw.toLowerCase() === 'unpacked') {
+                    statusClass = 'text-danger';
+                    shipStatusDisp = 'Não Enviado';
                 }
 
                 const formattedDate = formatBrasilianDate(item.created_at);
@@ -889,7 +907,7 @@
                 const message = `Olá ${customerName}, tudo bem? Sou da Cacife Brand! 🌟\n\nPassando para informar que seu pedido dos produtos: *${item.all_products.join(', ')}* já foi processado. ✅\n\nSeu código de rastreio é: *${trackingCode}*\n\nVocê pode acompanhar a entrega através do site da transportadora. Qualquer dúvida, estamos à disposição!`;
 
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
-                const isAEnviar = shipStatusDisp === 'A Enviar';
+                const isAEnviar = shipStatusDisp === 'Não Enviado';
 
                 tr.innerHTML = `
                     <td>${customerName}</td>
@@ -980,7 +998,7 @@
             const chartTitle = document.querySelector('#chart-revenue-evolution').parentElement.previousElementSibling.querySelector('h3');
             if (chartTitle) {
                 let suffix = '';
-                if (status === 'to_send') suffix = ' (A Enviar)';
+                if (status === 'to_send') suffix = ' (Não Enviado)';
                 else if (status === 'shipped') suffix = ' (Enviados)';
                 else if (status === 'delivered') suffix = ' (Entregues)';
                 else if (status === 'cancelled') suffix = ' (Cancelados)';
@@ -1007,7 +1025,7 @@
                 { id: 'paid', label: 'Pagos', color: '#22c55e' },
                 { id: 'pending', label: 'Pendentes', color: '#f59e0b' },
                 { id: 'rejected', label: 'Recusados', color: '#ef4444' },
-                { id: 'to_send', label: 'A Enviar', color: '#eab308' },
+                { id: 'to_send', label: 'Não Enviado', color: '#ef4444' },
                 { id: 'shipped', label: 'Enviados', color: '#9b4dff' },
                 { id: 'delivered', label: 'Entregues', color: '#10b981' },
                 { id: 'cancelled', label: 'Cancelados', color: '#ef4444' },
@@ -1077,7 +1095,7 @@
                 }
 
                 // Logistics still based on Sales status
-                const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
+                const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked' || shipStatus === 'unshipped';
                 if (isSale && isUnpacked) dataSetsMap['to_send'][dateKey] = (dataSetsMap['to_send'][dateKey] || 0) + val;
                 if (isSale && (shipStatus === 'shipped' || shipStatus === 'enviado')) dataSetsMap['shipped'][dateKey] = (dataSetsMap['shipped'][dateKey] || 0) + val;
                 if (isSale && (shipStatus === 'delivered' || shipStatus === 'entregue')) dataSetsMap['delivered'][dateKey] = (dataSetsMap['delivered'][dateKey] || 0) + val;
@@ -1162,7 +1180,9 @@
             const rawTrk = order.shipping_tracking_number || order.shipping_traking_number;
             const cleanTrk = cleanTrackingCode(rawTrk);
             document.getElementById('modal-tracking-code').textContent = (cleanTrk && cleanTrk.toLowerCase() !== 'null') ? cleanTrk : 'Não disponível';
-            document.getElementById('modal-shipping-city').textContent = order.shipping_city || 'N/A';
+
+            const city = extractCity(order) || 'Não disponível';
+            document.getElementById('modal-shipping-city').textContent = city;
 
             const totalValue = order.calculated_total || parseFloat(order.total) || 0;
             document.getElementById('modal-order-total').textContent = totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -1366,9 +1386,9 @@
                 let s = o.shipping_status?.toLowerCase();
                 if (!s || s === 'not-provided') {
                     s = 'Desconhecido';
-                } else if (s === 'não está embalado' || s === 'unpacked') {
+                } else if (s === 'não está embalado' || s === 'unpacked' || s === 'unshipped') {
                     if (!isSale) return; // Ignora se não for pago
-                    s = 'A Enviar';
+                    s = 'Não Enviado';
                 } else if (s === 'shipped' || s === 'enviado') {
                     if (!isSale) return; // Mantém consistência com vendas reais
                     s = 'Enviados';
@@ -1386,7 +1406,7 @@
             const data = Object.values(map);
             const backgroundColor = labels.map(label => {
                 const l = label.toLowerCase();
-                if (l === 'a enviar') return '#ef4444'; // Red
+                if (l === 'não enviado') return '#ef4444'; // Red
                 if (l === 'enviados') return '#9b4dff'; // Purple
                 if (l === 'entregues') return '#22c55e'; // Green
                 return '#ffffff'; // Default White
@@ -1456,7 +1476,7 @@
         function renderRegionChart(orders) {
             const regionMap = {};
             orders.forEach(o => {
-                let city = o.shipping_city || 'Desconhecido';
+                let city = extractCity(o) || 'Desconhecido';
                 regionMap[city] = (regionMap[city] || 0) + 1;
             });
 

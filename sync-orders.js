@@ -114,7 +114,7 @@ function mapStatusToStage(order) {
     // 1. Regras explícitas de Shipping Status (Prioridade Alta)
     if (shipStatus === 'entregue' || shipStatus === 'delivered') return 'Entregues';
     if (shipStatus === 'enviado' || shipStatus === 'shipped') return 'Enviados';
-    if (shipStatus === 'não está embalado' || shipStatus === 'nao esta embalado' || shipStatus.includes('não esta embalado') || shipStatus.includes('nao está embalado')) return 'A Enviar';
+    if (shipStatus === 'não está embalado' || shipStatus === 'nao esta embalado' || shipStatus === 'unpacked' || shipStatus === 'unshipped' || shipStatus.includes('não esta embalado') || shipStatus.includes('nao está embalado')) return 'A Enviar';
 
     // Alguns sistemas marcam cancelado no shipping, outros no status geral
     if (shipStatus === 'cancelado' || shipStatus === 'cancelled' || status === 'cancelled' || status === 'cancelado') return 'Cancelados';
