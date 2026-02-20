@@ -12,7 +12,7 @@ function initCrmSupabase() {
     return false;
 }
 
-async function fetchCrmData(pipelineName = 'starter') {
+async function fetchCrmData(pipelineName = 'starter', startDate = null, endDate = null) {
     if (!crmClient) return [];
 
     try {
@@ -23,11 +23,15 @@ async function fetchCrmData(pipelineName = 'starter') {
             let hasMore = true;
 
             while (hasMore) {
-                const { data, error } = await crmClient
+                let query = crmClient
                     .from('abandoned_checkouts')
                     .select('*')
-                    .order('created_at', { ascending: false })
-                    .range(from, to);
+                    .order('created_at', { ascending: false });
+
+                if (startDate) query = query.gte('created_at', startDate);
+                if (endDate) query = query.lte('created_at', endDate);
+
+                const { data, error } = await query.range(from, to);
 
                 if (error) {
                     console.error('Error fetching abandoned CRM data:', error);
@@ -87,7 +91,7 @@ async function fetchCrmData(pipelineName = 'starter') {
         let hasMore = true;
 
         while (hasMore) {
-            const { data, error } = await crmClient
+            let query = crmClient
                 .from('opportunities')
                 .select(`
                     id,
@@ -96,6 +100,7 @@ async function fetchCrmData(pipelineName = 'starter') {
                     responsible_name,
                     tags,
                     lead_status,
+                    created_at,
                     contacts (
                         id,
                         full_name,
@@ -111,8 +116,12 @@ async function fetchCrmData(pipelineName = 'starter') {
                         website
                     )
                 `)
-                .eq('pipeline', dbPipeline)
-                .range(from, to);
+                .eq('pipeline', dbPipeline);
+
+            if (startDate) query = query.gte('created_at', startDate);
+            if (endDate) query = query.lte('created_at', endDate);
+
+            const { data, error } = await query.range(from, to);
 
             if (error) {
                 console.error('Error fetching CRM data:', error);

@@ -83,8 +83,9 @@
 
                     <div class="header-center">
                         <div class="filter-group">
-                            <button class="period-btn" data-period="today">Hoje</button>
-                            <button class="period-btn active" data-period="7">7 Dias</button>
+                            <button class="period-btn active" data-period="today">Hoje</button>
+                            <button class="period-btn" data-period="yesterday">Ontem</button>
+                            <button class="period-btn" data-period="7">7 Dias</button>
                             <button class="period-btn" data-period="30">30 Dias</button>
                             <button class="period-btn" data-period="all">Tudo</button>
                             <button class="period-btn" data-period="custom">Personalizado</button>
@@ -368,6 +369,7 @@
                                         <th>Cliente</th>
                                         <th>Email</th>
                                         <th>WhatsApp</th>
+                                        <th>Data</th>
                                         <th>Status do pedido</th>
                                         <th>Cód. Rastreio</th>
                                         <th>Ação</th>
@@ -375,7 +377,7 @@
                                 </thead>
                                 <tbody id="orders-tbody">
                                     <tr>
-                                        <td colspan="5"
+                                        <td colspan="7"
                                             style="text-align: center; padding: 40px; color: var(--text-muted);">
                                             Carregando dados...</td>
                                     </tr>
@@ -476,7 +478,7 @@
     <script>
         let supabaseClient;
         let charts = {};
-        let currentPeriod = '7';
+        let currentPeriod = 'today';
         let allOrdersData = [];
         let currentOrdersPage = 1;
         const ordersPerPage = 10;
@@ -492,7 +494,7 @@
             return false;
         }
 
-        async function fetchDashboardData(period = '7', customStart = null, customEnd = null) {
+        async function fetchDashboardData(period = 'today', customStart = null, customEnd = null) {
             if (!supabaseClient) return;
             currentPeriod = period;
 
@@ -512,6 +514,14 @@
                 today.setHours(0, 0, 0, 0);
                 startDate = today.toISOString();
                 endDate = now.toISOString();
+            } else if (period === 'yesterday') {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                yesterday.setHours(0, 0, 0, 0);
+                const endYesterday = new Date(yesterday);
+                endYesterday.setHours(23, 59, 59, 999);
+                startDate = yesterday.toISOString();
+                endDate = endYesterday.toISOString();
             } else {
                 const days = parseInt(period);
                 const start = new Date();
@@ -571,24 +581,48 @@
             const paidConfirmed = salesOrders.length;
             const revenue = salesOrders.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
-            const toSend = orders.filter(o => {
-                const shipStatus = o.shipping_status?.toLowerCase();
-                const payStatus = o.payment_status?.toLowerCase();
-                const orderStatus = o.status?.toLowerCase();
-                // A enviar: Seguindo regra de venda (Confirmado/paid e não cancelado) + (não embalado/unpacked)
-                const isSale = (payStatus === 'confirmado' || payStatus === 'paid') && orderStatus !== 'cancelled' && orderStatus !== 'cancelado';
+            const toSendOrders = orders.filter(o => {
+                const payStatus = o.payment_status?.toLowerCase() || '';
+                const orderStatus = o.status?.toLowerCase() || '';
+                const shipStatus = o.shipping_status?.toLowerCase() || '';
+
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
+                const isSale = isPaid && !isCancelOrRefund;
                 const isUnpacked = shipStatus === 'não está embalado' || shipStatus === 'unpacked';
                 return isUnpacked && isSale;
-            }).length;
+            });
+            const toSend = toSendOrders.length;
 
             const shipped = orders.filter(o => {
-                const s = o.shipping_status?.toLowerCase();
-                return s === 'shipped' || s === 'enviado';
+                const payStatus = o.payment_status?.toLowerCase() || '';
+                const orderStatus = o.status?.toLowerCase() || '';
+                const shipStatus = o.shipping_status?.toLowerCase() || '';
+
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
+                const isSale = isPaid && !isCancelOrRefund;
+                return isSale && (shipStatus === 'shipped' || shipStatus === 'enviado');
             }).length;
 
             const delivered = orders.filter(o => {
-                const s = o.shipping_status?.toLowerCase();
-                return s === 'delivered' || s === 'entregue';
+                const payStatus = o.payment_status?.toLowerCase() || '';
+                const orderStatus = o.status?.toLowerCase() || '';
+                const shipStatus = o.shipping_status?.toLowerCase() || '';
+
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
+                const isSale = isPaid && !isCancelOrRefund;
+                return isSale && (shipStatus === 'delivered' || shipStatus === 'entregue');
             }).length;
 
             const cancelled = orders.filter(o => {
@@ -675,8 +709,12 @@
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) return 'N/A';
 
-            // Usamos UTC para garantir que a data YYYY-MM-DD não sofra deslocamento de fuso
-            return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                timeZone: 'UTC'
+            });
         }
 
         function cleanTrackingCode(trk) {
@@ -801,7 +839,7 @@
             const paginatedData = groupedList.slice(startIndex, endIndex);
 
             if (paginatedData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
                 return;
             }
 
@@ -857,6 +895,7 @@
                     <td>${customerName}</td>
                     <td>${item.customer_email || 'N/A'}</td>
                     <td style="white-space: nowrap;">${formattedPhone}</td>
+                    <td>${formattedDate}</td>
                     <td><span class="${statusClass}" style="font-weight: 600; font-size: 13px;">${shipStatusDisp}</span></td>
                     <td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>
                     <td>
@@ -1246,14 +1285,37 @@
 
             const map = {};
             orders.forEach(o => {
-                let s = o.payment_status?.toLowerCase();
-                if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s === 'paid' || s === 'pago' || s === 'approved' || s === 'aprovado' || s === 'confirmado') s = 'Confirmado';
-                else if (s === 'pending' || s === 'pendente') s = 'Pendente';
-                else if (s.includes('parcialmente estornado')) s = 'Parcialmente Estornado';
-                else if (s === 'refunded' || s === 'reembolsado' || s === 'estornado') s = 'Estornado';
-                else if (s === 'failed' || s === 'falhou' || s === 'recusado' || s === 'rejected') s = 'Recusado';
-                else s = s.charAt(0).toUpperCase() + s.slice(1);
+                const payStatus = (o.payment_status || '').toLowerCase();
+                const orderStatus = (o.status || '').toLowerCase();
+
+                // Lógica de Venda Real
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid' || payStatus === 'pago' || payStatus === 'approved' || payStatus === 'aprovado';
+
+                // Identificação distinta
+                const isRefund =
+                    orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
+                const isCancel = orderStatus.includes('cancel') || payStatus.includes('cancel');
+
+                let s;
+                if (isPaid && !isRefund && !isCancel) {
+                    s = 'Confirmado';
+                } else if (payStatus === 'pending' || payStatus === 'pendente') {
+                    s = 'Pendente';
+                } else if (payStatus.includes('parcialmente estornado')) {
+                    s = 'Parcialmente Estornado';
+                } else if (isRefund) {
+                    s = 'Estornado';
+                } else if (isCancel) {
+                    s = 'Cancelado';
+                } else if (payStatus === 'failed' || payStatus === 'falhou' || payStatus === 'recusado' || payStatus === 'rejected') {
+                    s = 'Recusado';
+                } else if (!payStatus || payStatus === 'not-provided') {
+                    s = 'Desconhecido';
+                } else {
+                    s = payStatus.charAt(0).toUpperCase() + payStatus.slice(1);
+                }
 
                 map[s] = (map[s] || 0) + 1;
             });
@@ -1265,6 +1327,7 @@
                 if (l === 'confirmado') return '#22c55e'; // Green for confirmed
                 if (l === 'pendente') return '#9b4dff'; // Purple for pending
                 if (l === 'recusado') return '#ef4444'; // Red for declined
+                if (l === 'cancelado') return '#ef4444'; // Red for cancelled
                 if (l === 'estornado' || l === 'parcialmente estornado') return '#f59e0b'; // Orange for refunded
                 return '#9b4dff'; // Default Purple
             });
@@ -1290,12 +1353,31 @@
 
             const map = {};
             orders.forEach(o => {
+                const payStatus = (o.payment_status || '').toLowerCase();
+                const orderStatus = (o.status || '').toLowerCase();
+                const isPaid = payStatus === 'confirmado' || payStatus === 'paid';
+
+                const isCancelOrRefund =
+                    orderStatus.includes('cancel') || orderStatus.includes('estornado') || orderStatus.includes('refund') ||
+                    payStatus.includes('cancel') || payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+
+                const isSale = isPaid && !isCancelOrRefund;
+
                 let s = o.shipping_status?.toLowerCase();
-                if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s === 'não está embalado' || s === 'unpacked') s = 'A Enviar';
-                else if (s === 'shipped' || s === 'enviado') s = 'Enviados';
-                else if (s === 'delivered' || s === 'entregue') s = 'Entregues';
-                else s = s.charAt(0).toUpperCase() + s.slice(1);
+                if (!s || s === 'not-provided') {
+                    s = 'Desconhecido';
+                } else if (s === 'não está embalado' || s === 'unpacked') {
+                    if (!isSale) return; // Ignora se não for pago
+                    s = 'A Enviar';
+                } else if (s === 'shipped' || s === 'enviado') {
+                    if (!isSale) return; // Mantém consistência com vendas reais
+                    s = 'Enviados';
+                } else if (s === 'delivered' || s === 'entregue') {
+                    if (!isSale) return; // Mantém consistência com vendas reais
+                    s = 'Entregues';
+                } else {
+                    s = s.charAt(0).toUpperCase() + s.slice(1);
+                }
 
                 map[s] = (map[s] || 0) + 1;
             });
@@ -1417,7 +1499,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (initSupabase()) {
-                fetchDashboardData('7');
+                fetchDashboardData('today');
 
                 // Real-time updates
                 supabaseClient

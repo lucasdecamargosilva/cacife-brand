@@ -635,6 +635,24 @@
                             onclick="switchPipeline('abandoned')">Carrinhos Abandonados</button>
                     </div>
 
+                    <div class="header-center">
+                        <div class="filter-group">
+                            <button class="period-btn active" data-period="today">Hoje</button>
+                            <button class="period-btn" data-period="yesterday">Ontem</button>
+                            <button class="period-btn" data-period="7">7 Dias</button>
+                            <button class="period-btn" data-period="30">30 Dias</button>
+                            <button class="period-btn" data-period="all">Tudo</button>
+                            <button class="period-btn" data-period="custom">Personalizado</button>
+                        </div>
+                        <div id="custom-date-picker"
+                            style="display: none; align-items: center; gap: 8px; margin-left: 16px;">
+                            <input type="date" id="date-start" class="date-input">
+                            <span style="color: var(--accent-gray)">até</span>
+                            <input type="date" id="date-end" class="date-input">
+                            <button id="apply-custom-date" class="apply-btn">Aplicar</button>
+                        </div>
+                    </div>
+
                     <div class="crm-filters"
                         style="display: flex; gap: 16px; align-items: center; flex: 1; max-width: 600px;">
                         <input type="text" id="crmSearch" class="crm-input-compact"
@@ -797,6 +815,7 @@
         };
 
         let currentPipeline = 'cacife';
+        let currentPeriod = 'today';
         let selectedLeads = new Set();
         let allLeads = [];
         let funnelChartInstance = null;
@@ -851,7 +870,33 @@
             const container = document.getElementById('crm-board');
             container.style.opacity = '0.5';
 
-            allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline);
+            let startDate, endDate;
+            const now = new Date();
+            endDate = now.toISOString();
+
+            if (currentPeriod === 'custom') {
+                const start = document.getElementById('date-start').value;
+                const end = document.getElementById('date-end').value;
+                if (start && end) {
+                    startDate = new Date(start).toISOString();
+                    endDate = new Date(end + 'T23:59:59').toISOString();
+                }
+            } else if (currentPeriod === 'today') {
+                startDate = new Date().toISOString().split('T')[0];
+            } else if (currentPeriod === 'yesterday') {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yDate = yesterday.toISOString().split('T')[0];
+                startDate = yDate;
+                endDate = yDate + 'T23:59:59';
+            } else if (currentPeriod !== 'all') {
+                const days = parseInt(currentPeriod);
+                const start = new Date();
+                start.setDate(now.getDate() - days);
+                startDate = start.toISOString();
+            }
+
+            allLeads = await CRM_LOGIC.fetchCrmData(currentPipeline, startDate, endDate);
             renderLeads(allLeads);
             container.style.opacity = '1';
         }
@@ -1049,6 +1094,30 @@
 
             document.getElementById('crmSearch').oninput = () => renderLeads(allLeads);
             document.getElementById('responsibleFilter').onchange = () => renderLeads(allLeads);
+
+            // Period buttons logic
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+
+                    currentPeriod = this.dataset.period;
+                    const customPicker = document.getElementById('custom-date-picker');
+
+                    if (currentPeriod === 'custom') {
+                        customPicker.style.display = 'flex';
+                    } else {
+                        customPicker.style.display = 'none';
+                        loadData();
+                    }
+                });
+            });
+
+            // Apply custom date
+            document.getElementById('apply-custom-date').addEventListener('click', () => {
+                loadData();
+            });
+
             document.getElementById('closeModal').onclick = () => {
                 document.getElementById('leadModal').style.display = 'none';
                 document.body.classList.remove('modal-open');

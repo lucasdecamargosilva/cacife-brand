@@ -77,7 +77,9 @@
 
                     <div class="header-center">
                         <div class="filter-group">
-                            <button class="period-btn active" data-period="7">7 Dias</button>
+                            <button class="period-btn active" data-period="today">Hoje</button>
+                            <button class="period-btn" data-period="yesterday">Ontem</button>
+                            <button class="period-btn" data-period="7">7 Dias</button>
                             <button class="period-btn" data-period="30">30 Dias</button>
                             <button class="period-btn" data-period="all">Tudo</button>
                             <button class="period-btn" data-period="custom">Personalizado</button>
@@ -212,7 +214,7 @@
         let chartFunnel = null;
         let allAbandonedData = [];
         let currentPage = 1;
-        let currentPeriod = '7';
+        let currentPeriod = 'today';
         const itemsPerPage = 10;
         const STAGES = ["Carrinho Abandonado", "Mensagem 1", "Mensagem 2", "Mensagem 3", "Carrinho Recuperado"];
 
@@ -227,7 +229,7 @@
             return false;
         }
 
-        async function fetchAbandonedData(period = '7', customStart = null, customEnd = null) {
+        async function fetchAbandonedData(period = 'today', customStart = null, customEnd = null) {
             if (!supabaseClient) return;
             currentPeriod = period;
 
@@ -241,6 +243,15 @@
             } else if (period === 'all') {
                 startDate = '2000-01-01T00:00:00Z'; // Far past to include everything
                 endDate = now.toISOString();
+            } else if (period === 'today') {
+                startDate = new Date().toISOString().split('T')[0]; // Literal YYYY-MM-DD
+                endDate = now.toISOString();
+            } else if (period === 'yesterday') {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yDate = yesterday.toISOString().split('T')[0];
+                startDate = yDate;
+                endDate = yDate + 'T23:59:59';
             } else {
                 const days = parseInt(period);
                 const start = new Date();
@@ -488,7 +499,12 @@
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
 
                 const date = new Date(item.created_at);
-                const formattedDate = date.toLocaleDateString('pt-BR');
+                const formattedDate = date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                });
 
                 tr.innerHTML = `
                     <td>${item.contact_name || 'N/A'}</td>
@@ -559,7 +575,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             if (initSupabase()) {
-                fetchAbandonedData('7');
+                fetchAbandonedData('today');
             }
 
             // Period buttons logic

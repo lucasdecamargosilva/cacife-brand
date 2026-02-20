@@ -109,6 +109,7 @@
 
                     <div class="header-center">
                         <div class="filter-group">
+                            <button class="period-btn" data-period="today">Hoje</button>
                             <button class="period-btn active" data-period="7">7 Dias</button>
                             <button class="period-btn" data-period="30">30 Dias</button>
                             <button class="period-btn" data-period="all">Tudo</button>
@@ -206,6 +207,11 @@
                 endDate = new Date(customEnd + 'T23:59:59').toISOString();
             } else if (period === 'all') {
                 startDate = '2000-01-01T00:00:00Z';
+                endDate = now.toISOString();
+            } else if (period === 'today') {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                startDate = today.toISOString();
                 endDate = now.toISOString();
             } else {
                 const days = parseInt(period);
