@@ -238,25 +238,25 @@
             endDate = now.toISOString();
 
             if (period === 'custom' && customStart && customEnd) {
-                startDate = new Date(customStart).toISOString();
-                endDate = new Date(customEnd + 'T23:59:59').toISOString();
+                startDate = customStart;
+                endDate = customEnd + ' 23:59:59';
             } else if (period === 'all') {
-                startDate = '2000-01-01T00:00:00Z'; // Far past to include everything
-                endDate = now.toISOString();
+                startDate = '2000-01-01';
+                endDate = '2100-01-01';
             } else if (period === 'today') {
-                startDate = new Date().toISOString().split('T')[0]; // Literal YYYY-MM-DD
-                endDate = now.toISOString();
+                startDate = new Date().toLocaleDateString('sv-SE');
+                endDate = startDate + ' 23:59:59';
             } else if (period === 'yesterday') {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yDate = yesterday.toISOString().split('T')[0];
-                startDate = yDate;
-                endDate = yDate + 'T23:59:59';
+                const d = new Date();
+                d.setDate(d.getDate() - 1);
+                startDate = d.toLocaleDateString('sv-SE');
+                endDate = startDate + ' 23:59:59';
             } else {
                 const days = parseInt(period);
-                const start = new Date();
-                start.setDate(now.getDate() - days);
-                startDate = start.toISOString();
+                const d = new Date();
+                d.setDate(d.getDate() - days);
+                startDate = d.toLocaleDateString('sv-SE');
+                endDate = new Date().toLocaleDateString('sv-SE') + ' 23:59:59';
             }
 
             try {

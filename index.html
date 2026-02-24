@@ -503,30 +503,25 @@
             endDate = now.toISOString();
 
             if (period === 'custom' && customStart && customEnd) {
-                // Ensure we use UTC to avoid local timezone shifts
-                startDate = `${customStart}T00:00:00.000Z`;
-                endDate = `${customEnd}T23:59:59.999Z`;
+                startDate = customStart;
+                endDate = customEnd + ' 23:59:59';
             } else if (period === 'all') {
-                startDate = '2000-01-01T00:00:00Z';
-                endDate = now.toISOString();
+                startDate = '2000-01-01';
+                endDate = '2100-01-01';
             } else if (period === 'today') {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                startDate = today.toISOString();
-                endDate = now.toISOString();
+                startDate = new Date().toLocaleDateString('sv-SE');
+                endDate = startDate + ' 23:59:59';
             } else if (period === 'yesterday') {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                yesterday.setHours(0, 0, 0, 0);
-                const endYesterday = new Date(yesterday);
-                endYesterday.setHours(23, 59, 59, 999);
-                startDate = yesterday.toISOString();
-                endDate = endYesterday.toISOString();
+                const d = new Date();
+                d.setDate(d.getDate() - 1);
+                startDate = d.toLocaleDateString('sv-SE');
+                endDate = startDate + ' 23:59:59';
             } else {
                 const days = parseInt(period);
-                const start = new Date();
-                start.setDate(now.getDate() - days);
-                startDate = start.toISOString();
+                const d = new Date();
+                d.setDate(d.getDate() - days);
+                startDate = d.toLocaleDateString('sv-SE');
+                endDate = new Date().toLocaleDateString('sv-SE') + ' 23:59:59';
             }
 
             try {
