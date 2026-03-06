@@ -388,7 +388,7 @@
                 const recoveredIds = new Set(allRecuperadosData.map(r => r.checkout_id));
                 allAbandonedData = abandoned.map(item => ({
                     ...item,
-                    is_recovered: recoveredIds.has(item.id)
+                    is_recovered: recoveredIds.has(item.checkout_id)
                 }));
 
                 updateDashboard(recuperadosData);
