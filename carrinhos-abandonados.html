@@ -196,8 +196,18 @@
                     <section class="dashboard-grid">
                         <!-- Table Section -->
                         <div class="card chart-card card-gold" style="min-height: 500px;">
-                            <div class="card-header">
+                            <div class="card-header"
+                                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
                                 <h3><i class="ph-fill ph-list"></i> Lista de Abandonos</h3>
+                                <div class="filter-group"
+                                    style="margin: 0; display: flex; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+                                    <button class="status-btn active" data-status="all"
+                                        style="background: none; border: none; padding: 8px 16px; color: var(--text-white); cursor: pointer; transition: 0.3s; font-size: 13px; font-weight: 600;">Todos</button>
+                                    <button class="status-btn" data-status="abandoned"
+                                        style="background: none; border: none; padding: 8px 16px; color: var(--text-muted); cursor: pointer; transition: 0.3s; font-size: 13px; font-weight: 600;">Abandonados</button>
+                                    <button class="status-btn" data-status="recovered"
+                                        style="background: none; border: none; padding: 8px 16px; color: var(--text-muted); cursor: pointer; transition: 0.3s; font-size: 13px; font-weight: 600;">Recuperados</button>
+                                </div>
                             </div>
                             <div class="table-container">
                                 <table class="custom-table" id="abandoned-table">
@@ -207,6 +217,7 @@
                                             <th>Email</th>
                                             <th>WhatsApp</th>
                                             <th>Data</th>
+                                            <th>Status</th>
                                             <th>Ação</th>
                                         </tr>
                                     </thead>
@@ -257,8 +268,10 @@
         let chartEvolution = null;
         let chartFunnel = null;
         let allAbandonedData = [];
+        let allRecuperadosData = [];
         let currentPage = 1;
         let currentPeriod = 'today';
+        let currentStatusFilter = 'all';
         const itemsPerPage = 10;
         const STAGES = ["Carrinho Abandonado", "Mensagem 1", "Mensagem 2", "Mensagem 3", "Carrinho Recuperado"];
 
@@ -299,6 +312,8 @@
                         to += 1000;
                     }
                 }
+
+                allRecuperadosData = allRecuperados;
 
                 const quantity = allRecuperados.length;
                 const value = allRecuperados.reduce((sum, item) => sum + (parseFloat(item.pedido_value) || 0), 0);
@@ -367,10 +382,14 @@
                     }
                 }
 
-                allAbandonedData = abandoned;
-
                 // Passa as datas para o fech de recuperados também
                 const recuperadosData = await fetchRecoveredCartsTotal(startDate, endDate);
+
+                const recoveredIds = new Set(allRecuperadosData.map(r => r.checkout_id));
+                allAbandonedData = abandoned.map(item => ({
+                    ...item,
+                    is_recovered: recoveredIds.has(item.id)
+                }));
 
                 updateDashboard(recuperadosData);
             } catch (error) {
@@ -480,12 +499,20 @@
         }
 
         function renderTable() {
+            // Apply Status Filter
+            let filteredData = allAbandonedData;
+            if (currentStatusFilter === 'abandoned') {
+                filteredData = allAbandonedData.filter(item => !item.is_recovered);
+            } else if (currentStatusFilter === 'recovered') {
+                filteredData = allAbandonedData.filter(item => item.is_recovered);
+            }
+
             const tbody = document.getElementById('abandoned-tbody');
             tbody.innerHTML = '';
 
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = startIndex + itemsPerPage;
-            const paginatedData = allAbandonedData.slice(startIndex, endIndex);
+            const paginatedData = filteredData.slice(startIndex, endIndex);
 
             if (paginatedData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum dado encontrado.</td></tr>';
@@ -517,11 +544,16 @@
                     timeZone: 'UTC'
                 });
 
+                const statusTag = item.is_recovered
+                    ? '<span style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="ph-fill ph-check-circle"></i> Recuperado</span>'
+                    : '<span style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"><i class="ph-fill ph-warning-circle"></i> Abandonado</span>';
+
                 tr.innerHTML = `
                     <td>${item.contact_name || 'N/A'}</td>
                     <td>${item.contact_email || 'N/A'}</td>
                     <td style="white-space: nowrap;">${formattedPhone}</td>
                     <td style="font-size: 13px; white-space: nowrap;">${formattedDate}</td>
+                    <td style="white-space: nowrap;">${statusTag}</td>
                     <td>
                         <a href="${waLink}" target="_blank" class="apply-btn" style="text-decoration: none; justify-content: center; gap: 8px; background: #9b4dff; color: white; border: none; font-weight: 700; font-size: 12px; white-space: nowrap;">
                             <i class="ph ph-whatsapp-logo"></i> Chamar
@@ -532,7 +564,7 @@
             });
 
             // Update Pagination UI
-            const total = allAbandonedData.length;
+            const total = filteredData.length;
             const startRange = total === 0 ? 0 : startIndex + 1;
             const endRange = Math.min(endIndex, total);
 
@@ -588,6 +620,24 @@
             if (initSupabase()) {
                 fetchAbandonedData('today');
             }
+
+            // Status Filter Logic
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.status-btn').forEach(b => {
+                        b.classList.remove('active');
+                        b.style.color = 'var(--text-muted)';
+                        b.style.background = 'none';
+                    });
+                    this.classList.add('active');
+                    this.style.color = 'var(--text-white)';
+                    this.style.background = 'rgba(255, 255, 255, 0.1)';
+
+                    currentStatusFilter = this.dataset.status;
+                    currentPage = 1;
+                    renderTable();
+                });
+            });
 
             // Period buttons logic
             document.querySelectorAll('.period-btn').forEach(btn => {
