@@ -123,19 +123,24 @@
                                 <span class="subtext">Soma dos checkouts</span>
                             </div>
                         </div>
+
+                        <div class="card kpi-card"
+                            style="border-left: 4px solid #facc15; background: linear-gradient(145deg, rgba(250, 204, 21, 0.05), transparent);">
+                            <div class="card-content">
+                                <span class="label" style="color: #facc15;">Valor Recuperado</span>
+                                <h3 id="kpi-total-recuperado" class="value"
+                                    style="font-size: 42px; color: var(--text-white); text-shadow: 0 0 20px rgba(250, 204, 21, 0.2);">
+                                    <i class="ph-fill ph-hand-coins" style="color: #facc15;"></i>
+                                    <span>---</span>
+                                </h3>
+                                <span class="subtext">Total de carrinhos salvos</span>
+                            </div>
+                        </div>
                     </section>
 
                     <!-- Chart Evolution & Funnel Section -->
                     <section class="dashboard-grid"
-                        style="margin-bottom: var(--spacing-lg); display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
-                        <div class="card chart-card card-gold" style="min-height: 480px;">
-                            <div class="card-header">
-                                <h3><i class="ph-fill ph-chart-line"></i> Evolução de Abandonos</h3>
-                            </div>
-                            <div class="chart-container" style="min-height: 250px;">
-                                <canvas id="chart-abandoned-evolution"></canvas>
-                            </div>
-                        </div>
+                        style="margin-bottom: var(--spacing-lg); display: grid; grid-template-columns: 1fr; gap: var(--spacing-lg);">
 
                         <div class="card chart-card card-gold" style="min-height: 480px;">
                             <div class="card-header">
@@ -229,6 +234,23 @@
             return false;
         }
 
+        async function fetchRecoveredCartsTotal() {
+            try {
+                // Tenta puxar a linha de TOTAL RECUPERADO da view que contém a query do cliente
+                const { data, error } = await supabaseClient
+                    .from('vw_carrinhos_recuperados')
+                    .select('pedido_value')
+                    .eq('contact_identification', 'TOTAL RECUPERADO')
+                    .single();
+
+                if (error) throw error;
+                return data ? data.pedido_value : 0;
+            } catch (err) {
+                console.warn('View vw_carrinhos_recuperados não encontrada ou sem dados: ', err.message);
+                return 0; // fallback se a view não existir ou falhar
+            }
+        }
+
         async function fetchAbandonedData(period = 'today', customStart = null, customEnd = null) {
             if (!supabaseClient) return;
             currentPeriod = period;
@@ -288,7 +310,9 @@
 
                 allAbandonedData = abandoned;
 
-                updateDashboard();
+                const totalRecuperado = await fetchRecoveredCartsTotal();
+
+                updateDashboard(totalRecuperado);
             } catch (error) {
                 console.error('Error fetching abandoned data:', error);
             }
@@ -298,98 +322,22 @@
             return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        function updateDashboard() {
+        function updateDashboard(valorRecuperado = 0) {
             const total = allAbandonedData.length;
             const sumValue = allAbandonedData.reduce((acc, curr) => acc + (parseFloat(curr.total) || 0), 0);
 
             document.querySelector('#kpi-total-abandoned span').textContent = total;
             document.querySelector('#kpi-total-value span').textContent = formatBRL(sumValue);
 
-            renderEvolutionChart();
+            const kpiRecup = document.querySelector('#kpi-total-recuperado span');
+            if (kpiRecup) kpiRecup.textContent = formatBRL(valorRecuperado);
+
+
             renderFunnelChart();
             renderTable();
         }
 
-        function renderEvolutionChart() {
-            const ctx = document.getElementById('chart-abandoned-evolution').getContext('2d');
-            if (chartEvolution) chartEvolution.destroy();
 
-            const dateMap = {};
-
-            allAbandonedData.forEach(a => {
-                if (!a.created_at) return;
-                const dateObj = new Date(a.created_at);
-                if (isNaN(dateObj.getTime())) return;
-
-                let dateKey;
-                if (currentPeriod === 'all') {
-                    // Group by Month: YYYY-MM
-                    const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                    const y = dateObj.getFullYear();
-                    dateKey = `${y}-${m}`;
-                } else {
-                    // Group by Day: YYYY-MM-DD
-                    const d = dateObj.getDate().toString().padStart(2, '0');
-                    const m = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                    const y = dateObj.getFullYear();
-                    dateKey = `${y}-${m}-${d}`;
-                }
-
-                dateMap[dateKey] = (dateMap[dateKey] || 0) + 1;
-            });
-
-            // Standard alpha sort works for YYYY-MM and YYYY-MM-DD
-            const sortedKeys = Object.keys(dateMap).sort();
-            const labels = sortedKeys.map(key => {
-                const p = key.split('-');
-                if (p.length === 2) return `${p[1]}/${p[0]}`; // MM/YYYY
-                return `${p[2]}/${p[1]}`; // DD/MM
-            });
-            const data = sortedKeys.map(key => dateMap[key]);
-
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(155, 77, 255, 0.4)');
-            gradient.addColorStop(1, 'rgba(155, 77, 255, 0)');
-
-            chartEvolution = new Chart(ctx, {
-                type: (currentPeriod === 'all' ? 'bar' : 'line'),
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Abandonos',
-                        data: data,
-                        borderColor: '#9b4dff',
-                        backgroundColor: (currentPeriod === 'all' ? '#9b4dff' : gradient),
-                        borderWidth: 3,
-                        pointBackgroundColor: '#9b4dff',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                        pointRadius: (currentPeriod === 'all' ? 0 : 5),
-                        pointHoverRadius: 7,
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { color: '#fff', stepSize: 1 },
-                            grid: { color: 'rgba(255,255,255,0.05)' }
-                        },
-                        x: {
-                            ticks: { color: '#fff' },
-                            grid: { display: false }
-                        }
-                    }
-                }
-            });
-        }
 
         function renderFunnelChart() {
             const chartEl = document.getElementById('chart-abandoned-funnel');
