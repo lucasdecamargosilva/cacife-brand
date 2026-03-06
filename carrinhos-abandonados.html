@@ -296,7 +296,7 @@
                 while (hasMore) {
                     const { data, error } = await supabaseClient
                         .from('vw_carrinhos_recuperados')
-                        .select('pedido_value')
+                        .select('checkout_id, pedido_value')
                         .neq('contact_identification', 'TOTAL RECUPERADO')
                         .gte('data_pedido', startDate)
                         .lte('data_pedido', endDate)
@@ -388,7 +388,7 @@
                 const recoveredIds = new Set(allRecuperadosData.map(r => r.checkout_id));
                 allAbandonedData = abandoned.map(item => ({
                     ...item,
-                    is_recovered: recoveredIds.has(item.checkout_id)
+                    is_recovered: recoveredIds.has(item.id)
                 }));
 
                 updateDashboard(recuperadosData);
