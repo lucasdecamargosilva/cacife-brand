@@ -95,58 +95,9 @@
                 </header>
 
                 <main class="dashboard-grid">
-                    <!-- Highlighted KPI -->
-                    <section style="margin-bottom: var(--spacing-lg);">
-                        <style>
-                            @keyframes floatIcon {
-                                0% {
-                                    transform: translateY(0px) rotate(0deg);
-                                }
-
-                                50% {
-                                    transform: translateY(-8px) rotate(5deg);
-                                }
-
-                                100% {
-                                    transform: translateY(0px) rotate(0deg);
-                                }
-                            }
-
-                            @keyframes glowPulse {
-                                0% {
-                                    box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
-                                }
-
-                                50% {
-                                    box-shadow: 0 0 50px rgba(250, 204, 21, 0.4);
-                                }
-
-                                100% {
-                                    box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
-                                }
-                            }
-                        </style>
-                        <div class="card kpi-card"
-                            style="border: 2px solid rgba(250, 204, 21, 0.4); border-bottom: 8px solid #facc15; background: linear-gradient(135deg, rgba(250, 204, 21, 0.15) 0%, rgba(20, 20, 20, 0.8) 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 60px 20px; text-align: center; border-radius: 24px; animation: glowPulse 3s infinite;">
-                            <span class="label"
-                                style="color: #facc15; font-size: 24px; text-transform: uppercase; letter-spacing: 4px; font-weight: 800; margin-bottom: 16px;">🔥
-                                Valor Recuperado 💸</span>
-                            <h3 id="kpi-total-recuperado" class="value"
-                                style="font-size: min(8vw, 96px); color: var(--text-white); text-shadow: 0 0 60px rgba(250, 204, 21, 0.8); margin: 10px 0; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
-                                <i class="ph-fill ph-hand-coins"
-                                    style="color: #facc15; font-size: min(8vw, 84px); margin-right: 20px; animation: floatIcon 3s ease-in-out infinite;"></i>
-                                <span
-                                    style="background: linear-gradient(to right, #ffffff, #facc15); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">---</span>
-                            </h3>
-                            <span class="subtext" id="kpi-recuperado-qtd"
-                                style="font-size: 20px; color: #facc15; font-weight: 600; background: rgba(250, 204, 21, 0.15); padding: 12px 24px; border-radius: 30px; display: inline-block; margin-top: 24px; border: 1px solid rgba(250, 204, 21, 0.3);">
-                                Carregando carrinhos salvos...
-                            </span>
-                        </div>
-                    </section>
-
-                    <!-- KPI Cards -->
-                    <section class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));">
+                    <!-- KPI Cards (Top) -->
+                    <section class="kpi-grid"
+                        style="grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); margin-bottom: var(--spacing-lg);">
                         <div class="card kpi-card"
                             style="border-left: 4px solid var(--accent-blue); background: linear-gradient(145deg, rgba(59, 130, 246, 0.05), transparent);">
                             <div class="card-content">
@@ -173,6 +124,56 @@
                                 </h3>
                                 <span class="subtext">Soma de todos os carrinhos abandonados</span>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- Highlighted KPI (Bottom) -->
+                    <section style="margin-bottom: var(--spacing-lg);">
+                        <style>
+                            @keyframes floatIcon {
+                                0% {
+                                    transform: translateY(0px) rotate(0deg);
+                                }
+
+                                50% {
+                                    transform: translateY(-4px) rotate(3deg);
+                                }
+
+                                100% {
+                                    transform: translateY(0px) rotate(0deg);
+                                }
+                            }
+
+                            @keyframes glowPulse {
+                                0% {
+                                    box-shadow: 0 0 15px rgba(250, 204, 21, 0.15);
+                                }
+
+                                50% {
+                                    box-shadow: 0 0 30px rgba(250, 204, 21, 0.3);
+                                }
+
+                                100% {
+                                    box-shadow: 0 0 15px rgba(250, 204, 21, 0.15);
+                                }
+                            }
+                        </style>
+                        <div class="card kpi-card"
+                            style="border: 1px solid rgba(250, 204, 21, 0.3); border-bottom: 5px solid #facc15; background: linear-gradient(135deg, rgba(250, 204, 21, 0.1) 0%, rgba(20, 20, 20, 0.9) 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px 20px; text-align: center; border-radius: 16px; animation: glowPulse 3s infinite;">
+                            <span class="label"
+                                style="color: #facc15; font-size: 16px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 8px;">🔥
+                                Valor Recuperado 💸</span>
+                            <h3 id="kpi-total-recuperado" class="value"
+                                style="font-size: min(6vw, 56px); color: var(--text-white); text-shadow: 0 0 40px rgba(250, 204, 21, 0.6); margin: 5px 0; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;">
+                                <i class="ph-fill ph-hand-coins"
+                                    style="color: #facc15; font-size: min(6vw, 48px); margin-right: 15px; animation: floatIcon 3s ease-in-out infinite;"></i>
+                                <span
+                                    style="background: linear-gradient(to right, #ffffff, #facc15); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">---</span>
+                            </h3>
+                            <span class="subtext" id="kpi-recuperado-qtd"
+                                style="font-size: 15px; color: #facc15; font-weight: 600; background: rgba(250, 204, 21, 0.1); padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 15px; border: 1px solid rgba(250, 204, 21, 0.2);">
+                                Carregando carrinhos salvos...
+                            </span>
                         </div>
                     </section>
 
