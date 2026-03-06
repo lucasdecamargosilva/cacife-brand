@@ -386,6 +386,19 @@
                 const recuperadosData = await fetchRecoveredCartsTotal(startDate, endDate);
 
                 const recoveredIds = new Set(allRecuperadosData.map(r => r.checkout_id));
+
+                const missingIds = [...recoveredIds].filter(id => !abandoned.some(a => a.id === id));
+                if (missingIds.length > 0) {
+                    const { data: missingCarts } = await supabaseClient
+                        .from('abandoned_checkouts')
+                        .select('*')
+                        .in('id', missingIds);
+
+                    if (missingCarts) {
+                        abandoned = [...abandoned, ...missingCarts];
+                    }
+                }
+
                 allAbandonedData = abandoned.map(item => ({
                     ...item,
                     is_recovered: recoveredIds.has(item.id)
