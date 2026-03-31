@@ -615,6 +615,60 @@ body {
     background: #e5e5e5;
 }
 
+/* ── Channel Filter ── */
+.channel-filter {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-white);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    height: 36px;
+    min-width: 160px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23999' viewBox='0 0 256 256'%3E%3Cpath d='M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.channel-filter:focus {
+    border-color: #ffffff;
+}
+
+.channel-filter option {
+    background: #111111;
+    color: #ffffff;
+}
+
+/* ── Channel Badge ── */
+.channel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.channel-badge.nuvemshop {
+    background: rgba(114, 105, 255, 0.15);
+    color: #7269ff;
+}
+
+.channel-badge.mercadolivre {
+    background: rgba(255, 224, 51, 0.15);
+    color: #ffe033;
+}
+
 .charts-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
