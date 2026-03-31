@@ -82,6 +82,11 @@
                     </div>
 
                     <div class="header-center">
+                        <select id="channel-filter" class="channel-filter" style="margin-right: 12px;">
+                            <option value="all">Todos os Canais</option>
+                            <option value="nuvemshop">Nuvemshop</option>
+                            <option value="mercadolivre">Mercado Livre</option>
+                        </select>
                         <div class="filter-group">
                             <button class="period-btn active" data-period="today">Hoje</button>
                             <button class="period-btn" data-period="yesterday">Ontem</button>
@@ -479,6 +484,7 @@
         let supabaseClient;
         let charts = {};
         let currentPeriod = 'today';
+        let currentChannel = 'all';
         let allOrdersData = [];
         let currentOrdersPage = 1;
         const ordersPerPage = 10;
@@ -531,12 +537,17 @@
                 let hasMore = true;
 
                 while (hasMore) {
-                    const { data, error } = await supabaseClient
+                    let query = supabaseClient
                         .from('cacife_orders')
                         .select('*')
                         .gte('created_at', startDate)
-                        .lte('created_at', endDate)
-                        .range(from, to);
+                        .lte('created_at', endDate);
+
+                    if (currentChannel !== 'all') {
+                        query = query.eq('channel', currentChannel);
+                    }
+
+                    const { data, error } = await query.range(from, to);
 
                     if (error) throw error;
                     allOrders = [...allOrders, ...data];
@@ -905,7 +916,7 @@
                 const isAEnviar = shipStatusDisp === 'Não Enviado';
 
                 tr.innerHTML = `
-                    <td>${customerName}</td>
+                    <td>${customerName} <span class="channel-badge ${item.channel || 'nuvemshop'}">${item.channel === 'mercadolivre' ? 'ML' : 'NS'}</span></td>
                     <td>${item.customer_email || 'N/A'}</td>
                     <td style="white-space: nowrap;">${formattedPhone}</td>
                     <td>${formattedDate}</td>
@@ -1545,6 +1556,20 @@
                         fetchDashboardData(period);
                     }
                 });
+            });
+
+            // Channel filter
+            document.getElementById('channel-filter').addEventListener('change', function () {
+                currentChannel = this.value;
+                currentOrdersPage = 1;
+                const activeBtn = document.querySelector('.period-btn.active');
+                if (activeBtn.dataset.period === 'custom') {
+                    const s = document.getElementById('date-start').value;
+                    const e = document.getElementById('date-end').value;
+                    if (s && e) fetchDashboardData('custom', s, e);
+                } else {
+                    fetchDashboardData(activeBtn.dataset.period);
+                }
             });
 
             // Listeners da Lista de Pedidos
