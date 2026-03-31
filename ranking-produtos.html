@@ -108,6 +108,11 @@
                     </div>
 
                     <div class="header-center">
+                        <select id="channel-filter" class="channel-filter" style="margin-right: 12px;">
+                            <option value="all">Todos os Canais</option>
+                            <option value="nuvemshop">Nuvemshop</option>
+                            <option value="mercadolivre">Mercado Livre</option>
+                        </select>
                         <div class="filter-group">
                             <button class="period-btn" data-period="today">Hoje</button>
                             <button class="period-btn active" data-period="7">7 Dias</button>
@@ -182,6 +187,7 @@
         let supabaseClient;
         let chartRanking = null;
         let currentPeriod = '7';
+        let currentChannel = 'all';
 
         function initSupabase() {
             if (window.supabase && window.SUPABASE_CONFIG) {
@@ -227,12 +233,17 @@
                 let hasMore = true;
 
                 while (hasMore) {
-                    const { data, error } = await supabaseClient
+                    let query = supabaseClient
                         .from('cacife_orders')
                         .select('product_name, product_price, quantity_buyed, total, payment_status, status')
                         .gte('created_at', startDate)
-                        .lte('created_at', endDate)
-                        .range(from, to);
+                        .lte('created_at', endDate);
+
+                    if (currentChannel !== 'all') {
+                        query = query.eq('channel', currentChannel);
+                    }
+
+                    const { data, error } = await query.range(from, to);
 
                     if (error) throw error;
                     allOrders = [...allOrders, ...data];
@@ -364,6 +375,19 @@
                         fetchRankingData(period);
                     }
                 });
+            });
+
+            // Channel filter
+            document.getElementById('channel-filter').addEventListener('change', function () {
+                currentChannel = this.value;
+                const activeBtn = document.querySelector('.period-btn.active');
+                if (activeBtn.dataset.period === 'custom') {
+                    const s = document.getElementById('date-start').value;
+                    const e = document.getElementById('date-end').value;
+                    if (s && e) fetchRankingData('custom', s, e);
+                } else {
+                    fetchRankingData(activeBtn.dataset.period);
+                }
             });
 
             document.getElementById('apply-custom-date').addEventListener('click', () => {
