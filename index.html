@@ -527,8 +527,8 @@
                                 <thead>
                                     <tr>
                                         <th>Cliente</th>
-                                        <th>Email</th>
-                                        <th>WhatsApp</th>
+                                        <th class="ns-only-col">Email</th>
+                                        <th class="ns-only-col">WhatsApp</th>
                                         <th>Data</th>
                                         <th>Status do pedido</th>
                                         <th class="ns-only-col">Cód. Rastreio</th>
@@ -1248,8 +1248,8 @@
                 const isML = currentChannel === 'mercadolivre';
                 tr.innerHTML = `
                     <td>${customerName} <span class="channel-badge ${item.channel || 'nuvemshop'}">${item.channel === 'mercadolivre' ? 'ML' : 'NS'}</span></td>
-                    <td>${item.customer_email || 'N/A'}</td>
-                    <td style="white-space: nowrap;">${formattedPhone}</td>
+                    ${isML ? '' : `<td>${item.customer_email || 'N/A'}</td>`}
+                    ${isML ? '' : `<td style="white-space: nowrap;">${formattedPhone}</td>`}
                     <td>${formattedDate}</td>
                     <td><span class="${statusClass}" style="font-weight: 600; font-size: 13px;">${shipStatusDisp}</span></td>
                     ${isML ? '' : `<td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>`}
@@ -1598,10 +1598,11 @@
             orders.forEach(o => {
                 let s = o.status?.toLowerCase();
                 if (!s || s === 'not-provided') s = 'Desconhecido';
-                else if (s === 'cancelled' || s === 'cancelado') s = 'Cancelado';
+                else if (s === 'cancelled' || s === 'cancelado' || s === 'pending_cancel') s = 'Cancelado';
                 else if (s === 'pending' || s === 'pendente' || s === 'aberto' || s === 'open') s = 'Aberto';
                 else if (s === 'processing' || s === 'processando') s = 'Processando';
                 else if (s === 'completed' || s === 'concluido' || s === 'concluído') s = 'Concluído';
+                else if (s === 'partially_refunded') s = 'Parcialmente Estornado';
                 else s = s.charAt(0).toUpperCase() + s.slice(1);
 
                 map[s] = (map[s] || 0) + 1;
