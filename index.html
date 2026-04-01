@@ -789,10 +789,10 @@
                 return s === 'cancelled' || s === 'cancelado';
             }).length;
 
-            // Recusados: payment_status == 'recusado'
+            // Recusados: payment_status == 'recusado' or 'in_mediation'
             const rejectedStatus = orders.filter(o => {
                 const s = o.payment_status?.toLowerCase();
-                return s === 'recusado';
+                return s === 'recusado' || s === 'in_mediation';
             }).length;
 
             const pendingOrders = orders.filter(o => {
@@ -810,11 +810,12 @@
                 const ps = o.payment_status?.toLowerCase() || '';
                 const os = o.status?.toLowerCase() || '';
                 // Estorno total: status exato ou contém palavras chave mas não é parcial
-                return (ps === 'estornado' || ps === 'refunded' || ps === 'reembolsado' || os === 'estornado' || os === 'refunded') && !ps.includes('parcial');
+                return (ps === 'estornado' || ps === 'refunded' || ps === 'reembolsado' || ps === 'charged_back' || os === 'estornado' || os === 'refunded') && !ps.includes('parcial');
             });
             const partialRefundOrders = orders.filter(o => {
-                const s = o.payment_status?.toLowerCase() || '';
-                return s.includes('parcialmente estornado');
+                const ps = o.payment_status?.toLowerCase() || '';
+                const os = o.status?.toLowerCase() || '';
+                return ps.includes('parcialmente estornado') || os === 'partially_refunded';
             });
 
             const totalRefundCount = totalRefundOrders.length;
@@ -987,6 +988,8 @@
                 const itemsData = await resp.json();
 
                 if (itemsData.length > 0) {
+                    // Sort by sold_quantity descending
+                    itemsData.sort((a, b) => ((b.body || {}).sold_quantity || 0) - ((a.body || {}).sold_quantity || 0));
 
                     const tbody = document.getElementById('ml-top-listings-tbody');
                     tbody.textContent = '';
@@ -1648,22 +1651,23 @@
                 // Identificação distinta
                 const isRefund =
                     orderStatus.includes('estornado') || orderStatus.includes('refund') ||
-                    payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado');
+                    payStatus.includes('estornado') || payStatus.includes('refund') || payStatus.includes('reembolsado') || payStatus === 'charged_back';
 
                 const isCancel = orderStatus.includes('cancel') || payStatus.includes('cancel');
+                const isPartialRefund = payStatus.includes('parcialmente estornado') || orderStatus === 'partially_refunded';
 
                 let s;
                 if (isPaid && !isRefund && !isCancel) {
                     s = 'Confirmado';
                 } else if (payStatus === 'pending' || payStatus === 'pendente') {
                     s = 'Pendente';
-                } else if (payStatus.includes('parcialmente estornado')) {
+                } else if (isPartialRefund) {
                     s = 'Parcialmente Estornado';
                 } else if (isRefund) {
                     s = 'Estornado';
                 } else if (isCancel) {
                     s = 'Cancelado';
-                } else if (payStatus === 'failed' || payStatus === 'falhou' || payStatus === 'recusado' || payStatus === 'rejected') {
+                } else if (payStatus === 'failed' || payStatus === 'falhou' || payStatus === 'recusado' || payStatus === 'rejected' || payStatus === 'in_mediation') {
                     s = 'Recusado';
                 } else if (!payStatus || payStatus === 'not-provided') {
                     s = 'Desconhecido';
