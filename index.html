@@ -280,6 +280,161 @@
                         </div>
                     </section>
 
+                    <!-- ML Exclusive Sections -->
+                    <div id="ml-sections" style="display: none;">
+                        <!-- ML Financial KPIs -->
+                        <section class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #22c55e;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #22c55e;">Faturamento Líquido</span>
+                                    <h3 id="ml-net-revenue" class="value text-success" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-money" style="font-size: 20px;"></i>
+                                        <span>R$ 0,00</span>
+                                    </h3>
+                                    <span class="subtext" style="font-size: 11px;">Após descontos do ML</span>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #ef4444;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #ef4444;">Total Taxas ML</span>
+                                    <h3 id="ml-total-fees" class="value text-danger" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-percent" style="font-size: 20px;"></i>
+                                        <span>R$ 0,00</span>
+                                    </h3>
+                                    <span id="ml-fee-percent" class="subtext" style="font-size: 11px;">0% do faturamento</span>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #a78bfa;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #a78bfa;">Ticket Médio</span>
+                                    <h3 id="ml-avg-ticket" class="value" style="font-size: 24px; gap: 8px; color: #a78bfa;">
+                                        <i class="ph-fill ph-tag" style="font-size: 20px;"></i>
+                                        <span>R$ 0,00</span>
+                                    </h3>
+                                    <span class="subtext" style="font-size: 11px;">Por pedido pago</span>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #ffe033;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #ffe033;">Preço Cheio (Gross)</span>
+                                    <h3 id="ml-gross-revenue" class="value" style="font-size: 24px; gap: 8px; color: #ffe033;">
+                                        <i class="ph-fill ph-coins" style="font-size: 20px;"></i>
+                                        <span>R$ 0,00</span>
+                                    </h3>
+                                    <span class="subtext" style="font-size: 11px;">Antes dos descontos ML</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- ML Reputation -->
+                        <div class="section-header" style="margin: 30px 0 15px 0;">
+                            <h3 style="font-size: 14px; font-weight: 700; color: #a3a3a3; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                                <i class="ph-bold ph-medal" style="color: #ffe033;"></i> Reputação no Mercado Livre
+                            </h3>
+                        </div>
+                        <section class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: var(--spacing-lg);">
+                            <div class="card kpi-card" style="padding: 15px;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px;">Nível</span>
+                                    <h3 id="ml-rep-level" class="value" style="font-size: 18px; gap: 8px; color: #ffe033;">
+                                        <i class="ph-fill ph-crown" style="font-size: 20px;"></i>
+                                        <span>---</span>
+                                    </h3>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px;">Reclamações (60d)</span>
+                                    <h3 id="ml-rep-claims" class="value" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-warning" style="font-size: 20px;"></i>
+                                        <span>---</span>
+                                    </h3>
+                                    <span id="ml-rep-claims-count" class="subtext" style="font-size: 11px;">---</span>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px;">Atrasos (60d)</span>
+                                    <h3 id="ml-rep-delays" class="value" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-clock-countdown" style="font-size: 20px;"></i>
+                                        <span>---</span>
+                                    </h3>
+                                    <span id="ml-rep-delays-count" class="subtext" style="font-size: 11px;">---</span>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px;">Cancelamentos (60d)</span>
+                                    <h3 id="ml-rep-cancels" class="value" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-x-circle" style="font-size: 20px;"></i>
+                                        <span>---</span>
+                                    </h3>
+                                    <span id="ml-rep-cancels-count" class="subtext" style="font-size: 11px;">---</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- ML Questions -->
+                        <div class="section-header" style="margin: 30px 0 15px 0;">
+                            <h3 style="font-size: 14px; font-weight: 700; color: #a3a3a3; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                                <i class="ph-bold ph-chat-dots" style="color: #ffe033;"></i> Perguntas
+                            </h3>
+                        </div>
+                        <section class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #ef4444;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #ef4444;">Não Respondidas</span>
+                                    <h3 id="ml-questions-unanswered" class="value text-danger" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-chat-circle-dots" style="font-size: 20px;"></i>
+                                        <span>0</span>
+                                    </h3>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #22c55e;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #22c55e;">Respondidas</span>
+                                    <h3 id="ml-questions-answered" class="value text-success" style="font-size: 24px; gap: 8px;">
+                                        <i class="ph-fill ph-chat-circle-check" style="font-size: 20px;"></i>
+                                        <span>0</span>
+                                    </h3>
+                                </div>
+                            </div>
+                            <div class="card kpi-card" style="padding: 15px; border-left: 4px solid #a78bfa;">
+                                <div class="card-content">
+                                    <span class="label" style="font-size: 12px; color: #a78bfa;">Total Perguntas</span>
+                                    <h3 id="ml-questions-total" class="value" style="font-size: 24px; gap: 8px; color: #a78bfa;">
+                                        <i class="ph-fill ph-chat-teardrop-text" style="font-size: 20px;"></i>
+                                        <span>0</span>
+                                    </h3>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- ML Top Listings -->
+                        <div class="section-header" style="margin: 30px 0 15px 0;">
+                            <h3 style="font-size: 14px; font-weight: 700; color: #a3a3a3; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
+                                <i class="ph-bold ph-trophy" style="color: #ffe033;"></i> Top 10 Anúncios
+                            </h3>
+                        </div>
+                        <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
+                            <div class="card chart-card" style="min-height: 200px;">
+                                <table class="custom-table" id="ml-top-listings-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 60px;">#</th>
+                                            <th>Anúncio</th>
+                                            <th style="text-align: right;">Vendidos</th>
+                                            <th style="text-align: right;">Preço</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ml-top-listings-tbody">
+                                        <tr><td colspan="4" style="text-align: center; padding: 40px; color: var(--text-muted);">Carregando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+
                     <!-- New Revenue Evolution Section -->
                     <section class="dashboard-grid" style="margin-bottom: var(--spacing-lg);">
                         <div class="card chart-card" style="min-height: 400px;">
@@ -708,6 +863,220 @@
             renderGatewayChart(orders);
             renderRegionChart(orders);
             renderOrdersTable();
+
+            // ML exclusive sections
+            fetchMLExclusiveData(orders);
+        }
+
+        // ─── ML Exclusive Functions ───
+        const ML_TOKEN_KEY = 'ml_access_token';
+        const ML_USER_ID = 674281461;
+        const ML_APP_ID = '523657307062945';
+        const ML_APP_SECRET = 'I7jKNj6gzjyZZ7iqIFAvIvMWcZ3kFLkM';
+
+        async function getMLToken() {
+            // Try stored token first
+            let token = localStorage.getItem(ML_TOKEN_KEY);
+            if (token) return token;
+
+            // Fetch from Supabase ml_tokens table
+            try {
+                const { data } = await supabaseClient
+                    .from('ml_tokens')
+                    .select('access_token, refresh_token, expires_at')
+                    .eq('user_id', ML_USER_ID)
+                    .single();
+
+                if (data) {
+                    // Check if expired
+                    if (new Date(data.expires_at) < new Date()) {
+                        // Refresh the token
+                        const resp = await fetch('https://api.mercadolibre.com/oauth/token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `grant_type=refresh_token&client_id=${ML_APP_ID}&client_secret=${ML_APP_SECRET}&refresh_token=${data.refresh_token}`
+                        });
+                        const tokenData = await resp.json();
+                        if (tokenData.access_token) {
+                            localStorage.setItem(ML_TOKEN_KEY, tokenData.access_token);
+                            // Update in Supabase
+                            await supabaseClient.from('ml_tokens').update({
+                                access_token: tokenData.access_token,
+                                refresh_token: tokenData.refresh_token,
+                                expires_at: new Date(Date.now() + 21600000).toISOString(),
+                                updated_at: new Date().toISOString()
+                            }).eq('user_id', ML_USER_ID);
+                            return tokenData.access_token;
+                        }
+                    }
+                    localStorage.setItem(ML_TOKEN_KEY, data.access_token);
+                    return data.access_token;
+                }
+            } catch (e) {
+                console.error('Error getting ML token:', e);
+            }
+            return null;
+        }
+
+        async function fetchMLExclusiveData(orders) {
+            const mlSections = document.getElementById('ml-sections');
+            if (currentChannel !== 'mercadolivre') {
+                mlSections.style.display = 'none';
+                return;
+            }
+            mlSections.style.display = 'block';
+
+            // Calculate ML financial KPIs from orders data
+            const paidOrders = orders.filter(o => {
+                const ps = o.payment_status?.toLowerCase() || '';
+                return ps === 'paid' || ps === 'confirmado';
+            });
+
+            const grossRevenue = paidOrders.reduce((sum, o) => sum + (parseFloat(o.gross_price) || 0), 0);
+            const netRevenue = paidOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const totalFees = paidOrders.reduce((sum, o) => sum + (parseFloat(o.sale_fee) || 0), 0);
+            const avgTicket = paidOrders.length > 0 ? netRevenue / paidOrders.length : 0;
+            const feePercent = grossRevenue > 0 ? (totalFees / grossRevenue * 100) : 0;
+
+            const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            document.querySelector('#ml-net-revenue span').textContent = fmt(netRevenue);
+            document.querySelector('#ml-total-fees span').textContent = fmt(totalFees);
+            document.querySelector('#ml-fee-percent').textContent = `${feePercent.toFixed(1)}% do faturamento`;
+            document.querySelector('#ml-avg-ticket span').textContent = fmt(avgTicket);
+            document.querySelector('#ml-gross-revenue span').textContent = fmt(grossRevenue);
+
+            // Fetch ML API data (reputation, questions, top listings)
+            const token = await getMLToken();
+            if (!token) {
+                console.warn('No ML token available');
+                return;
+            }
+
+            const mlHeaders = { 'Authorization': `Bearer ${token}` };
+
+            // Fetch reputation
+            try {
+                const resp = await fetch(`https://api.mercadolibre.com/users/${ML_USER_ID}`, { headers: mlHeaders });
+                const userData = await resp.json();
+                const rep = userData.seller_reputation || {};
+                const metrics = rep.metrics || {};
+
+                // Level
+                const levelMap = {
+                    '5_green': 'MercadoLíder Platinum',
+                    '4_light_green': 'MercadoLíder Gold',
+                    '3_yellow': 'MercadoLíder',
+                    '2_orange': 'Bom',
+                    '1_red': 'Regular'
+                };
+                const pssMap = {
+                    'platinum': '⭐ Platinum',
+                    'gold': '🥇 Gold',
+                    'silver': '🥈 Silver',
+                    null: ''
+                };
+                document.querySelector('#ml-rep-level span').textContent =
+                    pssMap[rep.power_seller_status] || levelMap[rep.level_id] || rep.level_id || '---';
+
+                // Claims
+                const claims = metrics.claims || {};
+                const claimsRate = ((claims.rate || 0) * 100).toFixed(2);
+                const claimsColor = claims.rate > 0.01 ? '#ef4444' : claims.rate > 0.005 ? '#eab308' : '#22c55e';
+                document.querySelector('#ml-rep-claims span').textContent = `${claimsRate}%`;
+                document.querySelector('#ml-rep-claims').style.color = claimsColor;
+                document.querySelector('#ml-rep-claims-count').textContent = `${claims.value || 0} reclamações`;
+
+                // Delays
+                const delays = metrics.delayed_handling_time || {};
+                const delaysRate = ((delays.rate || 0) * 100).toFixed(2);
+                const delaysColor = delays.rate > 0.01 ? '#ef4444' : delays.rate > 0.005 ? '#eab308' : '#22c55e';
+                document.querySelector('#ml-rep-delays span').textContent = `${delaysRate}%`;
+                document.querySelector('#ml-rep-delays').style.color = delaysColor;
+                document.querySelector('#ml-rep-delays-count').textContent = `${delays.value || 0} atrasos`;
+
+                // Cancellations
+                const cancels = metrics.cancellations || {};
+                const cancelsRate = ((cancels.rate || 0) * 100).toFixed(2);
+                const cancelsColor = cancels.rate > 0.01 ? '#ef4444' : cancels.rate > 0.005 ? '#eab308' : '#22c55e';
+                document.querySelector('#ml-rep-cancels span').textContent = `${cancelsRate}%`;
+                document.querySelector('#ml-rep-cancels').style.color = cancelsColor;
+                document.querySelector('#ml-rep-cancels-count').textContent = `${cancels.value || 0} cancelamentos`;
+            } catch (e) {
+                console.error('Error fetching ML reputation:', e);
+            }
+
+            // Fetch questions
+            try {
+                const resp = await fetch(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=UNANSWERED&limit=1`, { headers: mlHeaders });
+                const unanswered = await resp.json();
+
+                const resp2 = await fetch(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=ANSWERED&limit=1`, { headers: mlHeaders });
+                const answered = await resp2.json();
+
+                const uCount = unanswered.total || 0;
+                const aCount = answered.total || 0;
+
+                document.querySelector('#ml-questions-unanswered span').textContent = uCount;
+                document.querySelector('#ml-questions-answered span').textContent = aCount;
+                document.querySelector('#ml-questions-total span').textContent = uCount + aCount;
+            } catch (e) {
+                console.error('Error fetching ML questions:', e);
+            }
+
+            // Fetch top listings
+            try {
+                const resp = await fetch(`https://api.mercadolibre.com/users/${ML_USER_ID}/items/search?status=active&sort=sold_quantity_desc&limit=10`, { headers: mlHeaders });
+                const listingsData = await resp.json();
+                const ids = listingsData.results || [];
+
+                if (ids.length > 0) {
+                    const itemsResp = await fetch(`https://api.mercadolibre.com/items?ids=${ids.join(',')}`, { headers: mlHeaders });
+                    const itemsData = await itemsResp.json();
+
+                    const tbody = document.getElementById('ml-top-listings-tbody');
+                    tbody.textContent = '';
+
+                    itemsData.forEach((item, idx) => {
+                        const body = item.body || {};
+                        const tr = document.createElement('tr');
+                        const rank = idx + 1;
+                        let rankStyle = '';
+                        if (rank === 1) rankStyle = 'color: #ffe033; font-weight: 700;';
+                        else if (rank === 2) rankStyle = 'color: #c0c0c0; font-weight: 700;';
+                        else if (rank === 3) rankStyle = 'color: #cd7f32; font-weight: 700;';
+
+                        const price = (body.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        const titleText = (body.title || '').length > 60 ? body.title.substring(0, 57) + '...' : (body.title || '');
+
+                        const tdRank = document.createElement('td');
+                        tdRank.style.cssText = rankStyle;
+                        tdRank.textContent = rank;
+
+                        const tdTitle = document.createElement('td');
+                        tdTitle.style.fontWeight = '500';
+                        tdTitle.style.color = rank <= 3 ? 'white' : 'var(--text-gray-light)';
+                        tdTitle.textContent = titleText;
+
+                        const tdSold = document.createElement('td');
+                        tdSold.style.textAlign = 'right';
+                        tdSold.style.fontWeight = '700';
+                        tdSold.textContent = body.sold_quantity || 0;
+
+                        const tdPrice = document.createElement('td');
+                        tdPrice.style.textAlign = 'right';
+                        tdPrice.textContent = price;
+
+                        tr.appendChild(tdRank);
+                        tr.appendChild(tdTitle);
+                        tr.appendChild(tdSold);
+                        tr.appendChild(tdPrice);
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (e) {
+                console.error('Error fetching ML listings:', e);
+            }
         }
 
         function formatBrasilianDate(dateStr) {
@@ -1561,6 +1930,9 @@
             // Channel filter
             document.getElementById('channel-filter').addEventListener('change', function () {
                 currentChannel = this.value;
+                if (this.value !== 'mercadolivre') {
+                    document.getElementById('ml-sections').style.display = 'none';
+                }
                 currentOrdersPage = 1;
                 const activeBtn = document.querySelector('.period-btn.active');
                 if (activeBtn.dataset.period === 'custom') {
