@@ -231,13 +231,13 @@
                     </section>
 
                     <!-- Operational KPI Group 2: Logistics -->
-                    <div class="section-header" style="margin: 30px 0 15px 0;">
+                    <div id="logistics-section-header" class="section-header" style="margin: 30px 0 15px 0;">
                         <h3
                             style="font-size: 14px; font-weight: 700; color: #a3a3a3; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;">
                             <i class="ph-bold ph-truck" style="color: #9b4dff;"></i> Métricas de Logística
                         </h3>
                     </div>
-                    <section class="kpi-grid"
+                    <section id="logistics-kpis" class="kpi-grid"
                         style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: var(--spacing-lg);">
                         <div class="card kpi-card kpi-card-filter" id="card-filter-to_send"
                             onclick="setRevenueFilter('to_send')" style="padding: 15px;">
@@ -467,7 +467,7 @@
                             </div>
                         </div>
 
-                        <div class="card chart-card">
+                        <div id="chart-shipping-wrapper" class="card chart-card">
                             <div class="card-header">
                                 <h3><i class="ph-fill ph-package"></i> Status de Entrega</h3>
                             </div>
@@ -478,7 +478,7 @@
                     </section>
 
                     <!-- Charts Row 2 -->
-                    <section class="charts-row-large">
+                    <section id="charts-row-2" class="charts-row-large">
                         <div class="card chart-card">
                             <div class="card-header">
                                 <h3><i class="ph-fill ph-wallet"></i> Fontes de Pagamento</h3>
@@ -531,13 +531,13 @@
                                         <th>WhatsApp</th>
                                         <th>Data</th>
                                         <th>Status do pedido</th>
-                                        <th>Cód. Rastreio</th>
-                                        <th>Ação</th>
+                                        <th class="ns-only-col">Cód. Rastreio</th>
+                                        <th class="ns-only-col">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody id="orders-tbody">
                                     <tr>
-                                        <td colspan="7"
+                                        <td colspan="99"
                                             style="text-align: center; padding: 40px; color: var(--text-muted);">
                                             Carregando dados...</td>
                                     </tr>
@@ -920,11 +920,28 @@
 
         async function fetchMLExclusiveData(orders) {
             const mlSections = document.getElementById('ml-sections');
+            const hideOnML = [
+                'logistics-section-header', 'logistics-kpis',
+                'chart-shipping-wrapper', 'charts-row-2'
+            ];
+            const shippingFilter = document.getElementById('shipping-filter');
+
             if (currentChannel !== 'mercadolivre') {
                 mlSections.style.display = 'none';
+                hideOnML.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = '';
+                });
+                if (shippingFilter) shippingFilter.style.display = '';
                 return;
             }
+
             mlSections.style.display = 'block';
+            hideOnML.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            if (shippingFilter) shippingFilter.style.display = 'none';
 
             // Calculate ML financial KPIs from orders data
             const paidOrders = orders.filter(o => {
@@ -1140,6 +1157,10 @@
 
             tbody.innerHTML = '';
 
+            // Hide/show NS-only columns based on channel
+            const nsOnlyCols = document.querySelectorAll('.ns-only-col');
+            nsOnlyCols.forEach(col => col.style.display = currentChannel === 'mercadolivre' ? 'none' : '');
+
             const searchTerm = (document.getElementById('orders-search')?.value || '').toLowerCase();
             const filterValue = document.getElementById('shipping-filter')?.value || 'all';
 
@@ -1232,7 +1253,7 @@
             const paginatedData = groupedList.slice(startIndex, endIndex);
 
             if (paginatedData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="99" style="text-align: center; padding: 40px; color: var(--text-muted);">Nenhum pedido compatível encontrado.</td></tr>';
                 return;
             }
 
@@ -1284,14 +1305,15 @@
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(message)}` : '#';
                 const isAEnviar = shipStatusDisp === 'Não Enviado';
 
+                const isML = currentChannel === 'mercadolivre';
                 tr.innerHTML = `
                     <td>${customerName} <span class="channel-badge ${item.channel || 'nuvemshop'}">${item.channel === 'mercadolivre' ? 'ML' : 'NS'}</span></td>
                     <td>${item.customer_email || 'N/A'}</td>
                     <td style="white-space: nowrap;">${formattedPhone}</td>
                     <td>${formattedDate}</td>
                     <td><span class="${statusClass}" style="font-weight: 600; font-size: 13px;">${shipStatusDisp}</span></td>
-                    <td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>
-                    <td>
+                    ${isML ? '' : `<td><span class="${trackingCode === 'Não enviado' ? '' : 'gold-pill'}" style="font-family: ${trackingCode === 'Não enviado' ? 'inherit' : 'monospace'}; font-size: 13px; color: ${trackingCode === 'Não enviado' ? 'rgba(255,255,255,0.4)' : 'inherit'};">${trackingCode}</span></td>`}
+                    ${isML ? '' : `<td>
                         ${isAEnviar ? `
                             <button class="apply-btn" disabled style="justify-content: center; gap: 8px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); border: none; width: auto; font-size: 12px; padding: 0 16px; white-space: nowrap; font-weight: 700; cursor: not-allowed; opacity: 0.6;">
                                 <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
@@ -1301,7 +1323,7 @@
                                 <i class="ph-fill ph-whatsapp-logo"></i> Enviar Rastreio
                             </a>
                         `}
-                    </td>
+                    </td>`}
                 `;
                 tbody.appendChild(tr);
             });
