@@ -135,6 +135,7 @@ try {
             const ids = listingsData.results || [];
             if (ids.length === 0) return res.json([]);
             const { data: items } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}`, { headers: { Authorization: `Bearer ${token}` } });
+            items.sort((a, b) => ((b.body || {}).sold_quantity || 0) - ((a.body || {}).sold_quantity || 0));
             res.json(items);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
