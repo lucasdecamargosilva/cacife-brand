@@ -867,48 +867,6 @@
         }
 
         // ─── ML Exclusive Functions ───
-        const ML_TOKEN_KEY = 'ml_access_token';
-        const ML_USER_ID = 674281461;
-        const ML_APP_ID = '523657307062945';
-        const ML_APP_SECRET = 'I7jKNj6gzjyZZ7iqIFAvIvMWcZ3kFLkM';
-
-        async function getMLToken() {
-            try {
-                const { data } = await supabaseClient
-                    .from('ml_tokens')
-                    .select('access_token, refresh_token, expires_at')
-                    .eq('user_id', ML_USER_ID)
-                    .single();
-
-                if (!data) return null;
-
-                // If token is still valid, use it
-                if (new Date(data.expires_at) > new Date()) {
-                    return data.access_token;
-                }
-
-                // Token expired — refresh it
-                const resp = await fetch('https://api.mercadolibre.com/oauth/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `grant_type=refresh_token&client_id=${ML_APP_ID}&client_secret=${ML_APP_SECRET}&refresh_token=${data.refresh_token}`
-                });
-                const tokenData = await resp.json();
-                if (tokenData.access_token) {
-                    await supabaseClient.from('ml_tokens').update({
-                        access_token: tokenData.access_token,
-                        refresh_token: tokenData.refresh_token,
-                        expires_at: new Date(Date.now() + 21600000).toISOString(),
-                        updated_at: new Date().toISOString()
-                    }).eq('user_id', ML_USER_ID);
-                    return tokenData.access_token;
-                }
-            } catch (e) {
-                console.error('Error getting ML token:', e);
-            }
-            return null;
-        }
-
         async function fetchMLExclusiveData(orders) {
             const mlSections = document.getElementById('ml-sections');
             const hideOnML = [
@@ -954,18 +912,10 @@
             document.querySelector('#ml-avg-ticket span').textContent = fmt(avgTicket);
             document.querySelector('#ml-gross-revenue span').textContent = fmt(grossRevenue);
 
-            // Fetch ML API data (reputation, questions, top listings)
-            const token = await getMLToken();
-            if (!token) {
-                console.warn('No ML token available');
-                return;
-            }
-
-            const mlHeaders = { 'Authorization': `Bearer ${token}` };
-
+            // Fetch ML API data via server proxy (avoids CORS)
             // Fetch reputation
             try {
-                const resp = await fetch(`https://api.mercadolibre.com/users/${ML_USER_ID}`, { headers: mlHeaders });
+                const resp = await fetch('/api/ml/reputation');
                 const userData = await resp.json();
                 const rep = userData.seller_reputation || {};
                 const metrics = rep.metrics || {};
@@ -1016,10 +966,10 @@
 
             // Fetch questions
             try {
-                const resp = await fetch(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=UNANSWERED&limit=1`, { headers: mlHeaders });
+                const resp = await fetch('/api/ml/questions?status=UNANSWERED');
                 const unanswered = await resp.json();
 
-                const resp2 = await fetch(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=ANSWERED&limit=1`, { headers: mlHeaders });
+                const resp2 = await fetch('/api/ml/questions?status=ANSWERED');
                 const answered = await resp2.json();
 
                 const uCount = unanswered.total || 0;
@@ -1034,13 +984,10 @@
 
             // Fetch top listings
             try {
-                const resp = await fetch(`https://api.mercadolibre.com/users/${ML_USER_ID}/items/search?status=active&sort=sold_quantity_desc&limit=10`, { headers: mlHeaders });
-                const listingsData = await resp.json();
-                const ids = listingsData.results || [];
+                const resp = await fetch('/api/ml/listings');
+                const itemsData = await resp.json();
 
-                if (ids.length > 0) {
-                    const itemsResp = await fetch(`https://api.mercadolibre.com/items?ids=${ids.join(',')}`, { headers: mlHeaders });
-                    const itemsData = await itemsResp.json();
+                if (itemsData.length > 0) {
 
                     const tbody = document.getElementById('ml-top-listings-tbody');
                     tbody.textContent = '';

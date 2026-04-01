@@ -73,6 +73,72 @@ try {
         }
     });
 
+    // --- ML API Proxy ---
+    const SUPABASE_URL = process.env.SUPABASE_URL || 'https://quantic-supabase.k5jwra.easypanel.host';
+    const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.QF_2cwXiC3ry1eSjGGJVFHp2jZQtJdr3TBLxiR0ruG0';
+    const ML_APP_ID = '523657307062945';
+    const ML_APP_SECRET = 'I7jKNj6gzjyZZ7iqIFAvIvMWcZ3kFLkM';
+    const ML_USER_ID = 674281461;
+
+    async function getMLToken() {
+        try {
+            const { data: tokens } = await axios.get(
+                `${SUPABASE_URL}/rest/v1/ml_tokens?user_id=eq.${ML_USER_ID}&select=access_token,refresh_token,expires_at`,
+                { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
+            );
+            if (!tokens || !tokens[0]) return null;
+            const token = tokens[0];
+
+            if (new Date(token.expires_at) > new Date()) return token.access_token;
+
+            // Refresh
+            const { data: refreshed } = await axios.post('https://api.mercadolibre.com/oauth/token',
+                `grant_type=refresh_token&client_id=${ML_APP_ID}&client_secret=${ML_APP_SECRET}&refresh_token=${token.refresh_token}`,
+                { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+            );
+            if (refreshed.access_token) {
+                await axios.patch(
+                    `${SUPABASE_URL}/rest/v1/ml_tokens?user_id=eq.${ML_USER_ID}`,
+                    { access_token: refreshed.access_token, refresh_token: refreshed.refresh_token, expires_at: new Date(Date.now() + 21600000).toISOString(), updated_at: new Date().toISOString() },
+                    { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' } }
+                );
+                return refreshed.access_token;
+            }
+        } catch (e) { console.error('ML token error:', e.message); }
+        return null;
+    }
+
+    app.get('/api/ml/reputation', async (req, res) => {
+        try {
+            const token = await getMLToken();
+            if (!token) return res.status(401).json({ error: 'No ML token' });
+            const { data } = await axios.get(`https://api.mercadolibre.com/users/${ML_USER_ID}`, { headers: { Authorization: `Bearer ${token}` } });
+            res.json(data);
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    app.get('/api/ml/questions', async (req, res) => {
+        try {
+            const token = await getMLToken();
+            if (!token) return res.status(401).json({ error: 'No ML token' });
+            const status = req.query.status || 'UNANSWERED';
+            const { data } = await axios.get(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=${status}&limit=1`, { headers: { Authorization: `Bearer ${token}` } });
+            res.json(data);
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    app.get('/api/ml/listings', async (req, res) => {
+        try {
+            const token = await getMLToken();
+            if (!token) return res.status(401).json({ error: 'No ML token' });
+            const { data: listingsData } = await axios.get(`https://api.mercadolibre.com/users/${ML_USER_ID}/items/search?status=active&sort=sold_quantity_desc&limit=10`, { headers: { Authorization: `Bearer ${token}` } });
+            const ids = listingsData.results || [];
+            if (ids.length === 0) return res.json([]);
+            const { data: items } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}`, { headers: { Authorization: `Bearer ${token}` } });
+            res.json(items);
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
