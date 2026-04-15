@@ -169,6 +169,35 @@
                         </div>
                     </section>
 
+                    <!-- Recovered Carts Table -->
+                    <section style="margin-bottom: var(--spacing-lg);">
+                        <div class="card chart-card card-gold" style="min-height: 200px;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3><i class="ph-fill ph-check-circle" style="color: #4ade80;"></i> Carrinhos Recuperados</h3>
+                                <span id="recovered-count-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700;">0 recuperados</span>
+                            </div>
+                            <div class="table-container">
+                                <table class="custom-table" id="recovered-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Valor Carrinho</th>
+                                            <th>Valor Pedido</th>
+                                            <th>Data Recuperação</th>
+                                            <th>Estágio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recovered-tbody">
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                Carregando dados...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Chart Evolution & Funnel Section -->
                     <section class="dashboard-grid"
                         style="margin-bottom: var(--spacing-lg); display: grid; grid-template-columns: 1fr; gap: var(--spacing-lg);">
@@ -288,7 +317,7 @@
                 while (hasMore) {
                     const { data, error } = await supabaseClient
                         .from('vw_carrinhos_recuperados')
-                        .select('checkout_id, pedido_value')
+                        .select('checkout_id, pedido_value, contact_identification, contact_name, stage_recuperacao, data_pedido, checkout_value')
                         .neq('contact_identification', 'TOTAL RECUPERADO')
                         .gte('data_pedido', startDate)
                         .lte('data_pedido', endDate)
@@ -310,11 +339,74 @@
                 const quantity = allRecuperados.length;
                 const value = allRecuperados.reduce((sum, item) => sum + (parseFloat(item.pedido_value) || 0), 0);
 
+                renderRecoveredTable(allRecuperados);
+
                 return { quantity, value };
             } catch (err) {
                 console.warn('Erro ao buscar carrinhos recuperados na view: ', err.message);
                 return { quantity: 0, value: 0 };
             }
+        }
+
+        function renderRecoveredTable(recuperados) {
+            const tbody = document.getElementById('recovered-tbody');
+            const badge = document.getElementById('recovered-count-badge');
+            if (!tbody) return;
+
+            badge.textContent = `${recuperados.length} recuperado${recuperados.length !== 1 ? 's' : ''}`;
+            tbody.textContent = '';
+
+            if (recuperados.length === 0) {
+                const emptyRow = document.createElement('tr');
+                const emptyCell = document.createElement('td');
+                emptyCell.setAttribute('colspan', '5');
+                emptyCell.style.cssText = 'text-align: center; padding: 40px; color: var(--text-muted);';
+                emptyCell.textContent = 'Nenhum carrinho recuperado no período.';
+                emptyRow.appendChild(emptyCell);
+                tbody.appendChild(emptyRow);
+                return;
+            }
+
+            recuperados.forEach(rec => {
+                const name = rec.contact_name || 'N/A';
+                const checkoutValue = parseFloat(rec.checkout_value) || 0;
+                const pedidoValue = parseFloat(rec.pedido_value) || 0;
+                const dataPedido = rec.data_pedido ? new Date(rec.data_pedido).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : 'N/A';
+
+                const stageRec = (rec.stage_recuperacao || '').toLowerCase();
+                let stageLabel = 'Msg 1';
+                if (stageRec.includes('msg3')) stageLabel = 'Msg 3';
+                else if (stageRec.includes('msg2')) stageLabel = 'Msg 2';
+
+                const tr = document.createElement('tr');
+
+                const tdName = document.createElement('td');
+                tdName.textContent = name;
+                tr.appendChild(tdName);
+
+                const tdCart = document.createElement('td');
+                tdCart.textContent = formatBRL(checkoutValue);
+                tr.appendChild(tdCart);
+
+                const tdPedido = document.createElement('td');
+                tdPedido.style.cssText = 'color: #4ade80; font-weight: 700;';
+                tdPedido.textContent = formatBRL(pedidoValue);
+                tr.appendChild(tdPedido);
+
+                const tdDate = document.createElement('td');
+                tdDate.style.cssText = 'font-size: 13px; white-space: nowrap;';
+                tdDate.textContent = dataPedido;
+                tr.appendChild(tdDate);
+
+                const tdStage = document.createElement('td');
+                const stageBadge = document.createElement('span');
+                stageBadge.style.cssText = 'background: rgba(155, 77, 255, 0.15); color: #c084fc; border: 1px solid rgba(155, 77, 255, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;';
+                stageBadge.textContent = stageLabel;
+                tdStage.appendChild(stageBadge);
+                tr.appendChild(tdStage);
+
+                tbody.appendChild(tr);
+            });
         }
 
         async function fetchAbandonedData(period = 'today', customStart = null, customEnd = null) {
