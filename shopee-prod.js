@@ -1,15 +1,23 @@
 'use strict';
 // Integração Shopee de PRODUÇÃO (loja real da Cacife).
 // Autossuficiente: assinatura + normalização inline (não depende de local/, que não vai pro Git).
-// Persiste tokens/pedidos no Supabase (não em arquivo, que se perde no redeploy).
+// Persiste tokens/pedidos/itens/devoluções no Supabase.
 const { createHmac } = require('node:crypto');
 
 const DAY = 86400;
+
+const HOSTS = {
+  br: 'https://openplatform.shopee.com.br',
+  sandbox: 'https://openplatform.sandbox.test-stable.shopee.sg',
+  global: 'https://partner.shopeemobile.com',
+};
 
 // Assinatura HMAC-SHA256 exigida pela Shopee (base = partnerId+path+timestamp[+token+shopId]).
 function sign(key, partnerId, apiPath, timestamp, token = '', shopId = '') {
   return createHmac('sha256', key).update(`${partnerId}${apiPath}${timestamp}${token}${shopId}`).digest('hex');
 }
+
+const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 // Converte um pedido da Shopee no formato da tabela shopee_orders. Descarta dados do comprador.
 function normalize(order, shopId) {
@@ -23,18 +31,45 @@ function normalize(order, shopId) {
     id_pedido: String(order.order_sn), shop_id: shopId, channel: 'shopee', environment: 'production',
     currency: 'BRL', total: paid ? Math.round(amount * 100) / 100 : 0,
     payment_status: excluded ? 'cancelled' : paid ? 'paid' : 'pending', status: String(order.order_status),
+    payment_method: order.payment_method || null,
+    shipping_carrier: order.shipping_carrier || null,
+    shipping_fee: num(order.actual_shipping_fee),
+    region: order.region || null,
+    cancel_reason: order.cancel_reason || null,
     created_at: new Date(order.create_time * 1000).toISOString(), updated_at: new Date(order.update_time * 1000).toISOString(),
     paid_at: Number(order.pay_time) > 0 ? new Date(order.pay_time * 1000).toISOString() : null,
   };
 }
 
-const HOSTS = {
-  br: 'https://openplatform.shopee.com.br',
-  sandbox: 'https://openplatform.sandbox.test-stable.shopee.sg',
-  global: 'https://partner.shopeemobile.com',
-};
+// Itens do pedido -> linhas de shopee_order_items (para ranking de produtos).
+function itemsOf(order, shopId) {
+  return (order.item_list || []).map((it) => ({
+    shop_id: shopId, id_pedido: String(order.order_sn),
+    order_item_id: Number(it.order_item_id || it.line_item_id || 0),
+    item_id: it.item_id ? Number(it.item_id) : null,
+    item_name: it.item_name || null,
+    model_sku: it.model_sku || it.item_sku || null,
+    qty: Number(it.model_quantity_purchased || 0),
+    price: num(it.model_discounted_price),
+  })).filter((r) => r.order_item_id > 0);
+}
 
-// Camada de persistência no Supabase via PostgREST (service_role).
+// order_income (do escrow) -> campos de repasse/taxas do pedido.
+function incomeOf(orderSn, shopId, income) {
+  return {
+    shop_id: shopId, id_pedido: String(orderSn),
+    buyer_paid: num(income.buyer_total_amount),
+    escrow_amount: num(income.escrow_amount),
+    commission_fee: num(income.commission_fee),
+    service_fee: num(income.service_fee),
+    transaction_fee: num(income.seller_transaction_fee),
+    seller_voucher: num(income.voucher_from_seller),
+    shopee_voucher: num(income.voucher_from_shopee),
+    income_synced: true,
+  };
+}
+
+// Persistência no Supabase via PostgREST (service_role). Leituras agregadas via pg-meta (/pg/query).
 function supabaseDb({ url, serviceKey, fetchImpl = fetch }) {
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   async function rest(pathAndQuery, init = {}) {
@@ -43,32 +78,22 @@ function supabaseDb({ url, serviceKey, fetchImpl = fetch }) {
     const text = await res.text();
     return text ? JSON.parse(text) : null;
   }
+  const upsert = (table, conflict, rows) => rows.length ? rest(`${table}?on_conflict=${conflict}`, {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows),
+  }) : Promise.resolve();
   return {
-    async getToken(shopId) {
-      const rows = await rest(`shopee_tokens?shop_id=eq.${shopId}&select=*`);
-      return rows && rows[0] ? rows[0] : null;
-    },
-    async listTokens() {
-      return (await rest(`shopee_tokens?select=shop_id,expires_at,refresh_expires_at,updated_at`)) || [];
-    },
-    async saveToken(row) {
-      await rest(`shopee_tokens?on_conflict=shop_id`, {
-        method: 'POST',
-        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify(row),
-      });
-    },
-    async upsertOrders(rows) {
-      if (!rows.length) return;
-      await rest(`shopee_orders?on_conflict=shop_id,id_pedido`, {
-        method: 'POST',
-        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify(rows),
-      });
-    },
-    async listOrders(shopId) {
-      const q = shopId ? `shopee_orders?shop_id=eq.${shopId}&select=*` : `shopee_orders?select=*`;
-      return (await rest(q)) || [];
+    async getToken(shopId) { const r = await rest(`shopee_tokens?shop_id=eq.${shopId}&select=*`); return r && r[0] ? r[0] : null; },
+    async listTokens() { return (await rest(`shopee_tokens?select=shop_id,expires_at,refresh_expires_at,updated_at`)) || []; },
+    async saveToken(row) { await upsert('shopee_tokens', 'shop_id', [row]); },
+    async upsertOrders(rows) { await upsert('shopee_orders', 'shop_id,id_pedido', rows); },
+    async upsertItems(rows) { await upsert('shopee_order_items', 'shop_id,id_pedido,order_item_id', rows); },
+    async upsertReturns(rows) { await upsert('shopee_returns', 'shop_id,return_sn', rows); },
+    async listOrders(shopId) { return (await rest(shopId ? `shopee_orders?shop_id=eq.${shopId}&select=*` : `shopee_orders?select=*`)) || []; },
+    // Consulta agregada de leitura (pg-meta). SQL é fixo/definido pelo servidor, nunca vem do cliente.
+    async query(sql) {
+      const res = await fetchImpl(`${url}/pg/query`, { method: 'POST', headers, body: JSON.stringify({ query: sql }) });
+      if (!res.ok) throw new Error(`Consulta indisponível (HTTP ${res.status}).`);
+      return res.json();
     },
   };
 }
@@ -82,7 +107,6 @@ class ShopeeProd {
     this.syncs = new Map();
   }
 
-  // URL da página de autorização da loja (o lojista clica e aprova). v2: auth_partner.
   authUrl(redirect) {
     const apiPath = '/api/v2/shop/auth_partner';
     const timestamp = this.now();
@@ -115,9 +139,7 @@ class ShopeeProd {
     if (data.shop_id && Number(data.shop_id) !== shopId) throw new Error('A autorização retornou outra loja.');
     const now = this.now();
     await this.db.saveToken({
-      shop_id: shopId,
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
+      shop_id: shopId, access_token: data.access_token, refresh_token: data.refresh_token,
       expires_at: new Date((now + Number(data.expire_in)) * 1000).toISOString(),
       refresh_expires_at: new Date((now + 30 * DAY) * 1000).toISOString(),
       updated_at: new Date(now * 1000).toISOString(),
@@ -130,8 +152,6 @@ class ShopeeProd {
   }
 
   async access(shopId) {
-    // Dedupe concorrente: o promise é registrado ANTES de qualquer await,
-    // então duas chamadas simultâneas compartilham a mesma renovação.
     if (this.refreshes.has(shopId)) return this.refreshes.get(shopId);
     const work = (async () => {
       const token = await this.db.getToken(shopId);
@@ -148,7 +168,21 @@ class ShopeeProd {
     try { return await work; } finally { this.refreshes.delete(shopId); }
   }
 
-  async shopRequest(shopId, apiPath, query) { return this.request(apiPath, { query, shopId, token: await this.access(shopId) }); }
+  async shopRequest(shopId, apiPath, query, body) { return this.request(apiPath, { query, body, shopId, token: await this.access(shopId) }); }
+
+  // Repasse/taxas em lote (até 50 pedidos por chamada).
+  async fetchIncome(shopId, orderSns) {
+    const map = new Map();
+    for (let i = 0; i < orderSns.length; i += 50) {
+      const batch = orderSns.slice(i, i + 50);
+      const { response } = await this.shopRequest(shopId, '/api/v2/payment/get_escrow_detail_batch', {}, { order_sn_list: batch });
+      for (const entry of (Array.isArray(response) ? response : [])) {
+        const d = entry.escrow_detail;
+        if (d && d.order_sn && d.order_income) map.set(String(d.order_sn), incomeOf(d.order_sn, shopId, d.order_income));
+      }
+    }
+    return map;
+  }
 
   async sync(shopId, from, to, field = 'create_time') {
     if (![from, to].every(Number.isInteger) || from < 0 || to <= from || to - from > 90 * DAY || to > this.now() + 60 || !['create_time', 'update_time'].includes(field)) throw new Error('Escolha um intervalo válido de até 90 dias.');
@@ -169,18 +203,53 @@ class ShopeeProd {
           cursors.add(cursor);
         } while (true);
       }
-      const allIds = [...ids], staged = [];
+      const allIds = [...ids];
+      let saved = 0, withIncome = 0;
+      const optional = 'item_list,payment_method,shipping_carrier,actual_shipping_fee,cancel_reason,region,total_amount,pay_time';
       for (let i = 0; i < allIds.length; i += 50) {
         const batch = allIds.slice(i, i + 50);
-        const { response } = await this.shopRequest(shopId, '/api/v2/order/get_order_detail', { order_sn_list: batch.join(','), response_optional_fields: 'total_amount,pay_time' });
+        const { response } = await this.shopRequest(shopId, '/api/v2/order/get_order_detail', { order_sn_list: batch.join(','), response_optional_fields: optional });
         if (!response || !Array.isArray(response.order_list)) throw new Error('Detalhes de pedidos ausentes.');
-        const received = new Set(response.order_list.map(o => o.order_sn));
-        if (received.size !== batch.length || batch.some(id => !received.has(id))) throw new Error('Detalhes de pedidos incompletos; tente novamente.');
-        staged.push(...response.order_list.map(o => { const row = normalize(o, shopId); row.environment = 'production'; return row; }));
+        const received = new Set(response.order_list.map((o) => o.order_sn));
+        if (received.size !== batch.length || batch.some((id) => !received.has(id))) throw new Error('Detalhes de pedidos incompletos; tente novamente.');
+        const rows = response.order_list.map((o) => normalize(o, shopId));
+        const items = response.order_list.flatMap((o) => itemsOf(o, shopId));
+        // Repasse só faz sentido para pagos; falha de escrow não derruba o sync do pedido.
+        const paidSns = rows.filter((r) => r.payment_status === 'paid').map((r) => r.id_pedido);
+        if (paidSns.length) {
+          try {
+            const income = await this.fetchIncome(shopId, paidSns);
+            for (const r of rows) { const inc = income.get(r.id_pedido); if (inc) { Object.assign(r, inc); withIncome++; } }
+          } catch { /* mantém o pedido mesmo sem repasse; tenta de novo no próximo sync */ }
+        }
+        await this.db.upsertOrders(rows);
+        await this.db.upsertItems(items);
+        saved += rows.length;
       }
-      await this.db.upsertOrders(staged);
-      return { at: new Date(this.now() * 1000).toISOString(), count: staged.length, from, to, field };
+      let returns = 0;
+      try { returns = await this.syncReturns(shopId, from, to); } catch { /* devoluções são complementares */ }
+      return { at: new Date(this.now() * 1000).toISOString(), count: saved, withIncome, returns, from, to, field };
     } finally { this.syncs.delete(shopId); }
+  }
+
+  // Devoluções da loja no período -> shopee_returns.
+  async syncReturns(shopId, from, to) {
+    let page = 0, saved = 0;
+    for (let guard = 0; guard < 200; guard++) {
+      const { response } = await this.shopRequest(shopId, '/api/v2/returns/get_return_list', { page_no: page, page_size: 50, create_time_from: from, create_time_to: to });
+      const list = response && Array.isArray(response.return) ? response.return : [];
+      const rows = list.map((r) => ({
+        shop_id: shopId, return_sn: String(r.return_sn), order_sn: r.order_sn ? String(r.order_sn) : null,
+        status: r.status || null, reason: r.reason || r.text_reason || null,
+        refund_amount: num(r.refund_amount), currency: r.currency || null,
+        created_at: Number.isInteger(r.create_time) ? new Date(r.create_time * 1000).toISOString() : null,
+      })).filter((r) => r.return_sn && r.return_sn !== 'null');
+      await this.db.upsertReturns(rows);
+      saved += rows.length;
+      if (!response || response.more !== true) break;
+      page += 1;
+    }
+    return saved;
   }
 
   async status() {
@@ -189,4 +258,4 @@ class ShopeeProd {
   }
 }
 
-module.exports = { ShopeeProd, supabaseDb, HOSTS };
+module.exports = { ShopeeProd, supabaseDb, HOSTS, sign, normalize, itemsOf, incomeOf };

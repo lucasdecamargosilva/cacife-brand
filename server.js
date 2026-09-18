@@ -226,6 +226,34 @@ try {
         } catch (e) { console.error('Shopee orders:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // Resumo pronto pra tela da Shopee (repasse, taxas, pagamento, envio, top produtos, região, devoluções).
+    app.get('/api/shopee/summary', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        try {
+            if (!requireShopee(res)) return;
+            const Q = {
+                totais: `select count(*) filter (where payment_status='paid') pedidos_pagos,
+                    round(coalesce(sum(total) filter (where payment_status='paid'),0)::numeric,2) bruto,
+                    round(coalesce(sum(escrow_amount) filter (where payment_status='paid'),0)::numeric,2) liquido,
+                    round(coalesce(sum(coalesce(commission_fee,0)+coalesce(service_fee,0)+coalesce(transaction_fee,0)) filter (where payment_status='paid'),0)::numeric,2) taxas,
+                    round(coalesce(sum(seller_voucher) filter (where payment_status='paid'),0)::numeric,2) desconto_lojista,
+                    count(*) filter (where payment_status='paid' and income_synced) com_repasse,
+                    count(*) filter (where payment_status='cancelled') cancelados
+                    from shopee_orders`,
+                pagamento: `select coalesce(payment_method,'?') metodo, count(*) n, round(coalesce(sum(total),0)::numeric,2) bruto from shopee_orders where payment_status='paid' group by 1 order by n desc`,
+                envio: `select coalesce(shipping_carrier,'?') tipo, count(*) n from shopee_orders where payment_status='paid' group by 1 order by n desc`,
+                top_produtos: `select i.item_name, sum(i.qty) unidades, count(distinct i.id_pedido) pedidos from shopee_order_items i join shopee_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido and o.payment_status='paid' group by i.item_name order by unidades desc limit 10`,
+                regiao: `select coalesce(region,'?') uf, count(*) n from shopee_orders where payment_status='paid' group by 1 order by n desc limit 15`,
+                devolucoes: `select count(*) n, round(coalesce(sum(refund_amount),0)::numeric,2) valor from shopee_returns`,
+            };
+            const out = {};
+            for (const [k, sql] of Object.entries(Q)) out[k] = await shopee.db.query(sql);
+            out.totais = out.totais[0] || {};
+            out.devolucoes = out.devolucoes[0] || {};
+            res.json(out);
+        } catch (e) { console.error('Shopee summary:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
