@@ -87,7 +87,26 @@
     .shp-tbl td{padding:8px;border-bottom:1px solid var(--line,#e6dff0);white-space:nowrap}
     .shp-tbl td.r,.shp-tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
     .shp-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:600;white-space:nowrap}
-    .shp-scroll{overflow-x:auto}`;
+    .shp-scroll{overflow-x:auto}
+    .shp-chat{display:grid;grid-template-columns:300px 1fr;border:1px solid var(--line,#e6dff0);border-radius:12px;overflow:hidden;min-height:440px}
+    @media(max-width:760px){.shp-chat{grid-template-columns:1fr}}
+    .shp-chat-list{border-right:1px solid var(--line,#e6dff0);max-height:540px;overflow:auto}
+    .shp-conv{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line,#e6dff0);padding:10px 12px;cursor:pointer;color:var(--text,#241635)}
+    .shp-conv:hover,.shp-conv.on{background:rgba(128,128,128,.1)}
+    .shp-conv img{width:38px;height:38px;border-radius:50%;object-fit:cover;flex:none;background:rgba(128,128,128,.15)}
+    .shp-conv-info{flex:1;min-width:0}
+    .shp-conv-name{display:flex;align-items:center;gap:6px}
+    .shp-conv-name b{font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .shp-unread{background:#ee4d2d;color:#fff;font-size:.66rem;font-weight:700;border-radius:999px;padding:0 6px;min-width:16px;text-align:center}
+    .shp-conv-prev{font-size:.76rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .shp-chat-thread{display:flex;flex-direction:column;min-width:0}
+    .shp-thread-head{padding:12px 16px;border-bottom:1px solid var(--line,#e6dff0);font-size:.9rem}
+    .shp-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px;max-height:500px}
+    .shp-msg{max-width:75%;padding:8px 11px;border-radius:12px;font-size:.84rem;line-height:1.35;word-break:break-word}
+    .shp-msg.them{align-self:flex-start;background:rgba(128,128,128,.14)}
+    .shp-msg.me{align-self:flex-end;background:#ee4d2d;color:#fff}
+    .shp-msg-time{font-size:.66rem;opacity:.7;margin-top:3px}
+    .shp-chat-empty{padding:26px;color:var(--muted,#756582);font-size:.84rem}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'shp-style', textContent: css }));
   }
 
@@ -238,7 +257,68 @@
     box.append(lst); return box;
   }
 
-  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes]];
+  // ---- Chat ----
+  async function chatFetch(path) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) return null;
+    const r = await fetch(BASE + path, { headers: { Authorization: 'Bearer ' + session.access_token } });
+    if (!r.ok) return null;
+    return r.json();
+  }
+  function fmtTime(ts) {
+    const t = Number(ts) || 0; const ms = t > 1e15 ? t / 1e6 : t > 1e12 ? t : t * 1000;
+    if (!ms) return ''; try { return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
+  }
+  const TYPE_LABEL = { image: '📷 Imagem', item: '🛍️ Produto', order: '🧾 Pedido', sticker: '😊 Figurinha', image_with_text: '📷 Imagem', video: '🎬 Vídeo', v_code: 'Código', voucher: '🎟️ Cupom' };
+  function msgText(m) {
+    if (m.message_type === 'text') return (m.content && (m.content.text || m.content)) || '';
+    return TYPE_LABEL[m.message_type] || ('[' + (m.message_type || 'mensagem') + ']');
+  }
+  function convPreview(c) {
+    if (c.latest_message_type === 'text' && c.latest_message_content) return c.latest_message_content.text || '';
+    return TYPE_LABEL[c.latest_message_type] || '';
+  }
+  function secChat() {
+    const box = n('div', 'shp-wrap');
+    const pnl = panel('Conversas da Shopee', 'Mensagens dos clientes na loja (somente leitura por enquanto).');
+    const chat = n('div', 'shp-chat'), list = n('div', 'shp-chat-list'), thread = n('div', 'shp-chat-thread');
+    thread.append(n('div', 'shp-chat-empty', 'Selecione uma conversa à esquerda.'));
+    chat.append(list, thread); pnl.append(chat); box.append(pnl);
+    list.append(n('div', 'shp-chat-empty', 'Carregando conversas…'));
+    chatFetch('/api/shopee/chat/conversations?page_size=25').then(d => {
+      list.replaceChildren();
+      const convs = (d && d.conversations) || [];
+      if (!convs.length) { list.append(n('div', 'shp-chat-empty', 'Nenhuma conversa.')); return; }
+      for (const c of convs) {
+        const row = n('button', 'shp-conv'); row.type = 'button';
+        if (c.to_avatar) { const av = n('img'); av.src = c.to_avatar; av.alt = ''; av.onerror = () => av.remove(); row.append(av); }
+        const info = n('div', 'shp-conv-info'), nameRow = n('div', 'shp-conv-name'); nameRow.append(n('b', '', c.to_name || 'Cliente'));
+        if (c.unread_count > 0) nameRow.append(n('span', 'shp-unread', String(c.unread_count)));
+        info.append(nameRow, n('div', 'shp-conv-prev', convPreview(c))); row.append(info);
+        row.onclick = () => { [...list.querySelectorAll('.shp-conv')].forEach(b => b.classList.remove('on')); row.classList.add('on'); loadThread(c); };
+        list.append(row);
+      }
+    }).catch(() => list.replaceChildren(n('div', 'shp-chat-empty', 'Não consegui carregar as conversas.')));
+    function loadThread(c) {
+      thread.replaceChildren(n('div', 'shp-chat-empty', 'Carregando mensagens…'));
+      chatFetch('/api/shopee/chat/messages?conversation_id=' + encodeURIComponent(c.conversation_id) + '&page_size=40').then(d => {
+        thread.replaceChildren(n('div', 'shp-thread-head', c.to_name || 'Cliente'));
+        const msgs = (d && d.messages) || [];
+        const scroll = n('div', 'shp-msgs');
+        if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
+        for (const m of msgs) {
+          const mine = Number(m.from_shop_id) > 0;
+          const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them'));
+          bub.append(n('div', 'shp-msg-body', msgText(m)), n('div', 'shp-msg-time', fmtTime(m.created_timestamp)));
+          scroll.append(bub);
+        }
+        thread.append(scroll); scroll.scrollTop = scroll.scrollHeight;
+      }).catch(() => thread.replaceChildren(n('div', 'shp-chat-empty', 'Não consegui carregar as mensagens.')));
+    }
+    return box;
+  }
+
+  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes], ['Chat', secChat]];
 
   function render(target, data, state) {
     ensureStyle();
