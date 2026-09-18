@@ -188,18 +188,21 @@
       kpi('Reembolsado', brl(data.devolucoes?.valor), num(data.devolucoes?.n) + ' devoluções', RED),
     );
     box.append(kpis);
-    const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia no período (R$).'); chart.append(salesChart(data.byDay)); box.append(chart);
-    const cols = n('div', 'shp-cols');
+    // Linha 1: gráfico | forma de pagamento
+    const cols1 = n('div', 'shp-cols');
+    const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia (R$).'); chart.append(salesChart(data.byDay));
     const pay = panel('Forma de pagamento', 'Pedidos pagos por método.');
     if (data.pagamento?.length) pay.append(donut(data.pagamento.map((p, i) => ({ label: p.metodo, value: p.n, color: colorFor(p.metodo, PAY_COLORS, i) })))); else pay.append(n('p', 'cap', 'Sem dados.'));
+    cols1.append(chart, pay); box.append(cols1);
+    // Linha 2: envio | top produtos
+    const cols2 = n('div', 'shp-cols');
     const ship = panel('Envio', 'Full = Shopee entrega. Xpress = transportadora Shopee.');
     if (data.envio?.length) ship.append(hbars(data.envio.map((s, i) => ({ label: s.tipo, value: s.n, color: colorFor(s.tipo, SHIP_COLORS, i) })))); else ship.append(n('p', 'cap', 'Sem dados.'));
-    cols.append(pay, ship); box.append(cols);
     const top = panel('Top produtos', 'Os 5 mais vendidos no período.');
     const mx = Math.max(1, ...(data.ranking || []).map(p => p.value));
     (data.ranking || []).slice(0, 5).forEach((p, i) => top.append(productRow(p, i, mx)));
     if (!(data.ranking || []).length) top.append(n('p', 'cap', 'Nenhum item no período.'));
-    box.append(top);
+    cols2.append(ship, top); box.append(cols2);
     return box;
   }
   function secPedidos(data) {
