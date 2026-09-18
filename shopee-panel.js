@@ -106,7 +106,12 @@
     .shp-msg.them{align-self:flex-start;background:rgba(128,128,128,.14)}
     .shp-msg.me{align-self:flex-end;background:#ee4d2d;color:#fff}
     .shp-msg-time{font-size:.66rem;opacity:.7;margin-top:3px}
-    .shp-chat-empty{padding:26px;color:var(--muted,#756582);font-size:.84rem}`;
+    .shp-chat-empty{padding:26px;color:var(--muted,#756582);font-size:.84rem}
+    .shp-composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line,#e6dff0)}
+    .shp-composer textarea{flex:1;resize:none;border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 11px;background:transparent;color:var(--text,#241635);font:inherit;font-size:.85rem;max-height:110px}
+    .shp-send{background:#ee4d2d;color:#fff;border:0;border-radius:10px;padding:0 18px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .shp-send:disabled{opacity:.5;cursor:wait}
+    .shp-send-err{color:#f87171;font-size:.76rem;padding:0 12px 8px}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'shp-style', textContent: css }));
   }
 
@@ -265,6 +270,12 @@
     if (!r.ok) return null;
     return r.json();
   }
+  async function chatSendReq(toId, text) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) return false;
+    const r = await fetch(BASE + '/api/shopee/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ to_id: toId, text }) });
+    return r.ok;
+  }
   function fmtTime(ts) {
     const t = Number(ts) || 0; const ms = t > 1e15 ? t / 1e6 : t > 1e12 ? t : t * 1000;
     if (!ms) return ''; try { return new Date(ms).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
@@ -280,7 +291,7 @@
   }
   function secChat() {
     const box = n('div', 'shp-wrap');
-    const pnl = panel('Conversas da Shopee', 'Mensagens dos clientes na loja (somente leitura por enquanto).');
+    const pnl = panel('Conversas da Shopee', 'Converse com os clientes da sua loja Shopee — leia e responda.');
     const chat = n('div', 'shp-chat'), list = n('div', 'shp-chat-list'), thread = n('div', 'shp-chat-thread');
     thread.append(n('div', 'shp-chat-empty', 'Selecione uma conversa à esquerda.'));
     chat.append(list, thread); pnl.append(chat); box.append(pnl);
@@ -313,6 +324,21 @@
           scroll.append(bub);
         }
         thread.append(scroll); scroll.scrollTop = scroll.scrollHeight;
+        // compositor (responder o cliente)
+        const composer = n('div', 'shp-composer'), inp = n('textarea'), btn = n('button', 'shp-send', 'Enviar'), err = n('div', 'shp-send-err');
+        inp.placeholder = 'Escreva uma resposta…'; inp.rows = 1; btn.type = 'button';
+        const send = async () => {
+          const text = inp.value.trim(); if (!text) return; btn.disabled = true; err.textContent = '';
+          try {
+            const ok = await chatSendReq(c.to_id, text);
+            if (!ok) { err.textContent = 'Não consegui enviar. Tente de novo.'; }
+            else { inp.value = ''; const bub = n('div', 'shp-msg me'); bub.append(n('div', 'shp-msg-body', text), n('div', 'shp-msg-time', 'agora')); scroll.append(bub); scroll.scrollTop = scroll.scrollHeight; }
+          } catch { err.textContent = 'Não consegui enviar. Tente de novo.'; }
+          btn.disabled = false;
+        };
+        btn.onclick = send;
+        inp.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+        composer.append(inp, btn); thread.append(composer, err);
       }).catch(() => thread.replaceChildren(n('div', 'shp-chat-empty', 'Não consegui carregar as mensagens.')));
     }
     return box;

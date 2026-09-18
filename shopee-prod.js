@@ -273,6 +273,13 @@ class ShopeeProd {
     const { response } = await this.shopRequest(shopId, '/api/v2/sellerchat/get_message', { conversation_id: conversationId, page_size: Math.min(Math.max(1, pageSize), 60) });
     return response || {};
   }
+  async chatSend(shopId, toId, text) {
+    if (!Number.isSafeInteger(Number(toId)) || Number(toId) <= 0) throw new Error('Destinatário inválido.');
+    const message = String(text || '').trim();
+    if (!message) throw new Error('Mensagem vazia.');
+    const { response } = await this.shopRequest(shopId, '/api/v2/sellerchat/send_message', {}, { to_id: Number(toId), message_type: 'text', content: { text: message.slice(0, 2000) } });
+    return response || {};
+  }
 
   async status() {
     const tokens = await this.db.listTokens();

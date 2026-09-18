@@ -358,6 +358,16 @@ try {
             res.json(await shopee.chatMessages(shop, String(req.query.conversation_id || ''), { pageSize: Number(req.query.page_size) || 30 }));
         } catch (e) { console.error('Shopee chat messages:', e); res.status(500).json({ error: 'erro interno' }); }
     });
+    app.post('/api/shopee/chat/send', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const shop = await shopeeShopId(); if (!shop) return res.status(400).json({ error: 'Nenhuma loja autorizada.' });
+            const toId = Number(req.body?.to_id), text = String(req.body?.text || '');
+            if (!Number.isSafeInteger(toId) || toId <= 0 || !text.trim()) return res.status(400).json({ error: 'Dados inválidos.' });
+            res.json(await shopee.chatSend(shop, toId, text));
+        } catch (e) { console.error('Shopee chat send:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
 
     // --- Health Check ---
     app.get('/health', (req, res) => {
