@@ -340,6 +340,25 @@ try {
         } catch (e) { console.error('Shopee overview:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // --- Chat da Shopee (leitura) ---
+    const shopeeShopId = async () => Number((await shopee.status()).shops[0]?.shop_id) || 0;
+    app.get('/api/shopee/chat/conversations', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const shop = await shopeeShopId(); if (!shop) return res.status(400).json({ error: 'Nenhuma loja autorizada.' });
+            res.json(await shopee.chatConversations(shop, { pageSize: Number(req.query.page_size) || 25, next: req.query.next }));
+        } catch (e) { console.error('Shopee chat conversations:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+    app.get('/api/shopee/chat/messages', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const shop = await shopeeShopId(); if (!shop) return res.status(400).json({ error: 'Nenhuma loja autorizada.' });
+            res.json(await shopee.chatMessages(shop, String(req.query.conversation_id || ''), { pageSize: Number(req.query.page_size) || 30 }));
+        } catch (e) { console.error('Shopee chat messages:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });

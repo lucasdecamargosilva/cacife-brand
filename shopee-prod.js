@@ -261,6 +261,19 @@ class ShopeeProd {
     return saved;
   }
 
+  // ---- Chat (Seller Chat) ----
+  async chatConversations(shopId, { pageSize = 25, next } = {}) {
+    const query = { page_size: Math.min(Math.max(1, pageSize), 50), direction: 'latest', type: 'all' };
+    if (next) query.next_timestamp_nano = next;
+    const { response } = await this.shopRequest(shopId, '/api/v2/sellerchat/get_conversation_list', query);
+    return response || {};
+  }
+  async chatMessages(shopId, conversationId, { pageSize = 30 } = {}) {
+    if (!conversationId) throw new Error('Conversa inválida.');
+    const { response } = await this.shopRequest(shopId, '/api/v2/sellerchat/get_message', { conversation_id: conversationId, page_size: Math.min(Math.max(1, pageSize), 60) });
+    return response || {};
+  }
+
   async status() {
     const tokens = await this.db.listTokens();
     return { environment: 'production', host: this.host, partnerId: this.partnerId, shops: tokens };
