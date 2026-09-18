@@ -283,6 +283,56 @@ try {
         } catch (e) { console.error('Shopee summary:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // Resumo POR PERÍODO, no formato que o painel de canais consome (valores em centavos).
+    app.get('/api/shopee/overview', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const re = /^\d{4}-\d{2}-\d{2}$/;
+            const { start, end } = req.query;
+            if (!re.test(start || '') || !re.test(end || '') || start > end) return res.status(400).json({ error: 'período inválido' });
+            // janelas em horário de Brasília (-03:00); [lo, hi)
+            const lo = `'${start} 00:00:00-03'`;
+            const hi = `('${end} 00:00:00-03'::timestamptz + interval '1 day')`;
+            const per = `created_at >= ${lo} and created_at < ${hi}`;
+            const q1 = `select
+                count(*) filter (where payment_status='paid') paid,
+                count(*) orders,
+                count(*) filter (where payment_status='cancelled') cancelled,
+                round(coalesce(sum(total*100) filter (where payment_status='paid'),0)) revenue,
+                round(coalesce(sum(escrow_amount*100) filter (where payment_status='paid'),0)) liquido,
+                round(coalesce(sum((coalesce(commission_fee,0)+coalesce(service_fee,0)+coalesce(transaction_fee,0))*100) filter (where payment_status='paid'),0)) fees,
+                round(coalesce(sum(seller_voucher*100) filter (where payment_status='paid'),0)) discounts
+                from shopee_orders where ${per}`;
+            const qDay = `select to_char((created_at at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(total*100),0)) c
+                from shopee_orders where payment_status='paid' and ${per} group by 1`;
+            const qRank = `select coalesce(i.item_id,0) id, max(i.item_name) title, sum(i.qty)::int units, round(coalesce(sum(i.price*i.qty*100),0))::bigint value
+                from shopee_order_items i join shopee_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido
+                where o.payment_status='paid' and ${per.replace(/created_at/g, 'o.created_at')} group by i.item_id order by value desc limit 8`;
+            const qPay = `select coalesce(payment_method,'?') metodo, count(*) n, round(coalesce(sum(total*100),0)) bruto from shopee_orders where payment_status='paid' and ${per} group by 1 order by n desc`;
+            const qShip = `select coalesce(shipping_carrier,'?') tipo, count(*) n from shopee_orders where payment_status='paid' and ${per} group by 1 order by n desc`;
+            const qRet = `select count(*) n, round(coalesce(sum(refund_amount*100),0)) valor from shopee_returns where ${per}`;
+            const [base, days, rank, pay, ship, ret] = await Promise.all([
+                shopee.db.query(q1), shopee.db.query(qDay), shopee.db.query(qRank),
+                shopee.db.query(qPay), shopee.db.query(qShip), shopee.db.query(qRet),
+            ]);
+            const b = base[0] || {};
+            const N = (v) => Math.round(Number(v) || 0);
+            const revenue = N(b.revenue), paid = N(b.paid);
+            const byDay = {}; for (const r of days) byDay[r.d] = N(r.c);
+            res.json({
+                revenue, paid, orders: N(b.orders), cancelled: N(b.cancelled),
+                ticket: paid ? Math.round(revenue / paid) : 0,
+                liquido: N(b.liquido), fees: N(b.fees), discounts: N(b.discounts),
+                byDay,
+                ranking: rank.map(r => ({ id: r.id, title: r.title || 'Produto', units: N(r.units), value: N(r.value) })),
+                pagamento: pay.map(r => ({ metodo: r.metodo, n: N(r.n), bruto: N(r.bruto) })),
+                envio: ship.map(r => ({ tipo: r.tipo, n: N(r.n) })),
+                devolucoes: { n: N(ret[0]?.n), valor: N(ret[0]?.valor) },
+            });
+        } catch (e) { console.error('Shopee overview:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
