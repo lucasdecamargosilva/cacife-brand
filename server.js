@@ -306,7 +306,7 @@ try {
                 from shopee_orders where ${per}`;
             const qDay = `select to_char((created_at at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(total*100),0)) c
                 from shopee_orders where payment_status='paid' and ${per} group by 1`;
-            const qRank = `select coalesce(i.item_id,0) id, max(i.item_name) title, sum(i.qty)::int units, round(coalesce(sum(i.price*i.qty*100),0))::bigint value
+            const qRank = `select coalesce(i.item_id,0) id, max(i.item_name) title, max(i.image_url) image, sum(i.qty)::int units, round(coalesce(sum(i.price*i.qty*100),0))::bigint value
                 from shopee_order_items i join shopee_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido
                 where o.payment_status='paid' and ${per.replace(/created_at/g, 'o.created_at')} group by i.item_id order by value desc limit 8`;
             const qPay = `select coalesce(payment_method,'?') metodo, count(*) n, round(coalesce(sum(total*100),0)) bruto from shopee_orders where payment_status='paid' and ${per} group by 1 order by n desc`;
@@ -325,7 +325,7 @@ try {
                 ticket: paid ? Math.round(revenue / paid) : 0,
                 liquido: N(b.liquido), fees: N(b.fees), discounts: N(b.discounts),
                 byDay,
-                ranking: rank.map(r => ({ id: r.id, title: r.title || 'Produto', units: N(r.units), value: N(r.value) })),
+                ranking: rank.map(r => ({ id: r.id, title: r.title || 'Produto', image: r.image || null, units: N(r.units), value: N(r.value) })),
                 pagamento: pay.map(r => ({ metodo: r.metodo, n: N(r.n), bruto: N(r.bruto) })),
                 envio: ship.map(r => ({ tipo: r.tipo, n: N(r.n) })),
                 devolucoes: { n: N(ret[0]?.n), valor: N(ret[0]?.valor) },

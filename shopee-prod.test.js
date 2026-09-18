@@ -39,7 +39,7 @@ test('itemsOf extrai itens do pedido (ranking de produtos)', () => {
   ] };
   const items = itemsOf(o, 9);
   assert.equal(items.length, 2);
-  assert.deepEqual({ ...items[0] }, { shop_id: 9, id_pedido: 'A1', order_item_id: 11, item_id: 500, item_name: 'Óculos X', model_sku: 'SKU1', qty: 2, price: 75.19 });
+  assert.deepEqual({ ...items[0] }, { shop_id: 9, id_pedido: 'A1', order_item_id: 11, item_id: 500, item_name: 'Óculos X', model_sku: 'SKU1', qty: 2, price: 75.19, image_url: null });
   assert.equal(items[1].order_item_id, 12); // usa line_item_id como fallback
 });
 

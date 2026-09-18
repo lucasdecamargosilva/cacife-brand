@@ -55,6 +55,7 @@ function itemsOf(order, shopId) {
       model_sku: it.model_sku || it.item_sku || null,
       qty: Number(it.model_quantity_purchased || 0),
       price: num(it.model_discounted_price),
+      image_url: it.image_info?.image_url || null,
     });
   }
   return [...byKey.values()];
