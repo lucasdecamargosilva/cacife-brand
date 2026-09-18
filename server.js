@@ -203,7 +203,7 @@ try {
     app.get('/api/shopee/status', async (req, res) => {
         if (!requireAdmin(req, res)) return;
         try { res.json(shopee ? await shopee.status() : { environment: 'production', configured: false, shops: [] }); }
-        catch (e) { console.error('Shopee status:', e.message); res.status(500).json({ error: e.message }); }
+        catch (e) { console.error('Shopee status:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
     app.post('/api/shopee/sync', async (req, res) => {
@@ -215,7 +215,7 @@ try {
             const days = Math.min(Number(req.body?.days) || 30, 90);
             const to = Math.floor(Date.now() / 1000), from = to - days * 86400;
             res.json(await shopee.sync(shopId, from, to, 'update_time'));
-        } catch (e) { console.error('Shopee sync:', e.message); res.status(500).json({ error: e.message }); }
+        } catch (e) { console.error('Shopee sync:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
     app.get('/api/shopee/orders', async (req, res) => {
@@ -223,7 +223,7 @@ try {
         try {
             if (!requireShopee(res)) return;
             res.json({ environment: 'production', orders: await shopee.db.listOrders(req.query.shopId ? Number(req.query.shopId) : undefined) });
-        } catch (e) { console.error('Shopee orders:', e.message); res.status(500).json({ error: e.message }); }
+        } catch (e) { console.error('Shopee orders:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
     // --- Health Check ---
