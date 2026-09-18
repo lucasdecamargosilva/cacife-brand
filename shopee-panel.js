@@ -87,7 +87,7 @@
     const w = 640, h = 170, l = 42, r = 12, t = 12, b = 22, max = Math.max(100, ...vals);
     const x = i => l + (dates.length < 2 ? 0 : i / (dates.length - 1) * (w - l - r));
     const y = v => h - b - v / max * (h - t - b);
-    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', preserveAspectRatio: 'none', style: 'width:100%;height:180px' });
+    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;display:block' });
     const grad = svgEl('linearGradient', { id: 'shpGrad', x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgEl('stop', { offset: '0%', 'stop-color': SHOPEE, 'stop-opacity': .35 }), svgEl('stop', { offset: '100%', 'stop-color': SHOPEE, 'stop-opacity': 0 }));
     svg.append(svgEl('defs', {}), grad);
@@ -138,8 +138,10 @@
       kpi('Repasse líquido', brl(data.liquido), liqPct + '% do bruto', GREEN),
       kpi('Taxas Shopee', brl(data.fees), taxaPct + '% do bruto', AMBER),
       kpi('Pedidos pagos', num(data.paid), num(data.cancelled) + ' cancelados', '#3b82f6'),
-      kpi('Desconto do lojista', brl(data.discounts), 'cupons que você bancou', '#8b5cf6'),
       kpi('Ticket médio', brl(data.ticket), 'por pedido pago', '#06b6d4'),
+      kpi('Desconto do lojista', brl(data.discounts), 'cupons que você bancou', '#8b5cf6'),
+      kpi('Devoluções', num(data.devolucoes?.n), 'no período', RED),
+      kpi('Reembolsado', brl(data.devolucoes?.valor), 'valor devolvido', RED),
     );
     wrap.append(kpis);
 
@@ -166,11 +168,6 @@
     });
     if (!(data.ranking || []).length) top.append(n('p', 'cap', 'Nenhum item no período.'));
     wrap.append(top);
-
-    const ret = panel('Devoluções', 'Pedidos devolvidos no período.');
-    const rk = n('div', 'shp-kpis');
-    rk.append(kpi('Devoluções', num(data.devolucoes?.n), 'no período', RED), kpi('Reembolsado', brl(data.devolucoes?.valor), 'valor devolvido', RED));
-    ret.append(rk); wrap.append(ret);
 
     wrap.append(n('p', 'shp-src', 'API Shopee · loja Cacife Brand · repasse via escrow · consulta em ' + new Date().toLocaleString('pt-BR')));
     target.append(wrap);
