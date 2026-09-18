@@ -181,16 +181,16 @@ try {
         res.set('Referrer-Policy', 'no-referrer');
         const flow = crypto.randomBytes(16).toString('hex');
         res.cookie('shopee_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
-        // state viaja dentro do redirect (a Shopee acrescenta code & shop_id de volta) -> anti-CSRF
-        res.redirect(shopee.authUrl(SHOPEE_REDIRECT + '?state=' + flow));
+        // state viaja no CAMINHO (/callback/<state>) -> a Shopee gruda ?code&shop_id sem brigar. anti-CSRF.
+        res.redirect(shopee.authUrl(SHOPEE_REDIRECT + '/' + flow));
     });
 
     // Retorno da Shopee com o código; valida state+cookie, troca por token e salva no Supabase.
-    app.get('/shopee/callback', async (req, res) => {
+    app.get(['/shopee/callback', '/shopee/callback/:state'], async (req, res) => {
         try {
             if (!shopee) return res.status(503).send('Shopee não configurada.');
             const cookie = readCookie(req, 'shopee_flow');
-            const state = req.query.state;
+            const state = req.params.state || req.query.state;
             if (!cookie || typeof state !== 'string' || !timingEq(state, cookie)) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /shopee/connect.');
             const shopId = Number(req.query.shop_id), code = req.query.code;
             if (!Number.isSafeInteger(shopId) || shopId <= 0 || typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido da Shopee.');
