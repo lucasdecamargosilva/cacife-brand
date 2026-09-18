@@ -76,10 +76,10 @@
     .shp-prod .pv{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
     .shp-src{font-size:.74rem;color:var(--muted,#756582)}
     .shp-chart text{fill:var(--muted,#756582);font-size:9px}
-    .shp-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line,#e6dff0)}
-    .shp-tab{background:transparent;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-size:.86rem;font-weight:600;color:var(--muted,#756582);cursor:pointer;border-radius:6px 6px 0 0;margin-bottom:-1px}
+    .shp-tabs{display:flex;gap:14px;background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:12px;padding:0 12px;overflow:auto}
+    .shp-tab{white-space:nowrap;background:transparent;border:0;border-bottom:3px solid transparent;padding:16px 12px;font-size:.9rem;font-weight:500;color:var(--muted,#756582);cursor:pointer}
     .shp-tab:hover{color:var(--text,#241635)}
-    .shp-tab.on{color:var(--shopee,#ee4d2d);border-bottom-color:var(--shopee,#ee4d2d)}
+    .shp-tab.on{color:var(--shopee,#ee4d2d);border-bottom-color:var(--shopee,#ee4d2d);font-weight:600}
     .shp-tbl{width:100%;border-collapse:collapse;font-size:.82rem}
     .shp-tbl th{text-align:left;padding:8px;color:var(--muted,#756582);font-weight:600;font-size:.74rem;border-bottom:1px solid var(--line,#e6dff0);white-space:nowrap}
     .shp-tbl td{padding:8px;border-bottom:1px solid var(--line,#e6dff0);white-space:nowrap}
@@ -151,6 +151,18 @@
   // ---------- seções ----------
   function secVisao(data) {
     const box = n('div', 'shp-wrap');
+    const taxaPct = data.revenue > 0 ? (data.fees / data.revenue * 100).toFixed(1) : '0';
+    const liqPct = data.revenue > 0 ? (data.liquido / data.revenue * 100).toFixed(0) : '0';
+    const kpis = n('div', 'shp-kpis');
+    kpis.append(
+      kpi('Faturamento bruto', brl(data.revenue), 'pago pelos clientes', SHOPEE),
+      kpi('Repasse líquido', brl(data.liquido), liqPct + '% do bruto', GREEN),
+      kpi('Taxas Shopee', brl(data.fees), taxaPct + '% do bruto', AMBER),
+      kpi('Pedidos pagos', num(data.paid), num(data.cancelled) + ' cancelados', BLUE),
+      kpi('Ticket médio', brl(data.ticket), 'por pedido pago', '#06b6d4'),
+      kpi('Reembolsado', brl(data.devolucoes?.valor), num(data.devolucoes?.n) + ' devoluções', RED),
+    );
+    box.append(kpis);
     const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia no período (R$).'); chart.append(salesChart(data.byDay)); box.append(chart);
     const cols = n('div', 'shp-cols');
     const pay = panel('Forma de pagamento', 'Pedidos pagos por método.');
@@ -198,33 +210,17 @@
     box.append(lst); return box;
   }
 
-  const TABS = [['Visão geral', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes]];
+  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes]];
 
   function render(target, data, state) {
     ensureStyle();
     target.replaceChildren(); target.hidden = false; document.body.dataset.marketplace = 'shopee';
     const wrap = n('div', 'shp-wrap');
-    const hero = n('div', 'marketplace-hero');
-    hero.append(n('span', 'marketplace-eyebrow', 'CANAL SHOPEE'), n('h2', '', 'Repasse, taxas e desempenho'), n('p', '', 'Vendas confirmadas, valor líquido de repasse e detalhes da operação Shopee no período selecionado.'));
-    wrap.append(hero);
     if (!data) { const p = panel('Shopee'); p.append(n('p', 'cap', state || 'Carregando dados da Shopee…')); wrap.append(p); target.append(wrap); return; }
 
-    const taxaPct = data.revenue > 0 ? (data.fees / data.revenue * 100).toFixed(1) : '0';
-    const liqPct = data.revenue > 0 ? (data.liquido / data.revenue * 100).toFixed(0) : '0';
-    const kpis = n('div', 'shp-kpis');
-    kpis.append(
-      kpi('Faturamento bruto', brl(data.revenue), 'pago pelos clientes', SHOPEE),
-      kpi('Repasse líquido', brl(data.liquido), liqPct + '% do bruto', GREEN),
-      kpi('Taxas Shopee', brl(data.fees), taxaPct + '% do bruto', AMBER),
-      kpi('Pedidos pagos', num(data.paid), num(data.cancelled) + ' cancelados', BLUE),
-      kpi('Ticket médio', brl(data.ticket), 'por pedido pago', '#06b6d4'),
-      kpi('Reembolsado', brl(data.devolucoes?.valor), num(data.devolucoes?.n) + ' devoluções', RED),
-    );
-    wrap.append(kpis);
-
-    // sub-abas
+    // menu (mesmo estilo das outras abas) no topo
     const tabsEl = n('div', 'shp-tabs'), content = n('div');
-    let active = (root.__shopeeTab && TABS.some(t => t[0] === root.__shopeeTab)) ? root.__shopeeTab : 'Visão geral';
+    let active = (root.__shopeeTab && TABS.some(t => t[0] === root.__shopeeTab)) ? root.__shopeeTab : 'Resumo';
     const paint = () => {
       [...tabsEl.children].forEach(btn => btn.classList.toggle('on', btn.textContent === active));
       const sec = TABS.find(t => t[0] === active)[1];
