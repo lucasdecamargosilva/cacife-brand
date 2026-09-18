@@ -37,12 +37,12 @@
     if (document.getElementById('shp-style')) return;
     const css = `
     .shp-wrap{display:flex;flex-direction:column;gap:16px}
-    .shp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px}
-    .shp-kpi{position:relative;background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:14px;padding:14px 16px 14px 18px;overflow:hidden;color:var(--text,#241635)}
-    .shp-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#ee4d2d)}
-    .shp-kpi .k-lbl{font-size:.78rem;color:var(--muted,#756582);font-weight:500}
-    .shp-kpi .k-val{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-top:6px;color:var(--accent,inherit)}
-    .shp-kpi .k-sub{font-size:.74rem;color:var(--muted,#756582);margin-top:3px}
+    .shp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:10px}
+    .shp-kpi{position:relative;background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:12px;padding:11px 13px 11px 15px;overflow:hidden;color:var(--text,#241635)}
+    .shp-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,#ee4d2d)}
+    .shp-kpi .k-lbl{font-size:.72rem;color:var(--muted,#756582);font-weight:500}
+    .shp-kpi .k-val{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;margin-top:4px;color:var(--accent,inherit)}
+    .shp-kpi .k-sub{font-size:.68rem;color:var(--muted,#756582);margin-top:2px}
     .shp-panel{background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:16px;padding:18px 20px;color:var(--text,#241635)}
     .shp-panel h3{font-size:.98rem;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px}
     .shp-panel .cap{font-size:.78rem;color:var(--muted,#756582);margin:0 0 12px}
@@ -84,14 +84,15 @@
     const first = keys[0], last = keys[keys.length - 1];
     const dates = []; for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) dates.push(d.toISOString().slice(0, 10));
     const vals = dates.map(d => byDay[d] || 0);
-    const w = 640, h = 170, l = 42, r = 12, t = 12, b = 22, max = Math.max(100, ...vals);
+    const w = 720, h = 150, l = 58, r = 14, t = 10, b = 20, max = Math.max(100, ...vals);
     const x = i => l + (dates.length < 2 ? 0 : i / (dates.length - 1) * (w - l - r));
     const y = v => h - b - v / max * (h - t - b);
-    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;display:block' });
+    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;max-height:150px;display:block' });
     const grad = svgEl('linearGradient', { id: 'shpGrad', x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgEl('stop', { offset: '0%', 'stop-color': SHOPEE, 'stop-opacity': .35 }), svgEl('stop', { offset: '100%', 'stop-color': SHOPEE, 'stop-opacity': 0 }));
     svg.append(svgEl('defs', {}), grad);
-    for (let i = 0; i <= 3; i++) { const gy = t + (h - t - b) * i / 3; svg.append(svgEl('line', { x1: l, y1: gy, x2: w - r, y2: gy, stroke: 'var(--line,#e6dff0)', 'stroke-width': .5 }), svgEl('text', { x: l - 6, y: gy + 3, 'text-anchor': 'end' }, brlShort(max * (1 - i / 3)))); }
+    const kShort = c => new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 }).format((Number(c) || 0) / 100);
+    for (let i = 0; i <= 3; i++) { const gy = t + (h - t - b) * i / 3; svg.append(svgEl('line', { x1: l, y1: gy, x2: w - r, y2: gy, stroke: 'var(--line,#e6dff0)', 'stroke-width': .5 }), svgEl('text', { x: l - 8, y: gy + 3, 'text-anchor': 'end' }, kShort(max * (1 - i / 3)))); }
     const line = vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
     svg.append(svgEl('polygon', { points: `${l},${h - b} ${line} ${x(dates.length - 1)},${h - b}`, fill: 'url(#shpGrad)' }));
     svg.append(svgEl('polyline', { points: line, fill: 'none', stroke: SHOPEE, 'stroke-width': 2 }));
@@ -145,7 +146,7 @@
     );
     wrap.append(kpis);
 
-    const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia no período.');
+    const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia no período (R$).');
     chart.append(salesChart(data.byDay)); wrap.append(chart);
 
     const cols = n('div', 'shp-cols');
