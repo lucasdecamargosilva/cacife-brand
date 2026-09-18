@@ -7,6 +7,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 try {
     const app = express();
     app.set('trust proxy', 1);
+    app.use(express.json());
 
     const PORT = process.env.PORT || 3000;
 
@@ -137,6 +138,73 @@ try {
             const { data: items } = await axios.get(`https://api.mercadolibre.com/items?ids=${ids.join(',')}`, { headers: { Authorization: `Bearer ${token}` } });
             items.sort((a, b) => ((b.body || {}).sold_quantity || 0) - ((a.body || {}).sold_quantity || 0));
             res.json(items);
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    // --- Shopee (loja real) ---
+    const { ShopeeProd, supabaseDb, HOSTS } = require('./shopee-prod');
+    const SHOPEE_PARTNER_ID = Number(process.env.SHOPEE_PARTNER_ID || 0);
+    const SHOPEE_PARTNER_KEY = process.env.SHOPEE_PARTNER_KEY || '';
+    const SHOPEE_HOST = HOSTS[process.env.SHOPEE_REGION || 'br'] || HOSTS.br;
+    const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'https://cacife.quanticsolutions.com.br';
+    const SHOPEE_REDIRECT = PUBLIC_BASE_URL + '/shopee/callback';
+
+    let shopee = null;
+    if (SHOPEE_PARTNER_ID && SHOPEE_PARTNER_KEY) {
+        try {
+            shopee = new ShopeeProd({
+                partnerId: SHOPEE_PARTNER_ID, partnerKey: SHOPEE_PARTNER_KEY, host: SHOPEE_HOST,
+                db: supabaseDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }),
+            });
+            console.log(`🛍️  Shopee ligada (host: ${SHOPEE_HOST}, partner: ${SHOPEE_PARTNER_ID})`);
+        } catch (e) { console.error('Shopee init falhou:', e.message); }
+    } else {
+        console.log('🛍️  Shopee: aguardando SHOPEE_PARTNER_ID / SHOPEE_PARTNER_KEY no ambiente.');
+    }
+    const requireShopee = (res) => { if (!shopee) { res.status(503).json({ error: 'Shopee ainda não configurada no servidor.' }); return false; } return true; };
+    const readCookie = (req, name) => (req.headers.cookie || '').split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1];
+
+    // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja.
+    app.get('/shopee/connect', (req, res) => {
+        if (!requireShopee(res)) return;
+        const flow = require('crypto').randomBytes(16).toString('hex');
+        res.cookie('shopee_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
+        res.redirect(shopee.authUrl(SHOPEE_REDIRECT));
+    });
+
+    // Retorno da Shopee com o código; troca por token e salva no Supabase.
+    app.get('/shopee/callback', async (req, res) => {
+        try {
+            if (!shopee) return res.status(503).send('Shopee não configurada.');
+            if (!readCookie(req, 'shopee_flow')) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /shopee/connect.');
+            const shopId = Number(req.query.shop_id), code = req.query.code;
+            if (!Number.isSafeInteger(shopId) || shopId <= 0 || typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido da Shopee.');
+            res.clearCookie('shopee_flow');
+            await shopee.exchange(code, shopId);
+            res.redirect('/metricas.html?shopee=conectada');
+        } catch (e) { console.error('Shopee callback:', e.message); res.status(500).send('Falha ao conectar a loja. Tente novamente.'); }
+    });
+
+    app.get('/api/shopee/status', async (req, res) => {
+        try { res.json(shopee ? await shopee.status() : { environment: 'production', configured: false, shops: [] }); }
+        catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    app.post('/api/shopee/sync', async (req, res) => {
+        try {
+            if (!requireShopee(res)) return;
+            const shopId = Number(req.body?.shopId || (await shopee.status()).shops[0]?.shop_id);
+            if (!Number.isSafeInteger(shopId) || shopId <= 0) return res.status(400).json({ error: 'Nenhuma loja autorizada.' });
+            const days = Math.min(Number(req.body?.days) || 30, 90);
+            const to = Math.floor(Date.now() / 1000), from = to - days * 86400;
+            res.json(await shopee.sync(shopId, from, to, 'update_time'));
+        } catch (e) { res.status(500).json({ error: e.message }); }
+    });
+
+    app.get('/api/shopee/orders', async (req, res) => {
+        try {
+            if (!requireShopee(res)) return;
+            res.json({ environment: 'production', orders: await shopee.db.listOrders(req.query.shopId ? Number(req.query.shopId) : undefined) });
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
 
