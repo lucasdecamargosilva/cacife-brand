@@ -38,6 +38,7 @@
   const kShort = c => new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 }).format((Number(c) || 0) / 100);
   const num = v => new Intl.NumberFormat('pt-BR').format(Number(v) || 0);
   const colorFor = (label, map, i) => map[label] || PALETTE[i % PALETTE.length];
+  const iconFor = t => /repasse|l[ií]quido/i.test(t) ? 'ph-coins' : /comiss|taxa/i.test(t) ? 'ph-percent' : /desconto|cupom/i.test(t) ? 'ph-tag' : /cancel/i.test(t) ? 'ph-x-circle' : /reembol|devolu/i.test(t) ? 'ph-arrow-u-up-left' : /pedidos/i.test(t) ? 'ph-bag-simple' : /unidade/i.test(t) ? 'ph-package' : /ticket/i.test(t) ? 'ph-receipt' : /vendas|faturamento|bruto/i.test(t) ? 'ph-currency-circle-dollar' : 'ph-chart-line';
   const statusInfo = s => STATUS[s] || [s === '?' ? '—' : s, '#94a3b8'];
   const badge = (text, color) => { const e = n('span', 'shp-badge', text); e.style.color = color; e.style.background = color + '22'; return e; };
 
@@ -48,7 +49,8 @@
     .shp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
     .shp-kpi{position:relative;background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:14px;padding:13px 15px 13px 17px;overflow:hidden;color:var(--text,#241635)}
     .shp-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#ee4d2d)}
-    .shp-kpi .k-lbl{font-size:.76rem;color:var(--muted,#756582);font-weight:500}
+    .shp-kpi .k-lbl{font-size:.76rem;color:var(--muted,#756582);font-weight:500;display:flex;align-items:center;gap:7px}
+    .shp-kpi .k-ico{width:24px;height:24px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex:none}
     .shp-kpi .k-val{font-size:1.35rem;font-weight:800;letter-spacing:-.02em;margin-top:5px;color:var(--accent,inherit)}
     .shp-kpi .k-sub{font-size:.7rem;color:var(--muted,#756582);margin-top:3px}
     .shp-panel{background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:16px;padding:18px 20px;color:var(--text,#241635)}
@@ -90,22 +92,33 @@
   }
 
   function kpi(label, value, sub, accent) {
-    const e = n('div', 'shp-kpi'); e.style.setProperty('--accent', accent || SHOPEE);
-    e.append(n('div', 'k-lbl', label), n('div', 'k-val', value)); if (sub) e.append(n('div', 'k-sub', sub));
+    const c = accent || SHOPEE;
+    const e = n('div', 'shp-kpi'); e.style.setProperty('--accent', c);
+    const lbl = n('div', 'k-lbl'); const ib = n('span', 'k-ico'); ib.style.background = c + '22'; ib.style.color = c; ib.append(n('i', 'ph ' + iconFor(label))); lbl.append(ib, n('span', '', label));
+    e.append(lbl, n('div', 'k-val', value)); if (sub) e.append(n('div', 'k-sub', sub));
     return e;
   }
   function panel(title, cap) { const e = n('section', 'shp-panel'); e.append(n('h3', '', title)); if (cap) e.append(n('p', 'cap', cap)); return e; }
 
+  function tooltipEl() {
+    let tip = document.getElementById('shp-tip');
+    if (!tip) {
+      tip = n('div'); tip.id = 'shp-tip';
+      tip.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:#0e1116;color:#fff;border:1px solid #2a2e37;border-radius:8px;padding:7px 10px;font:600 12px Outfit,sans-serif;box-shadow:0 8px 24px #0006;display:none;white-space:nowrap';
+      document.body.append(tip);
+    }
+    return tip;
+  }
   function salesChart(byDay) {
     const keys = Object.keys(byDay || {}).sort();
     if (!keys.length) return n('p', 'cap', 'Sem vendas no período.');
     const first = keys[0], last = keys[keys.length - 1];
     const dates = []; for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) dates.push(d.toISOString().slice(0, 10));
     const vals = dates.map(d => byDay[d] || 0);
-    const w = 680, h = 168, l = 56, r = 14, t = 10, b = 20, max = Math.max(100, ...vals);
+    const w = 680, h = 210, l = 56, r = 14, t = 12, b = 24, max = Math.max(100, ...vals);
     const x = i => l + (dates.length < 2 ? 0 : i / (dates.length - 1) * (w - l - r));
     const y = v => h - b - v / max * (h - t - b);
-    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;max-height:190px;display:block' });
+    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;max-height:260px;display:block' });
     const grad = svgEl('linearGradient', { id: 'shpGrad', x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgEl('stop', { offset: '0%', 'stop-color': SHOPEE, 'stop-opacity': .35 }), svgEl('stop', { offset: '100%', 'stop-color': SHOPEE, 'stop-opacity': 0 }));
     svg.append(svgEl('defs', {}), grad);
@@ -113,8 +126,20 @@
     const line = vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
     svg.append(svgEl('polygon', { points: `${l},${h - b} ${line} ${x(dates.length - 1)},${h - b}`, fill: 'url(#shpGrad)' }));
     svg.append(svgEl('polyline', { points: line, fill: 'none', stroke: SHOPEE, 'stroke-width': 2 }));
+    for (let i = 0; i < dates.length; i++) svg.append(svgEl('circle', { cx: x(i), cy: y(vals[i]), r: dates.length > 60 ? 1.6 : 2.6, fill: SHOPEE }));
     const idx = [...new Set([0, Math.floor((dates.length - 1) / 2), dates.length - 1])];
-    for (const i of idx) svg.append(svgEl('text', { x: x(i), y: h - 6, 'text-anchor': i === 0 ? 'start' : i === dates.length - 1 ? 'end' : 'middle' }, dates[i].slice(5).split('-').reverse().join('/')));
+    for (const i of idx) svg.append(svgEl('text', { x: x(i), y: h - 7, 'text-anchor': i === 0 ? 'start' : i === dates.length - 1 ? 'end' : 'middle' }, dates[i].slice(5).split('-').reverse().join('/')));
+    // hover: mostra o detalhe do dia
+    const tip = tooltipEl();
+    const guide = svgEl('line', { y1: t, y2: h - b, stroke: SHOPEE, 'stroke-width': .8, 'stroke-dasharray': '3 3', opacity: 0 }); svg.append(guide);
+    for (let i = 0; i < dates.length; i++) {
+      const left = i === 0 ? l : (x(i - 1) + x(i)) / 2, right = i === dates.length - 1 ? w - r : (x(i) + x(i + 1)) / 2;
+      const zone = svgEl('rect', { x: left, y: t, width: Math.max(1, right - left), height: h - t - b, fill: 'transparent', style: 'cursor:crosshair' });
+      const show = ev => { guide.setAttribute('x1', x(i)); guide.setAttribute('x2', x(i)); guide.setAttribute('opacity', 1); const val = n('span'); val.style.color = '#ff8a68'; val.textContent = brl(vals[i]); tip.replaceChildren(document.createTextNode(dates[i].slice(5).split('-').reverse().join('/')), document.createElement('br'), val); tip.style.display = 'block'; tip.style.left = Math.min(innerWidth - tip.offsetWidth - 12, ev.clientX + 14) + 'px'; tip.style.top = (ev.clientY - 10) + 'px'; };
+      zone.addEventListener('pointermove', show); zone.addEventListener('pointerenter', show);
+      zone.addEventListener('pointerleave', () => { tip.style.display = 'none'; guide.setAttribute('opacity', 0); });
+      svg.append(zone);
+    }
     return svg;
   }
   function donut(entries) {
