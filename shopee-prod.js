@@ -42,16 +42,22 @@ function normalize(order, shopId) {
 }
 
 // Itens do pedido -> linhas de shopee_order_items (para ranking de produtos).
+// Deduplica pela chave (pedido, order_item_id) pra não repetir na mesma gravação (senão o upsert dá 500).
 function itemsOf(order, shopId) {
-  return (order.item_list || []).map((it) => ({
-    shop_id: shopId, id_pedido: String(order.order_sn),
-    order_item_id: Number(it.order_item_id || it.line_item_id || 0),
-    item_id: it.item_id ? Number(it.item_id) : null,
-    item_name: it.item_name || null,
-    model_sku: it.model_sku || it.item_sku || null,
-    qty: Number(it.model_quantity_purchased || 0),
-    price: num(it.model_discounted_price),
-  })).filter((r) => r.order_item_id > 0);
+  const byKey = new Map();
+  for (const it of (order.item_list || [])) {
+    const oid = Number(it.order_item_id || it.line_item_id || 0);
+    if (oid <= 0) continue;
+    byKey.set(oid, {
+      shop_id: shopId, id_pedido: String(order.order_sn), order_item_id: oid,
+      item_id: it.item_id ? Number(it.item_id) : null,
+      item_name: it.item_name || null,
+      model_sku: it.model_sku || it.item_sku || null,
+      qty: Number(it.model_quantity_purchased || 0),
+      price: num(it.model_discounted_price),
+    });
+  }
+  return [...byKey.values()];
 }
 
 // order_income (do escrow) -> campos de repasse/taxas do pedido.
@@ -74,8 +80,8 @@ function supabaseDb({ url, serviceKey, fetchImpl = fetch }) {
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   async function rest(pathAndQuery, init = {}) {
     const res = await fetchImpl(`${url}/rest/v1/${pathAndQuery}`, { ...init, headers: { ...headers, ...(init.headers || {}) } });
-    if (!res.ok) throw new Error(`Supabase indisponível (HTTP ${res.status}).`);
     const text = await res.text();
+    if (!res.ok) throw new Error(`Supabase HTTP ${res.status}: ${text.slice(0, 200)}`);
     return text ? JSON.parse(text) : null;
   }
   const upsert = (table, conflict, rows) => rows.length ? rest(`${table}?on_conflict=${conflict}`, {
@@ -214,17 +220,19 @@ class ShopeeProd {
         if (received.size !== batch.length || batch.some((id) => !received.has(id))) throw new Error('Detalhes de pedidos incompletos; tente novamente.');
         const rows = response.order_list.map((o) => normalize(o, shopId));
         const items = response.order_list.flatMap((o) => itemsOf(o, shopId));
-        // Repasse só faz sentido para pagos; falha de escrow não derruba o sync do pedido.
+        // Grava o pedido base primeiro (todas as linhas com as MESMAS colunas -> PostgREST aceita).
+        await this.db.upsertOrders(rows);
+        await this.db.upsertItems(items);
+        saved += rows.length;
+        // Repasse/taxas: gravação SEPARADA (só pagos, colunas homogêneas). Falha aqui não perde o pedido.
         const paidSns = rows.filter((r) => r.payment_status === 'paid').map((r) => r.id_pedido);
         if (paidSns.length) {
           try {
             const income = await this.fetchIncome(shopId, paidSns);
-            for (const r of rows) { const inc = income.get(r.id_pedido); if (inc) { Object.assign(r, inc); withIncome++; } }
-          } catch { /* mantém o pedido mesmo sem repasse; tenta de novo no próximo sync */ }
+            const incomeRows = [...income.values()];
+            if (incomeRows.length) { await this.db.upsertOrders(incomeRows); withIncome += incomeRows.length; }
+          } catch { /* tenta de novo no próximo sync */ }
         }
-        await this.db.upsertOrders(rows);
-        await this.db.upsertItems(items);
-        saved += rows.length;
       }
       let returns = 0;
       try { returns = await this.syncReturns(shopId, from, to); } catch { /* devoluções são complementares */ }
@@ -236,7 +244,7 @@ class ShopeeProd {
   async syncReturns(shopId, from, to) {
     let page = 0, saved = 0;
     for (let guard = 0; guard < 200; guard++) {
-      const { response } = await this.shopRequest(shopId, '/api/v2/returns/get_return_list', { page_no: page, page_size: 50, create_time_from: from, create_time_to: to });
+      const { response } = await this.shopRequest(shopId, '/api/v2/returns/get_return_list', { page_no: page, page_size: 50 });
       const list = response && Array.isArray(response.return) ? response.return : [];
       const rows = list.map((r) => ({
         shop_id: shopId, return_sn: String(r.return_sn), order_sn: r.order_sn ? String(r.order_sn) : null,
