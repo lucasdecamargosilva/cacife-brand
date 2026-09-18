@@ -1,8 +1,32 @@
 'use strict';
 // Integração Shopee de PRODUÇÃO (loja real da Cacife).
-// Reaproveita as funções puras testadas do conector sandbox (assinatura + normalização)
-// e persiste tokens/pedidos no Supabase (não em arquivo, que se perde no redeploy).
-const { sign, normalize, DAY } = require('./local/shopee');
+// Autossuficiente: assinatura + normalização inline (não depende de local/, que não vai pro Git).
+// Persiste tokens/pedidos no Supabase (não em arquivo, que se perde no redeploy).
+const { createHmac } = require('node:crypto');
+
+const DAY = 86400;
+
+// Assinatura HMAC-SHA256 exigida pela Shopee (base = partnerId+path+timestamp[+token+shopId]).
+function sign(key, partnerId, apiPath, timestamp, token = '', shopId = '') {
+  return createHmac('sha256', key).update(`${partnerId}${apiPath}${timestamp}${token}${shopId}`).digest('hex');
+}
+
+// Converte um pedido da Shopee no formato da tabela shopee_orders. Descarta dados do comprador.
+function normalize(order, shopId) {
+  if (!order.order_sn || !Number.isInteger(order.create_time) || !Number.isInteger(order.update_time)) throw new Error('Pedido com identificação ou data inválida.');
+  if (order.currency !== 'BRL') throw new Error('A loja precisa usar BRL.');
+  const excluded = ['CANCELLED', 'IN_CANCEL', 'TO_RETURN'].includes(order.order_status);
+  const paid = Number(order.pay_time) > 0 && !excluded;
+  const amount = order.total_amount;
+  if (paid && (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0)) throw new Error('Pedido pago sem total válido.');
+  return {
+    id_pedido: String(order.order_sn), shop_id: shopId, channel: 'shopee', environment: 'production',
+    currency: 'BRL', total: paid ? Math.round(amount * 100) / 100 : 0,
+    payment_status: excluded ? 'cancelled' : paid ? 'paid' : 'pending', status: String(order.order_status),
+    created_at: new Date(order.create_time * 1000).toISOString(), updated_at: new Date(order.update_time * 1000).toISOString(),
+    paid_at: Number(order.pay_time) > 0 ? new Date(order.pay_time * 1000).toISOString() : null,
+  };
+}
 
 const HOSTS = {
   br: 'https://openplatform.shopee.com.br',
