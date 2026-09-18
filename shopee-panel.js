@@ -315,6 +315,9 @@
       chatFetch('/api/shopee/chat/messages?conversation_id=' + encodeURIComponent(c.conversation_id) + '&page_size=40').then(d => {
         thread.replaceChildren(n('div', 'shp-thread-head', c.to_name || 'Cliente'));
         const msgs = (d && d.messages) || [];
+        // ordena por data (mais antiga em cima); timestamps são enormes, então compara como número por tamanho+texto
+        const tkey = m => String(m.created_timestamp || '0');
+        msgs.sort((a, b) => { const x = tkey(a), y = tkey(b); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); });
         const scroll = n('div', 'shp-msgs');
         if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
         for (const m of msgs) {
