@@ -142,10 +142,12 @@ try {
     });
 
     // --- Shopee (loja real) ---
+    const crypto = require('crypto');
     const { ShopeeProd, supabaseDb, HOSTS } = require('./shopee-prod');
     const SHOPEE_PARTNER_ID = Number(process.env.SHOPEE_PARTNER_ID || 0);
     const SHOPEE_PARTNER_KEY = process.env.SHOPEE_PARTNER_KEY || '';
     const SHOPEE_HOST = HOSTS[process.env.SHOPEE_REGION || 'br'] || HOSTS.br;
+    const SHOPEE_ADMIN_TOKEN = process.env.SHOPEE_ADMIN_TOKEN || '';
     const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'https://cacife.quanticsolutions.com.br';
     const SHOPEE_REDIRECT = PUBLIC_BASE_URL + '/shopee/callback';
 
@@ -163,20 +165,31 @@ try {
     }
     const requireShopee = (res) => { if (!shopee) { res.status(503).json({ error: 'Shopee ainda não configurada no servidor.' }); return false; } return true; };
     const readCookie = (req, name) => (req.headers.cookie || '').split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1];
+    const timingEq = (a, b) => { const ba = Buffer.from(String(a)), bb = Buffer.from(String(b)); return ba.length === bb.length && crypto.timingSafeEqual(ba, bb); };
+    // Todas as rotas Shopee exigem o token de operador (SHOPEE_ADMIN_TOKEN), via ?key= ou header x-admin-token.
+    const requireAdmin = (req, res) => {
+        const provided = req.query.key || req.headers['x-admin-token'] || '';
+        if (!SHOPEE_ADMIN_TOKEN || !timingEq(provided, SHOPEE_ADMIN_TOKEN)) { res.status(401).json({ error: 'não autorizado' }); return false; }
+        return true;
+    };
 
-    // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja.
+    // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja. (operador autenticado)
     app.get('/shopee/connect', (req, res) => {
         if (!requireShopee(res)) return;
-        const flow = require('crypto').randomBytes(16).toString('hex');
+        if (!requireAdmin(req, res)) return;
+        const flow = crypto.randomBytes(16).toString('hex');
         res.cookie('shopee_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
-        res.redirect(shopee.authUrl(SHOPEE_REDIRECT));
+        // state viaja dentro do redirect (a Shopee acrescenta code & shop_id de volta) -> anti-CSRF
+        res.redirect(shopee.authUrl(SHOPEE_REDIRECT + '?state=' + flow));
     });
 
-    // Retorno da Shopee com o código; troca por token e salva no Supabase.
+    // Retorno da Shopee com o código; valida state+cookie, troca por token e salva no Supabase.
     app.get('/shopee/callback', async (req, res) => {
         try {
             if (!shopee) return res.status(503).send('Shopee não configurada.');
-            if (!readCookie(req, 'shopee_flow')) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /shopee/connect.');
+            const cookie = readCookie(req, 'shopee_flow');
+            const state = req.query.state;
+            if (!cookie || typeof state !== 'string' || !timingEq(state, cookie)) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /shopee/connect.');
             const shopId = Number(req.query.shop_id), code = req.query.code;
             if (!Number.isSafeInteger(shopId) || shopId <= 0 || typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido da Shopee.');
             res.clearCookie('shopee_flow');
@@ -186,11 +199,13 @@ try {
     });
 
     app.get('/api/shopee/status', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
         try { res.json(shopee ? await shopee.status() : { environment: 'production', configured: false, shops: [] }); }
-        catch (e) { res.status(500).json({ error: e.message }); }
+        catch (e) { console.error('Shopee status:', e.message); res.status(500).json({ error: 'erro interno' }); }
     });
 
     app.post('/api/shopee/sync', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
         try {
             if (!requireShopee(res)) return;
             const shopId = Number(req.body?.shopId || (await shopee.status()).shops[0]?.shop_id);
@@ -198,14 +213,15 @@ try {
             const days = Math.min(Number(req.body?.days) || 30, 90);
             const to = Math.floor(Date.now() / 1000), from = to - days * 86400;
             res.json(await shopee.sync(shopId, from, to, 'update_time'));
-        } catch (e) { res.status(500).json({ error: e.message }); }
+        } catch (e) { console.error('Shopee sync:', e.message); res.status(500).json({ error: 'erro interno' }); }
     });
 
     app.get('/api/shopee/orders', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
         try {
             if (!requireShopee(res)) return;
             res.json({ environment: 'production', orders: await shopee.db.listOrders(req.query.shopId ? Number(req.query.shopId) : undefined) });
-        } catch (e) { res.status(500).json({ error: e.message }); }
+        } catch (e) { console.error('Shopee orders:', e.message); res.status(500).json({ error: 'erro interno' }); }
     });
 
     // --- Health Check ---
