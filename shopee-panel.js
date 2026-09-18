@@ -229,8 +229,6 @@
     for (const [label] of TABS) { const btn = n('button', 'shp-tab', label); btn.type = 'button'; btn.onclick = () => { active = label; root.__shopeeTab = label; paint(); }; tabsEl.append(btn); }
     wrap.append(tabsEl, content);
     paint();
-
-    wrap.append(n('p', 'shp-src', 'API Shopee · loja Cacife Brand · repasse via escrow · consulta em ' + new Date().toLocaleString('pt-BR')));
     target.append(wrap);
   }
 
