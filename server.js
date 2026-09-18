@@ -166,17 +166,19 @@ try {
     const requireShopee = (res) => { if (!shopee) { res.status(503).json({ error: 'Shopee ainda não configurada no servidor.' }); return false; } return true; };
     const readCookie = (req, name) => (req.headers.cookie || '').split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))?.split('=')[1];
     const timingEq = (a, b) => { const ba = Buffer.from(String(a)), bb = Buffer.from(String(b)); return ba.length === bb.length && crypto.timingSafeEqual(ba, bb); };
-    // Todas as rotas Shopee exigem o token de operador (SHOPEE_ADMIN_TOKEN), via ?key= ou header x-admin-token.
+    const adminOk = (provided) => Boolean(SHOPEE_ADMIN_TOKEN) && timingEq(provided || '', SHOPEE_ADMIN_TOKEN);
+    // Rotas de dados (API): token SÓ por header x-admin-token (não em URL).
     const requireAdmin = (req, res) => {
-        const provided = req.query.key || req.headers['x-admin-token'] || '';
-        if (!SHOPEE_ADMIN_TOKEN || !timingEq(provided, SHOPEE_ADMIN_TOKEN)) { res.status(401).json({ error: 'não autorizado' }); return false; }
+        if (!adminOk(req.headers['x-admin-token'])) { res.status(401).json({ error: 'não autorizado' }); return false; }
         return true;
     };
 
-    // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja. (operador autenticado)
+    // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja.
+    // Fluxo de navegador -> aceita ?key= (link de uso único; o token é rotacionado após conectar).
     app.get('/shopee/connect', (req, res) => {
         if (!requireShopee(res)) return;
-        if (!requireAdmin(req, res)) return;
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.status(401).send('não autorizado');
+        res.set('Referrer-Policy', 'no-referrer');
         const flow = crypto.randomBytes(16).toString('hex');
         res.cookie('shopee_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
         // state viaja dentro do redirect (a Shopee acrescenta code & shop_id de volta) -> anti-CSRF
