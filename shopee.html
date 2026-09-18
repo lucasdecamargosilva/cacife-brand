@@ -98,10 +98,12 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const $=s=>document.querySelector(s);
 const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const nf=v=>Number(v||0).toLocaleString('pt-BR');
+// escapa texto externo (nomes de produto vêm da Shopee) antes de virar HTML
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
 function bars(items,valKey,labelKey,fmt,alt){
   const max=Math.max(1,...items.map(i=>Number(i[valKey])||0));
-  return items.map((i,ix)=>`<div class="bar-row"><span class="name" title="${i[labelKey]}">${i[labelKey]}</span>
+  return items.map((i,ix)=>`<div class="bar-row"><span class="name" title="${esc(i[labelKey])}">${esc(i[labelKey])}</span>
     <div class="bar-track"><div class="bar-fill ${alt&&ix%2?'b':''}" style="width:${(Number(i[valKey])||0)/max*100}%"></div></div>
     <span class="num">${fmt(i[valKey])}</span></div>`).join('');
 }
@@ -125,7 +127,7 @@ function render(d){
     <div class="panel"><h2>Envio</h2>${bars(env,'n','tipo',nf,true)}</div>
     <div class="panel full"><h2>Top produtos</h2>
       <table><thead><tr><th>Produto</th><th class="n">Unidades</th><th class="n">Pedidos</th></tr></thead>
-      <tbody>${top.map(p=>`<tr><td><span class="prod" title="${p.item_name}">${p.item_name}</span></td><td class="n">${nf(p.unidades)}</td><td class="n">${nf(p.pedidos)}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">Sem itens no período.</td></tr>'}</tbody></table>
+      <tbody>${top.map(p=>`<tr><td><span class="prod" title="${esc(p.item_name)}">${esc(p.item_name)}</span></td><td class="n">${nf(p.unidades)}</td><td class="n">${nf(p.pedidos)}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">Sem itens no período.</td></tr>'}</tbody></table>
       <p class="muted">Itens de pedidos pagos.</p>
     </div>
   </section>`;
