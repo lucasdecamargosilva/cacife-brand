@@ -312,9 +312,13 @@ try {
             const qPay = `select coalesce(payment_method,'?') metodo, count(*) n, round(coalesce(sum(total*100),0)) bruto from shopee_orders where payment_status='paid' and ${per} group by 1 order by n desc`;
             const qShip = `select coalesce(shipping_carrier,'?') tipo, count(*) n from shopee_orders where payment_status='paid' and ${per} group by 1 order by n desc`;
             const qRet = `select count(*) n, round(coalesce(sum(refund_amount*100),0)) valor from shopee_returns where ${per}`;
-            const [base, days, rank, pay, ship, ret] = await Promise.all([
+            const qStatus = `select coalesce(status,'?') status, count(*) n, round(coalesce(sum(total*100),0)) valor from shopee_orders where ${per} group by 1 order by n desc`;
+            const qRecent = `select id_pedido, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM HH24:MI') dt, coalesce(status,'?') status, coalesce(payment_status,'?') pay_status, coalesce(payment_method,'-') pay, round(coalesce(total*100,0)) total from shopee_orders where ${per} order by created_at desc limit 40`;
+            const qDev = `select return_sn, order_sn, coalesce(status,'?') status, coalesce(reason,'-') reason, round(coalesce(refund_amount*100,0)) refund, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM') dt from shopee_returns where ${per} order by created_at desc limit 30`;
+            const [base, days, rank, pay, ship, ret, sts, recent, dev] = await Promise.all([
                 shopee.db.query(q1), shopee.db.query(qDay), shopee.db.query(qRank),
                 shopee.db.query(qPay), shopee.db.query(qShip), shopee.db.query(qRet),
+                shopee.db.query(qStatus), shopee.db.query(qRecent), shopee.db.query(qDev),
             ]);
             const b = base[0] || {};
             const N = (v) => Math.round(Number(v) || 0);
@@ -329,6 +333,9 @@ try {
                 pagamento: pay.map(r => ({ metodo: r.metodo, n: N(r.n), bruto: N(r.bruto) })),
                 envio: ship.map(r => ({ tipo: r.tipo, n: N(r.n) })),
                 devolucoes: { n: N(ret[0]?.n), valor: N(ret[0]?.valor) },
+                porStatus: sts.map(r => ({ status: r.status, n: N(r.n), valor: N(r.valor) })),
+                recentes: recent.map(r => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total) })),
+                devList: dev.map(r => ({ return_sn: r.return_sn, order_sn: r.order_sn, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt })),
             });
         } catch (e) { console.error('Shopee overview:', e); res.status(500).json({ error: 'erro interno' }); }
     });
