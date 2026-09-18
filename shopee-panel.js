@@ -115,10 +115,10 @@
     const first = keys[0], last = keys[keys.length - 1];
     const dates = []; for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) dates.push(d.toISOString().slice(0, 10));
     const vals = dates.map(d => byDay[d] || 0);
-    const w = 680, h = 210, l = 56, r = 14, t = 12, b = 24, max = Math.max(100, ...vals);
+    const w = 760, h = 220, l = 58, r = 16, t = 12, b = 26, max = Math.max(100, ...vals);
     const x = i => l + (dates.length < 2 ? 0 : i / (dates.length - 1) * (w - l - r));
     const y = v => h - b - v / max * (h - t - b);
-    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;max-height:260px;display:block' });
+    const svg = svgEl('svg', { viewBox: `0 0 ${w} ${h}`, class: 'shp-chart', style: 'width:100%;height:auto;display:block' });
     const grad = svgEl('linearGradient', { id: 'shpGrad', x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgEl('stop', { offset: '0%', 'stop-color': SHOPEE, 'stop-opacity': .35 }), svgEl('stop', { offset: '100%', 'stop-color': SHOPEE, 'stop-opacity': 0 }));
     svg.append(svgEl('defs', {}), grad);
