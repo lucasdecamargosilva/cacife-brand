@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopee · Cacife Brand</title>
+<link rel="icon" href="favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0e0f12; --card:#17191f; --card2:#1e2128; --line:#2a2e37;
+  --tx:#eef0f4; --tx2:#9aa0ab; --shopee:#ee4d2d; --ok:#22c55e; --warn:#f59e0b;
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased;padding:0 16px 48px}
+.wrap{max-width:1080px;margin:0 auto}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{height:26px}
+.tag{display:inline-flex;align-items:center;gap:7px;font-weight:700;font-size:.86rem;color:#fff;background:var(--shopee);padding:5px 11px;border-radius:999px}
+.top-actions{display:flex;align-items:center;gap:10px}
+button{font-family:inherit;cursor:pointer;border:0;border-radius:10px;font-weight:600}
+.btn{background:var(--shopee);color:#fff;padding:9px 16px}
+.btn.ghost{background:var(--card2);color:var(--tx2)}
+.btn:disabled{opacity:.5;cursor:wait}
+.updated{color:var(--tx2);font-size:.82rem}
+.grid{display:grid;gap:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(165px,1fr));margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.kpi .lbl{color:var(--tx2);font-size:.8rem;font-weight:500;display:flex;align-items:center;gap:6px}
+.kpi .val{font-size:1.55rem;font-weight:800;margin-top:8px;letter-spacing:-.02em}
+.kpi .sub{color:var(--tx2);font-size:.76rem;margin-top:3px}
+.kpi.hl{background:linear-gradient(160deg,#2a140e,#17191f);border-color:#4a2318}
+.kpi.hl .val{color:#ff7a5c}
+.panels{grid-template-columns:1fr 1fr;margin-top:4px}
+@media(max-width:760px){.panels{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+.panel h2{font-size:1rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.bar-row{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:10px;margin:9px 0;font-size:.86rem}
+.bar-row .name{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:9px;background:var(--card2);border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;background:var(--shopee);border-radius:999px}
+.bar-fill.b{background:#3b82f6}
+.bar-row .num{font-weight:700;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--tx2);font-weight:600;font-size:.78rem}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td .prod{display:block;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.full{grid-column:1/-1}
+.muted{color:var(--tx2);font-size:.82rem;margin-top:10px}
+/* login */
+.gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.gate.show{display:flex}
+.gate .box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px;width:100%;max-width:360px}
+.gate h1{font-size:1.2rem;text-align:center;margin-bottom:4px}
+.gate p{color:var(--tx2);text-align:center;font-size:.85rem;margin-bottom:18px}
+.gate label{display:block;font-size:.8rem;color:var(--tx2);margin:12px 0 6px}
+.gate input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--tx);font-family:inherit}
+.gate .btn{width:100%;margin-top:18px;padding:12px}
+.gate .err{color:#f87171;font-size:.82rem;text-align:center;margin-top:12px;min-height:18px}
+.loading{text-align:center;color:var(--tx2);padding:60px 0}
+.spin{display:inline-block;width:20px;height:20px;border:3px solid var(--line);border-top-color:var(--shopee);border-radius:50%;animation:s 1s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><img src="cacife-logo.png" alt="Cacife Brand"><span class="tag">Shopee</span></div>
+    <div class="top-actions">
+      <span class="updated" id="updated"></span>
+      <button class="btn ghost" id="logout">Sair</button>
+      <button class="btn" id="refresh">Atualizar</button>
+    </div>
+  </header>
+  <div id="app"><div class="loading"><span class="spin"></span>Carregando…</div></div>
+</div>
+
+<div class="gate" id="gate">
+  <form class="box" id="loginForm">
+    <h1>Painel Shopee</h1>
+    <p>Entre com sua conta Cacife</p>
+    <label>E-mail</label>
+    <input type="email" id="email" autocomplete="email" required>
+    <label>Senha</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button class="btn" type="submit" id="loginBtn">Entrar</button>
+    <div class="err" id="loginErr"></div>
+  </form>
+</div>
+
+<script>
+const SUPABASE_URL='https://quantic-supabase.k5jwra.easypanel.host';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.pCFnSnrlSUM2EwXi9gxAegpoC-9U0Mjx3iAtROR-E20';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+const $=s=>document.querySelector(s);
+const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const nf=v=>Number(v||0).toLocaleString('pt-BR');
+
+function bars(items,valKey,labelKey,fmt,alt){
+  const max=Math.max(1,...items.map(i=>Number(i[valKey])||0));
+  return items.map((i,ix)=>`<div class="bar-row"><span class="name" title="${i[labelKey]}">${i[labelKey]}</span>
+    <div class="bar-track"><div class="bar-fill ${alt&&ix%2?'b':''}" style="width:${(Number(i[valKey])||0)/max*100}%"></div></div>
+    <span class="num">${fmt(i[valKey])}</span></div>`).join('');
+}
+
+function render(d){
+  const t=d.totais||{};
+  const taxaPct = Number(t.bruto)>0 ? (Number(t.taxas)/Number(t.bruto)*100).toFixed(1) : '0';
+  const liqPct = Number(t.bruto)>0 ? (Number(t.liquido)/Number(t.bruto)*100).toFixed(0) : '0';
+  const pay=d.pagamento||[], env=d.envio||[], top=d.top_produtos||[], dev=d.devolucoes||{};
+  $('#app').innerHTML=`
+  <section class="grid kpis">
+    <div class="kpi"><div class="lbl">Pedidos pagos</div><div class="val">${nf(t.pedidos_pagos)}</div><div class="sub">${nf(t.cancelados)} cancelados</div></div>
+    <div class="kpi"><div class="lbl">Faturamento bruto</div><div class="val">${brl(t.bruto)}</div><div class="sub">pago pelos clientes</div></div>
+    <div class="kpi hl"><div class="lbl">Repasse líquido</div><div class="val">${brl(t.liquido)}</div><div class="sub">${liqPct}% do bruto · o que cai na conta</div></div>
+    <div class="kpi"><div class="lbl">Taxas Shopee</div><div class="val">${brl(t.taxas)}</div><div class="sub">${taxaPct}% do bruto</div></div>
+    <div class="kpi"><div class="lbl">Desconto que você bancou</div><div class="val">${brl(t.desconto_lojista)}</div><div class="sub">cupons do lojista</div></div>
+    <div class="kpi"><div class="lbl">Devoluções</div><div class="val">${nf(dev.n)}</div><div class="sub">${brl(dev.valor)} reembolsado</div></div>
+  </section>
+  <section class="grid panels">
+    <div class="panel"><h2>Forma de pagamento</h2>${bars(pay,'n','metodo',nf)}</div>
+    <div class="panel"><h2>Envio</h2>${bars(env,'n','tipo',nf,true)}</div>
+    <div class="panel full"><h2>Top produtos</h2>
+      <table><thead><tr><th>Produto</th><th class="n">Unidades</th><th class="n">Pedidos</th></tr></thead>
+      <tbody>${top.map(p=>`<tr><td><span class="prod" title="${p.item_name}">${p.item_name}</span></td><td class="n">${nf(p.unidades)}</td><td class="n">${nf(p.pedidos)}</td></tr>`).join('')||'<tr><td colspan="3" class="muted">Sem itens no período.</td></tr>'}</tbody></table>
+      <p class="muted">Itens de pedidos pagos.</p>
+    </div>
+  </section>`;
+}
+
+async function load(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){$('#gate').classList.add('show');return;}
+  $('#gate').classList.remove('show');
+  $('#app').innerHTML='<div class="loading"><span class="spin"></span>Buscando dados da Shopee…</div>';
+  try{
+    const r=await fetch('/api/shopee/summary',{headers:{Authorization:'Bearer '+session.access_token}});
+    if(r.status===401){await sb.auth.signOut();$('#gate').classList.add('show');return;}
+    if(!r.ok)throw new Error('falha '+r.status);
+    render(await r.json());
+    $('#updated').textContent='Atualizado '+new Date().toLocaleString('pt-BR');
+  }catch(e){$('#app').innerHTML='<div class="loading">Não consegui carregar agora. Tente Atualizar.</div>';}
+}
+
+$('#refresh').onclick=load;
+$('#logout').onclick=async()=>{await sb.auth.signOut();location.reload();};
+$('#loginForm').onsubmit=async(e)=>{
+  e.preventDefault();$('#loginErr').textContent='';$('#loginBtn').disabled=true;
+  const {error}=await sb.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});
+  $('#loginBtn').disabled=false;
+  if(error){$('#loginErr').textContent='E-mail ou senha inválidos.';return;}
+  load();
+};
+load();
+</script>
+</body>
+</html>

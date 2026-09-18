@@ -148,6 +148,7 @@ try {
     const SHOPEE_PARTNER_KEY = process.env.SHOPEE_PARTNER_KEY || '';
     const SHOPEE_HOST = HOSTS[process.env.SHOPEE_REGION || 'br'] || HOSTS.br;
     const SHOPEE_ADMIN_TOKEN = process.env.SHOPEE_ADMIN_TOKEN || '';
+    const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
     const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'https://cacife.quanticsolutions.com.br';
     const SHOPEE_REDIRECT = PUBLIC_BASE_URL + '/shopee/callback';
 
@@ -172,6 +173,34 @@ try {
         if (!adminOk(req.headers['x-admin-token'])) { res.status(401).json({ error: 'não autorizado' }); return false; }
         return true;
     };
+    // Leitura (tela): aceita o token de admin OU uma sessão Supabase válida (usuário logado no painel).
+    const requireViewer = async (req, res) => {
+        if (adminOk(req.headers['x-admin-token'])) return true;
+        const m = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+        if (m && SUPABASE_ANON_KEY) {
+            try {
+                const u = await axios.get(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${m[1]}` } });
+                if (u.data && u.data.id) return true;
+            } catch { /* sessão inválida */ }
+        }
+        res.status(401).json({ error: 'não autorizado' });
+        return false;
+    };
+
+    // Sync automático: 1 min após subir e a cada 24h (últimos 7 dias por atualização).
+    if (shopee) {
+        const runDailySync = async () => {
+            try {
+                const st = await shopee.status();
+                for (const s of st.shops) {
+                    const to = Math.floor(Date.now() / 1000), from = to - 7 * 86400;
+                    console.log('🛍️  sync diário:', JSON.stringify(await shopee.sync(Number(s.shop_id), from, to, 'update_time')));
+                }
+            } catch (e) { console.error('sync diário falhou:', e.message); }
+        };
+        setTimeout(runDailySync, 60000);
+        setInterval(runDailySync, 24 * 60 * 60 * 1000);
+    }
 
     // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja.
     // Fluxo de navegador -> aceita ?key= (link de uso único; o token é rotacionado após conectar).
@@ -228,7 +257,7 @@ try {
 
     // Resumo pronto pra tela da Shopee (repasse, taxas, pagamento, envio, top produtos, região, devoluções).
     app.get('/api/shopee/summary', async (req, res) => {
-        if (!requireAdmin(req, res)) return;
+        if (!(await requireViewer(req, res))) return;
         try {
             if (!requireShopee(res)) return;
             const Q = {
