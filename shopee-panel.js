@@ -318,7 +318,8 @@
         const scroll = n('div', 'shp-msgs');
         if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
         for (const m of msgs) {
-          const mine = Number(m.from_shop_id) > 0;
+          // "minha" (loja) = mensagem que NÃO veio do comprador (c.to_id)
+          const mine = String(m.from_id) !== String(c.to_id);
           const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them'));
           bub.append(n('div', 'shp-msg-body', msgText(m)), n('div', 'shp-msg-time', fmtTime(m.created_timestamp)));
           scroll.append(bub);
