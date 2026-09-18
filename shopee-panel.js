@@ -38,14 +38,14 @@
     const css = `
     .shp-wrap{display:flex;flex-direction:column;gap:16px}
     .shp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px}
-    .shp-kpi{position:relative;background:var(--panel-bg,#17191f);border:1px solid var(--panel-border,#2a2e37);border-radius:14px;padding:14px 16px 14px 18px;overflow:hidden}
+    .shp-kpi{position:relative;background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:14px;padding:14px 16px 14px 18px;overflow:hidden;color:var(--text,#241635)}
     .shp-kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,#ee4d2d)}
-    .shp-kpi .k-lbl{font-size:.78rem;color:var(--muted,#9aa0ab);font-weight:500}
+    .shp-kpi .k-lbl{font-size:.78rem;color:var(--muted,#756582);font-weight:500}
     .shp-kpi .k-val{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin-top:6px;color:var(--accent,inherit)}
-    .shp-kpi .k-sub{font-size:.74rem;color:var(--muted,#9aa0ab);margin-top:3px}
-    .shp-panel{background:var(--panel-bg,#17191f);border:1px solid var(--panel-border,#2a2e37);border-radius:16px;padding:18px 20px}
+    .shp-kpi .k-sub{font-size:.74rem;color:var(--muted,#756582);margin-top:3px}
+    .shp-panel{background:var(--panel,#fff);border:1px solid var(--line,#e6dff0);border-radius:16px;padding:18px 20px;color:var(--text,#241635)}
     .shp-panel h3{font-size:.98rem;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:8px}
-    .shp-panel .cap{font-size:.78rem;color:var(--muted,#9aa0ab);margin:0 0 12px}
+    .shp-panel .cap{font-size:.78rem;color:var(--muted,#756582);margin:0 0 12px}
     .shp-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media(max-width:760px){.shp-cols{grid-template-columns:1fr}}
     .shp-donut{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -55,19 +55,19 @@
     .shp-legrow .lg-n{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
     .shp-hbar{margin:9px 0;font-size:.84rem}
     .shp-hbar .hb-top{display:flex;justify-content:space-between;margin-bottom:4px}
-    .shp-hbar .hb-track{height:10px;background:var(--track,#23262e);border-radius:999px;overflow:hidden}
+    .shp-hbar .hb-track{height:10px;background:rgba(128,128,128,.18);border-radius:999px;overflow:hidden}
     .shp-hbar .hb-fill{height:100%;border-radius:999px}
-    .shp-prod{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--panel-border,#2a2e37)}
+    .shp-prod{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line,#e6dff0)}
     .shp-prod:last-child{border-bottom:0}
-    .shp-prod .rk{width:22px;text-align:center;font-weight:800;color:var(--muted,#9aa0ab);flex:none}
-    .shp-prod img{width:46px;height:46px;border-radius:10px;object-fit:cover;background:#23262e;flex:none}
-    .shp-prod .ph{width:46px;height:46px;border-radius:10px;background:#23262e;display:flex;align-items:center;justify-content:center;color:#556;flex:none}
+    .shp-prod .rk{width:22px;text-align:center;font-weight:800;color:var(--muted,#756582);flex:none}
+    .shp-prod img{width:46px;height:46px;border-radius:10px;object-fit:cover;background:rgba(128,128,128,.15);flex:none}
+    .shp-prod .ph{width:46px;height:46px;border-radius:10px;background:rgba(128,128,128,.15);display:flex;align-items:center;justify-content:center;color:var(--muted,#999);flex:none}
     .shp-prod .pn{flex:1;min-width:0}
     .shp-prod .pn b{display:block;font-size:.86rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .shp-prod .pn .u{font-size:.76rem;color:var(--muted,#9aa0ab)}
+    .shp-prod .pn .u{font-size:.76rem;color:var(--muted,#756582)}
     .shp-prod .pv{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .shp-src{font-size:.74rem;color:var(--muted,#9aa0ab)}
-    .shp-chart text{fill:var(--muted,#9aa0ab);font-size:9px}`;
+    .shp-src{font-size:.74rem;color:var(--muted,#756582)}
+    .shp-chart text{fill:var(--muted,#756582);font-size:9px}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'shp-style', textContent: css }));
   }
 
@@ -91,7 +91,7 @@
     const grad = svgEl('linearGradient', { id: 'shpGrad', x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgEl('stop', { offset: '0%', 'stop-color': SHOPEE, 'stop-opacity': .35 }), svgEl('stop', { offset: '100%', 'stop-color': SHOPEE, 'stop-opacity': 0 }));
     svg.append(svgEl('defs', {}), grad);
-    for (let i = 0; i <= 3; i++) { const gy = t + (h - t - b) * i / 3; svg.append(svgEl('line', { x1: l, y1: gy, x2: w - r, y2: gy, stroke: 'var(--panel-border,#2a2e37)', 'stroke-width': .5 }), svgEl('text', { x: l - 6, y: gy + 3, 'text-anchor': 'end' }, brlShort(max * (1 - i / 3)))); }
+    for (let i = 0; i <= 3; i++) { const gy = t + (h - t - b) * i / 3; svg.append(svgEl('line', { x1: l, y1: gy, x2: w - r, y2: gy, stroke: 'var(--line,#e6dff0)', 'stroke-width': .5 }), svgEl('text', { x: l - 6, y: gy + 3, 'text-anchor': 'end' }, brlShort(max * (1 - i / 3)))); }
     const line = vals.map((v, i) => `${x(i)},${y(v)}`).join(' ');
     svg.append(svgEl('polygon', { points: `${l},${h - b} ${line} ${x(dates.length - 1)},${h - b}`, fill: 'url(#shpGrad)' }));
     svg.append(svgEl('polyline', { points: line, fill: 'none', stroke: SHOPEE, 'stroke-width': 2 }));
@@ -103,7 +103,7 @@
   function donut(entries) {
     const total = entries.reduce((s, e) => s + e.value, 0) || 1;
     const svg = svgEl('svg', { viewBox: '0 0 120 120', width: 132, height: 132 });
-    svg.append(svgEl('circle', { cx: 60, cy: 60, r: 46, fill: 'none', stroke: 'var(--track,#23262e)', 'stroke-width': 16 }));
+    svg.append(svgEl('circle', { cx: 60, cy: 60, r: 46, fill: 'none', stroke: 'rgba(128,128,128,.18)', 'stroke-width': 16 }));
     let off = 0;
     for (const e of entries) { const frac = e.value / total * 100; if (frac <= 0) continue; svg.append(svgEl('circle', { cx: 60, cy: 60, r: 46, pathLength: 100, fill: 'none', stroke: e.color, 'stroke-width': 16, 'stroke-dasharray': `${frac} ${100 - frac}`, 'stroke-dashoffset': -off, transform: 'rotate(-90 60 60)' })); off += frac; }
     const box = n('div', 'shp-donut'); box.append(svg);
