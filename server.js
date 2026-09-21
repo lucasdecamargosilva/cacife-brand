@@ -369,6 +369,47 @@ try {
         } catch (e) { console.error('Shopee chat send:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // --- TikTok Shop (loja real) ---
+    const { TikTokProd, tiktokDb } = require('./tiktok-prod');
+    const TIKTOK_APP_KEY = process.env.TIKTOK_APP_KEY || '';
+    const TIKTOK_APP_SECRET = process.env.TIKTOK_APP_SECRET || '';
+    const TIKTOK_SERVICE_ID = process.env.TIKTOK_SERVICE_ID || '';
+    let tiktok = null;
+    if (TIKTOK_APP_KEY && TIKTOK_APP_SECRET) {
+        try {
+            tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }) });
+            console.log('🎵 TikTok Shop ligado (service ' + TIKTOK_SERVICE_ID + ')');
+        } catch (e) { console.error('TikTok init falhou:', e.message); }
+    } else { console.log('🎵 TikTok Shop: aguardando TIKTOK_APP_KEY / TIKTOK_APP_SECRET no ambiente.'); }
+    const requireTiktok = (res) => { if (!tiktok) { res.status(503).json({ error: 'TikTok ainda não configurado no servidor.' }); return false; } return true; };
+
+    app.get('/tiktok/connect', (req, res) => {
+        if (!requireTiktok(res)) return;
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.status(401).send('não autorizado');
+        res.set('Referrer-Policy', 'no-referrer');
+        const flow = crypto.randomBytes(16).toString('hex');
+        res.cookie('tiktok_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
+        res.redirect(tiktok.authUrl(flow));
+    });
+    app.get('/tiktok/callback', async (req, res) => {
+        try {
+            if (!tiktok) return res.status(503).send('TikTok não configurado.');
+            const cookie = readCookie(req, 'tiktok_flow');
+            const state = req.query.state;
+            if (!cookie || (state && !timingEq(String(state), cookie))) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /tiktok/connect.');
+            const code = req.query.code || req.query.auth_code;
+            if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
+            res.clearCookie('tiktok_flow');
+            const r = await tiktok.exchange(code);
+            res.redirect('/metricas.html?tiktok=conectado&lojas=' + (r.shops?.length || 0));
+        } catch (e) { console.error('TikTok callback:', e.message); res.status(500).send('Falha ao conectar a loja: ' + e.message); }
+    });
+    app.get('/api/tiktok/status', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try { res.json(tiktok ? await tiktok.status() : { configured: false, shops: [] }); }
+        catch (e) { console.error('TikTok status:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
