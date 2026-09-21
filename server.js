@@ -396,13 +396,13 @@ try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
             const cookie = readCookie(req, 'tiktok_flow');
             const state = req.query.state;
-            if (!cookie || (state && !timingEq(String(state), cookie))) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /tiktok/connect.');
+            if (!cookie || typeof state !== 'string' || state.length !== cookie.length || !timingEq(state, cookie)) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /tiktok/connect.');
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
             res.clearCookie('tiktok_flow');
             const r = await tiktok.exchange(code);
             res.redirect('/metricas.html?tiktok=conectado&lojas=' + (r.shops?.length || 0));
-        } catch (e) { console.error('TikTok callback:', e.message); res.status(500).send('Falha ao conectar a loja: ' + e.message); }
+        } catch (e) { console.error('TikTok callback:', e.message); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
     app.get('/api/tiktok/status', async (req, res) => {
         if (!(await requireViewer(req, res))) return;
