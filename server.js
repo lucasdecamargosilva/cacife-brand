@@ -456,13 +456,16 @@ try {
 
     const botMemory = []; // últimas trocas (só o número autorizado)
     const botDebug = []; // diagnóstico temporário (últimos eventos)
+    const botRaw = []; // corpo cru (temporário, para achar o campo do telefone)
     const pushDebug = (o) => { botDebug.push({ at: new Date().toISOString(), ...o }); if (botDebug.length > 15) botDebug.shift(); };
+    const pushRaw = (b) => { try { botRaw.push(b && b.message ? b.message : b); } catch (e) {} if (botRaw.length > 6) botRaw.shift(); };
     app.post('/api/bot/whatsapp', async (req, res) => {
         if (!botReady) return res.sendStatus(503);
         const secret = req.headers['x-webhook-secret'] || req.query.secret || '';
         if (!timingEq(String(secret), BOT.webhookSecret)) { pushDebug({ step: 'secret-ruim' }); return res.sendStatus(401); }
         const inbound = parseInbound(req.body);
         res.sendStatus(200); // responde já ao Uazapi; processa em background
+        pushRaw(req.body);
         const allowed = inbound && isAllowed(inbound.sender, BOT.allowed);
         pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, sender: inbound && inbound.sender, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
         if (!inbound || !allowed) return;
@@ -476,7 +479,7 @@ try {
     });
     app.get('/api/bot/debug', (req, res) => {
         if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
-        res.json({ botReady, model: BOT.model, allowed: BOT.allowed, events: botDebug });
+        res.json({ botReady, model: BOT.model, allowed: BOT.allowed, events: botDebug, raw: req.query.raw ? botRaw : undefined });
     });
 
     // --- Health Check ---
