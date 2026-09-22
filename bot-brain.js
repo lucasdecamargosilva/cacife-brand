@@ -5,6 +5,8 @@ const SYSTEM = [
   'REGRA ABSOLUTA: você só sabe o que as FERRAMENTAS retornam. Para QUALQUER número, produto, pedido, faturamento, ranking ou status, você DEVE chamar a ferramenta apropriada ANTES de responder. É terminantemente PROIBIDO inventar, estimar ou chutar dados. Se você não chamou uma ferramenta, você NÃO tem a informação — então chame. Se a ferramenta falhar ou vier vazia, diga que não conseguiu buscar; nunca invente.',
   'Para "produtos mais vendidos"/"top produtos" chame SEMPRE top_produtos. Nunca liste produtos de memória.',
   'ORDEM DE PREFERÊNCIA: primeiro as ferramentas prontas (resumo_geral, resumo_canal, top_produtos, perguntas_ml, chat_shopee) — elas são garantidas. Use consulta_banco SÓ quando nenhuma pronta cobrir a pergunta (ex: por mês, por dia, status, ticket médio).',
+  'Se TODOS os valores de um período vierem zero, NÃO apresente zeros como resultado: avise que não há registros nesse período e sugira conferir a data/ano.',
+  'Se uma consulta voltar vazia ou nula, diga que não encontrou registros (não que "falhou"), e se for um produto que a loja não vende, diga isso.',
   'INTEGRIDADE: em toda resposta com números, diga o PERÍODO considerado. Use os valores exatamente como vieram (2 casas decimais). Se algum canal falhar, diga qual. Se o período pedido for maior que ~45 dias, avise que a Shopee só tem histórico desde agosto/2026 (conectada recentemente), então ela pode aparecer menor que o real.',
   'Os valores JÁ VÊM FORMATADOS em reais (ex: "R$ 823.584,01"). Apenas repita exatamente; NUNCA recalcule, divida ou multiplique.',
   'Ao comparar canais ou dar um total, use resumo_geral (traz todos de uma vez) e diga em qual vendeu mais.',
@@ -20,6 +22,7 @@ const SYSTEM = [
 
 const SCHEMA = [
   'Tabelas Postgres para consulta_banco (só SELECT; dinheiro em REAIS; fuso Brasil -03:00, filtre created_at):',
+  "FUSO: para agrupar por dia/mês use SEMPRE date_trunc('month', created_at at time zone 'America/Sao_Paulo') (ou 'day'), senão a virada do mês fica errada. Ex.: to_char(date_trunc('month', created_at at time zone 'America/Sao_Paulo'),'YYYY-MM').",
   "IMPORTANTE para FATURAMENTO/VENDAS/LÍQUIDO (por mês, por dia, por canal, etc.): use SEMPRE a view bot_vendas(channel ['shopee'|'mercadolivre'|'nuvemshop'], created_at, status, valor numeric (bruto R$), liquido numeric (R$), product_name, quantity_buyed). Ela JÁ contém somente pedidos PAGOS — não precisa (e não deve) filtrar payment_status. Ex.: select to_char(date_trunc('month',created_at),'YYYY-MM') mes, sum(valor) from bot_vendas where channel='mercadolivre' group by 1 order by 1.",
   "cacife_orders(channel text ['mercadolivre'|'nuvemshop'], created_at timestamptz, paid_at, status, payment_status, shipping_status, total numeric, sale_fee numeric, product_name text (lista 'A, B, C'), quantity_buyed text, customer_name, customer_phone, order_number). Pago: ML payment_status='paid'; NS payment_status in ('paid','Confirmado'). Comissão ML = sale_fee; NS não tem.",
   "shopee_orders(id_pedido, created_at, payment_status ['paid'|'pending'|'cancelled'], total numeric bruto, escrow_amount numeric (repasse líquido), commission_fee, service_fee, transaction_fee, shipping_carrier, payment_method, region). Pago: payment_status='paid'.",
@@ -38,8 +41,16 @@ const TOOL_DEFS = [
   { type: 'function', function: { name: 'chat_shopee', description: 'Situação do chat da Shopee agora (ao vivo): quantas conversas e quantas aguardando resposta (não lidas).', parameters: { type: 'object', properties: {} } } },
 ];
 
-async function answer({ chat, tools, model, history = [], text }) {
-  const messages = [{ role: 'system', content: SYSTEM + '\n\n' + SCHEMA }, ...history, { role: 'user', content: text }];
+// Data de hoje em fuso Brasil, para a IA não chutar o ano em "agosto", "esse mês", etc.
+function hojeLine(now = new Date()) {
+  const br = new Date(now.getTime() - 3 * 3600000);
+  const iso = br.toISOString().slice(0, 10);
+  const dias = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  return `DATA DE HOJE (Brasil): ${iso} (${dias[br.getUTCDay()]}). Ano corrente: ${iso.slice(0, 4)}. Quando o usuário citar um mês sem dizer o ano, use o ano corrente (se esse mês ainda não chegou este ano, use o ano anterior). NUNCA use anos antigos como 2023 por conta própria.`;
+}
+
+async function answer({ chat, tools, model, history = [], text, now = new Date() }) {
+  const messages = [{ role: 'system', content: SYSTEM + '\n\n' + hojeLine(now) + '\n\n' + SCHEMA }, ...history, { role: 'user', content: text }];
   for (let i = 0; i < 4; i++) {
     const resp = await chat({ model, messages, tools: TOOL_DEFS, tool_choice: 'auto', temperature: 0 });
     const msg = resp.choices[0].message;

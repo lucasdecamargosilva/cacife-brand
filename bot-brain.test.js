@@ -19,6 +19,18 @@ test('answer chama a tool pedida pelo modelo e devolve o texto final', async () 
   assert.strictEqual(out, 'Hoje você vendeu R$ 150,00.');
 });
 
+test('answer injeta a data de hoje (fuso BR) no system prompt', async () => {
+  let systemSeen = '';
+  const chat = async ({ messages }) => { systemSeen = messages[0].content; return { choices: [{ message: { role: 'assistant', content: 'ok' } }] }; };
+  // 2026-09-21 23:30 UTC = 2026-09-21 20:30 BR (ainda dia 21)
+  await answer({ chat, tools: {}, model: 'x', history: [], text: 'oi', now: new Date('2026-09-21T23:30:00.000Z') });
+  assert.ok(systemSeen.includes('DATA DE HOJE (Brasil): 2026-09-21'));
+  assert.ok(systemSeen.includes('Ano corrente: 2026'));
+  // 2026-09-22 01:00 UTC = 2026-09-21 22:00 BR (ainda dia 21, não 22)
+  await answer({ chat, tools: {}, model: 'x', history: [], text: 'oi', now: new Date('2026-09-22T01:00:00.000Z') });
+  assert.ok(systemSeen.includes('DATA DE HOJE (Brasil): 2026-09-21'));
+});
+
 test('answer sem tool_call devolve o content direto', async () => {
   const chat = async () => ({ choices: [{ message: { role: 'assistant', content: 'Oi! Pergunte sobre suas vendas.' } }] });
   const out = await answer({ chat, tools: {}, model: 'x', history: [], text: 'oi' });
