@@ -466,14 +466,14 @@ try {
         const inbound = parseInbound(req.body);
         res.sendStatus(200); // responde já ao Uazapi; processa em background
         pushRaw(req.body);
-        const allowed = inbound && isAllowed(inbound.sender, BOT.allowed);
-        pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, sender: inbound && inbound.sender, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
-        if (!inbound || !allowed) return;
+        const allowed = Boolean(inbound && !inbound.isGroup && isAllowed(inbound.phone, BOT.allowed));
+        pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, phone: inbound && inbound.phone, isGroup: inbound && inbound.isGroup, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
+        if (!allowed) return;
         try {
             const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text });
             botMemory.push({ role: 'user', content: inbound.text }, { role: 'assistant', content: reply });
             if (botMemory.length > 12) botMemory.splice(0, botMemory.length - 12);
-            await sendText(BOT.uazapi, inbound.sender, reply); // responde no mesmo JID que mandou
+            await sendText(BOT.uazapi, inbound.phone, reply); // responde no telefone real (com DDI)
             pushDebug({ step: 'respondido', reply: reply.slice(0, 120) });
         } catch (e) { console.error('bot whatsapp:', e.message); pushDebug({ step: 'erro', erro: e.message }); }
     });
