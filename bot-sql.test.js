@@ -7,6 +7,11 @@ test('permite SELECT numa tabela da allowlist e força LIMIT', () => {
   assert.strictEqual(guardSelect('select count(*) from cacife_orders'), 'select count(*) from cacife_orders limit 200');
 });
 
+test('permite a view bot_vendas (faturamento já pago)', () => {
+  const out = guardSelect("select channel, sum(valor) from bot_vendas group by 1");
+  assert.ok(out.includes('bot_vendas'));
+});
+
 test('mantém LIMIT existente e remove ; final', () => {
   assert.strictEqual(guardSelect('select * from shopee_orders limit 5;'), 'select * from shopee_orders limit 5');
 });

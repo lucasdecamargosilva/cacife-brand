@@ -3,7 +3,7 @@
 // A chave é service-role (ignora RLS), então aqui está a única barreira — tem que ser rígida.
 
 // Tabelas que a IA pode ler. Nada de auth/storage/pg_catalog/tokens/afiliados/etc.
-const ALLOWED = new Set(['cacife_orders', 'shopee_orders', 'shopee_order_items', 'shopee_returns']);
+const ALLOWED = new Set(['bot_vendas', 'cacife_orders', 'shopee_orders', 'shopee_order_items', 'shopee_returns']);
 
 // Verbos/funções perigosas (escrita, leitura de arquivo, privilégios).
 const FORBIDDEN = /\b(insert|update|delete|drop|alter|create|grant|revoke|truncate|copy|merge|call|vacuum|analyze|reindex|comment|lock|listen|notify|into|nextval|setval|pg_sleep|dblink|lo_import|lo_export|current_setting|set_config|pg_read_file|pg_read_binary_file|pg_ls_dir|pg_stat_file|has_table_privilege|has_column_privilege|has_database_privilege)\b/i;

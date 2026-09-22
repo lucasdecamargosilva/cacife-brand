@@ -18,6 +18,7 @@ const SYSTEM = [
 
 const SCHEMA = [
   'Tabelas Postgres para consulta_banco (só SELECT; dinheiro em REAIS; fuso Brasil -03:00, filtre created_at):',
+  "IMPORTANTE para FATURAMENTO/VENDAS/LÍQUIDO (por mês, por dia, por canal, etc.): use SEMPRE a view bot_vendas(channel ['shopee'|'mercadolivre'|'nuvemshop'], created_at, status, valor numeric (bruto R$), liquido numeric (R$), product_name, quantity_buyed). Ela JÁ contém somente pedidos PAGOS — não precisa (e não deve) filtrar payment_status. Ex.: select to_char(date_trunc('month',created_at),'YYYY-MM') mes, sum(valor) from bot_vendas where channel='mercadolivre' group by 1 order by 1.",
   "cacife_orders(channel text ['mercadolivre'|'nuvemshop'], created_at timestamptz, paid_at, status, payment_status, shipping_status, total numeric, sale_fee numeric, product_name text (lista 'A, B, C'), quantity_buyed text, customer_name, customer_phone, order_number). Pago: ML payment_status='paid'; NS payment_status in ('paid','Confirmado'). Comissão ML = sale_fee; NS não tem.",
   "shopee_orders(id_pedido, created_at, payment_status ['paid'|'pending'|'cancelled'], total numeric bruto, escrow_amount numeric (repasse líquido), commission_fee, service_fee, transaction_fee, shipping_carrier, payment_method, region). Pago: payment_status='paid'.",
   'shopee_order_items(id_pedido, shop_id, item_name, qty, price, image_url) — junte com shopee_orders por shop_id+id_pedido.',
