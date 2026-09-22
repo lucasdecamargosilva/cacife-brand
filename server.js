@@ -416,6 +416,7 @@ try {
     const { parseInbound, sendText } = require('./bot-wa');
     const { overview, topProducts } = require('./bot-data');
     const { fmtOverview } = require('./bot-format');
+    const { guardSelect } = require('./bot-sql');
     const { makeChat } = require('./bot-openrouter');
     const { answer } = require('./bot-brain');
 
@@ -438,7 +439,7 @@ try {
         return r.json();
     };
     const botPgQuery = async (sql) => {
-        const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) });
+        const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }), signal: AbortSignal.timeout(15000) });
         if (!r.ok) throw new Error(`Supabase pg ${r.status}`);
         return r.json();
     };
@@ -475,6 +476,18 @@ try {
             }));
             pushDebug({ step: 'tool', tool: 'top_produtos', period: per.label, ms: Date.now() - t0, canais: canais.join(',') });
             return { periodo: per.label, top };
+        },
+        consulta_banco: async ({ sql }) => {
+            const t0 = Date.now();
+            let safe;
+            try { safe = guardSelect(sql, 200); }
+            catch (e) { pushDebug({ step: 'tool', tool: 'consulta_banco', erro: e.message }); return { erro: e.message }; }
+            try {
+                const rows = await botPgQuery(safe);
+                const arr = Array.isArray(rows) ? rows : [];
+                pushDebug({ step: 'tool', tool: 'consulta_banco', ms: Date.now() - t0, linhas: arr.length, sql: safe.slice(0, 160) });
+                return { linhas: arr.slice(0, 100) };
+            } catch (e) { console.error('consulta_banco:', e.message); pushDebug({ step: 'tool', tool: 'consulta_banco', erro: 'falha' }); return { erro: 'não consegui consultar agora' }; }
         },
     };
 
