@@ -4,6 +4,8 @@ const SYSTEM = [
   'Responda em português do Brasil, curto e direto.',
   'REGRA ABSOLUTA: você só sabe o que as FERRAMENTAS retornam. Para QUALQUER número, produto, pedido, faturamento, ranking ou status, você DEVE chamar a ferramenta apropriada ANTES de responder. É terminantemente PROIBIDO inventar, estimar ou chutar dados. Se você não chamou uma ferramenta, você NÃO tem a informação — então chame. Se a ferramenta falhar ou vier vazia, diga que não conseguiu buscar; nunca invente.',
   'Para "produtos mais vendidos"/"top produtos" chame SEMPRE top_produtos. Nunca liste produtos de memória.',
+  'ORDEM DE PREFERÊNCIA: primeiro as ferramentas prontas (resumo_geral, resumo_canal, top_produtos, perguntas_ml, chat_shopee) — elas são garantidas. Use consulta_banco SÓ quando nenhuma pronta cobrir a pergunta (ex: por mês, por dia, status, ticket médio).',
+  'INTEGRIDADE: em toda resposta com números, diga o PERÍODO considerado. Use os valores exatamente como vieram (2 casas decimais). Se algum canal falhar, diga qual. Se o período pedido for maior que ~45 dias, avise que a Shopee só tem histórico desde agosto/2026 (conectada recentemente), então ela pode aparecer menor que o real.',
   'Os valores JÁ VÊM FORMATADOS em reais (ex: "R$ 823.584,01"). Apenas repita exatamente; NUNCA recalcule, divida ou multiplique.',
   'Ao comparar canais ou dar um total, use resumo_geral (traz todos de uma vez) e diga em qual vendeu mais.',
   'Para produtos mais vendidos use top_produtos (omita o canal para trazer de todos).',
@@ -39,7 +41,7 @@ const TOOL_DEFS = [
 async function answer({ chat, tools, model, history = [], text }) {
   const messages = [{ role: 'system', content: SYSTEM + '\n\n' + SCHEMA }, ...history, { role: 'user', content: text }];
   for (let i = 0; i < 4; i++) {
-    const resp = await chat({ model, messages, tools: TOOL_DEFS, tool_choice: 'auto' });
+    const resp = await chat({ model, messages, tools: TOOL_DEFS, tool_choice: 'auto', temperature: 0 });
     const msg = resp.choices[0].message;
     messages.push(msg);
     if (!msg.tool_calls || msg.tool_calls.length === 0) {

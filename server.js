@@ -415,7 +415,7 @@ try {
     const { isAllowed } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
     const { overview, topProducts } = require('./bot-data');
-    const { fmtOverview } = require('./bot-format');
+    const { fmtOverview, toWhatsApp } = require('./bot-format');
     const { guardSelect } = require('./bot-sql');
     const { makeChat } = require('./bot-openrouter');
     const { answer } = require('./bot-brain');
@@ -534,7 +534,7 @@ try {
         if (!(inbound && inbound.isGroup)) pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, phone: inbound && inbound.phone, isGroup: inbound && inbound.isGroup, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
         if (!allowed) return;
         try {
-            const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text });
+            const reply = toWhatsApp(await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text }));
             botMemory.push({ role: 'user', content: inbound.text }, { role: 'assistant', content: reply });
             if (botMemory.length > 12) botMemory.splice(0, botMemory.length - 12);
             await sendText(BOT.uazapi, inbound.phone, reply); // responde no telefone real (com DDI)

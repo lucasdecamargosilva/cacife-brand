@@ -24,4 +24,15 @@ function fmtOverview(ov) {
   };
 }
 
-module.exports = { brl, fmtChannel, fmtOverview };
+// Converte markdown que o modelo insiste em usar para o formato do WhatsApp.
+function toWhatsApp(text) {
+  return String(text || '')
+    .replace(/\*\*(.+?)\*\*/g, '*$1*')   // **negrito** -> *negrito*
+    .replace(/__(.+?)__/g, '_$1_')       // __itálico__ -> _itálico_
+    .replace(/^#{1,6}\s*(.+)$/gm, '*$1*') // # Título -> *Título*
+    .replace(/^\s*[-•]\s+/gm, '• ')      // marcadores uniformes
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+module.exports = { brl, fmtChannel, fmtOverview, toWhatsApp };

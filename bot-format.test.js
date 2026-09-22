@@ -1,7 +1,13 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { brl, fmtChannel, fmtOverview } = require('./bot-format');
+const { brl, fmtChannel, fmtOverview, toWhatsApp } = require('./bot-format');
+
+test('toWhatsApp converte markdown para formato do WhatsApp', () => {
+  assert.strictEqual(toWhatsApp('**Total:** R$ 10,00'), '*Total:* R$ 10,00');
+  assert.strictEqual(toWhatsApp('# Título\n- item'), '*Título*\n• item');
+  assert.strictEqual(toWhatsApp('a\n\n\n\nb'), 'a\n\nb');
+});
 
 test('brl formata centavos no padrão BR', () => {
   assert.strictEqual(brl(82358401), 'R$ 823.584,01');
