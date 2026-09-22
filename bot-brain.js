@@ -4,13 +4,16 @@ const SYSTEM = [
   'Responda em português do Brasil, curto e direto, com no máximo poucas linhas.',
   'Valores sempre em reais (R$), com duas casas. Os dados vêm em centavos: divida por 100.',
   'NUNCA invente números: use somente o que as ferramentas retornarem.',
-  'Ao dar um total, cite também a quebra por canal quando fizer sentido.',
+  'Ao comparar canais ou dar um total, use resumo_geral (traz todos de uma vez) e cite a quebra por canal, dizendo em qual vendeu mais.',
+  'Períodos aceitos no parâmetro period: hoje, ontem, 7d, 30d, 90d, mes, "Nd" (N dias), "Nm" (N meses, ex: 3m = 3 meses), ou "AAAA-MM-DD:AAAA-MM-DD".',
+  'Se um canal vier com "error", diga que aquele canal não respondeu agora, mas mostre os demais.',
   'Se a pergunta não for sobre vendas/canais, explique gentilmente o que você faz.',
 ].join(' ');
 
+const PERIOD_DESC = "hoje|ontem|7d|30d|90d|mes, ou 'Nd'/'Nm' (ex: 3m = 3 meses), ou 'AAAA-MM-DD:AAAA-MM-DD'";
 const TOOL_DEFS = [
-  { type: 'function', function: { name: 'resumo_geral', description: 'Vendas (bruto), líquido e nº de pedidos de todos os canais + total, num período.', parameters: { type: 'object', properties: { period: { type: 'string', description: "hoje|ontem|7d|30d|mes ou 'YYYY-MM-DD:YYYY-MM-DD'" } }, required: ['period'] } } },
-  { type: 'function', function: { name: 'resumo_canal', description: 'Mesmo que resumo_geral, mas de um canal só.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: "hoje|ontem|7d|30d|mes ou 'YYYY-MM-DD:YYYY-MM-DD'" } }, required: ['canal', 'period'] } } },
+  { type: 'function', function: { name: 'resumo_geral', description: 'Vendas (bruto), líquido e nº de pedidos de TODOS os canais (Shopee, Mercado Livre, Nuvemshop) + total, num período. Use para comparar canais.', parameters: { type: 'object', properties: { period: { type: 'string', description: PERIOD_DESC } }, required: ['period'] } } },
+  { type: 'function', function: { name: 'resumo_canal', description: 'Mesmo que resumo_geral, mas de um canal só.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: PERIOD_DESC } }, required: ['canal', 'period'] } } },
 ];
 
 async function answer({ chat, tools, model, history = [], text }) {

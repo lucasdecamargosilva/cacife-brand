@@ -28,8 +28,18 @@ function resolvePeriod(spec, now = new Date()) {
   const today = ymd(p.y, p.m, p.d);
   let start = today, end = today, label = 'hoje';
 
+  const asDays = typeof spec === 'string' && /^(\d{1,3})d$/.exec(spec);
+  const asMonths = typeof spec === 'string' && /^(\d{1,2})m(?:eses|ês)?$/.exec(spec);
   if (spec && typeof spec === 'object' && spec.from && spec.to) {
     start = spec.from; end = spec.to; label = `${spec.from} a ${spec.to}`;
+  } else if (asDays) {
+    const n = Math.max(1, Number(asDays[1]));
+    start = addDaysStr(today, -(n - 1)); end = today; label = `últimos ${n} dias`;
+  } else if (asMonths) {
+    const n = Math.max(1, Number(asMonths[1]));
+    const dt = new Date(Date.UTC(p.y, p.m - n, p.d));
+    start = ymd(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()); end = today;
+    label = `últimos ${n} ${n === 1 ? 'mês' : 'meses'}`;
   } else {
     switch (spec) {
       case 'hoje': start = today; end = today; label = 'hoje'; break;

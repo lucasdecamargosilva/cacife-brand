@@ -39,6 +39,20 @@ test('intervalo custom respeita as datas dadas', () => {
   assert.strictEqual(p.endExclusiveISO, '2026-09-01T03:00:00.000Z');
 });
 
+test('90d = últimos 90 dias', () => {
+  const p = resolvePeriod('90d', NOW);
+  assert.strictEqual(p.end, '2026-09-21');
+  assert.strictEqual(p.start, '2026-06-24');
+});
+
+test('3m = 3 meses atrás até hoje (normaliza mês)', () => {
+  const p = resolvePeriod('3m', NOW);
+  assert.strictEqual(p.end, '2026-09-21');
+  assert.strictEqual(p.start, '2026-06-21');
+  const jan = resolvePeriod('3m', new Date('2026-01-15T18:00:00.000Z'));
+  assert.strictEqual(jan.start, '2025-10-15');
+});
+
 test('spec inválido cai em 30d', () => {
   const p = resolvePeriod('xpto', NOW);
   assert.strictEqual(p.start, '2026-08-23');

@@ -457,7 +457,7 @@ try {
     const botMemory = []; // últimas trocas (só o número autorizado)
     const botDebug = []; // diagnóstico temporário (últimos eventos)
     const botRaw = []; // corpo cru (temporário, para achar o campo do telefone)
-    const pushDebug = (o) => { botDebug.push({ at: new Date().toISOString(), ...o }); if (botDebug.length > 15) botDebug.shift(); };
+    const pushDebug = (o) => { botDebug.push({ at: new Date().toISOString(), ...o }); if (botDebug.length > 40) botDebug.shift(); };
     const pushRaw = (b) => { try { botRaw.push(b && b.message ? b.message : b); } catch (e) {} if (botRaw.length > 6) botRaw.shift(); };
     app.post('/api/bot/whatsapp', async (req, res) => {
         if (!botReady) return res.sendStatus(503);
@@ -467,7 +467,7 @@ try {
         res.sendStatus(200); // responde já ao Uazapi; processa em background
         pushRaw(req.body);
         const allowed = Boolean(inbound && !inbound.isGroup && isAllowed(inbound.phone, BOT.allowed));
-        pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, phone: inbound && inbound.phone, isGroup: inbound && inbound.isGroup, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
+        if (!(inbound && inbound.isGroup)) pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, phone: inbound && inbound.phone, isGroup: inbound && inbound.isGroup, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
         if (!allowed) return;
         try {
             const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text });
