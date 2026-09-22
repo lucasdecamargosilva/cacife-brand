@@ -489,6 +489,31 @@ try {
                 return { linhas: arr.slice(0, 100) };
             } catch (e) { console.error('consulta_banco:', e.message); pushDebug({ step: 'tool', tool: 'consulta_banco', erro: 'falha' }); return { erro: 'não consegui consultar agora' }; }
         },
+        perguntas_ml: async () => {
+            const t0 = Date.now();
+            try {
+                const token = await getMLToken();
+                if (!token) return { erro: 'Mercado Livre não conectado' };
+                const { data } = await axios.get(`https://api.mercadolibre.com/my/received_questions/search?seller_id=${ML_USER_ID}&status=UNANSWERED&limit=1`, { headers: { Authorization: `Bearer ${token}` }, timeout: 15000 });
+                const n = (data && (data.total != null ? data.total : (data.paging && data.paging.total))) || 0;
+                pushDebug({ step: 'tool', tool: 'perguntas_ml', ms: Date.now() - t0, pendentes: n });
+                return { perguntas_sem_resposta: n };
+            } catch (e) { console.error('perguntas_ml:', e.message); return { erro: 'não consegui consultar o Mercado Livre' }; }
+        },
+        chat_shopee: async () => {
+            const t0 = Date.now();
+            try {
+                if (!shopee) return { erro: 'Shopee não conectada' };
+                const shop = await shopeeShopId();
+                if (!shop) return { erro: 'Shopee não conectada' };
+                const data = await shopee.chatConversations(shop, { pageSize: 50 });
+                const list = (data && data.conversations) || [];
+                let aguardando = 0, naoLidas = 0;
+                for (const c of list) { const u = Number(c.unread_count || 0); if (u > 0) { aguardando++; naoLidas += u; } }
+                pushDebug({ step: 'tool', tool: 'chat_shopee', ms: Date.now() - t0, aguardando });
+                return { conversas: list.length, aguardando_resposta: aguardando, mensagens_nao_lidas: naoLidas };
+            } catch (e) { console.error('chat_shopee:', e.message); return { erro: 'não consegui consultar o chat da Shopee' }; }
+        },
     };
 
     const botMemory = []; // últimas trocas (só o número autorizado)

@@ -10,6 +10,7 @@ const SYSTEM = [
   'Se um canal vier com "erro", diga que aquele canal não respondeu agora, mas mostre os demais.',
   'Para qualquer outra pergunta sobre os dados (status de pedido, devoluções, ticket médio, por dia, por cliente, formas de pagamento, etc.) use consulta_banco escrevendo uma consulta SQL (só SELECT).',
   'No banco o dinheiro está em REAIS (não centavos): formate como R$ com pontos de milhar e vírgula decimal.',
+  'Para perguntas sem resposta no Mercado Livre use perguntas_ml; para o chat da Shopee (conversas aguardando) use chat_shopee.',
   'Se a pergunta não for sobre a loja, explique gentilmente o que você faz.',
 ].join(' ');
 
@@ -28,6 +29,8 @@ const TOOL_DEFS = [
   { type: 'function', function: { name: 'resumo_canal', description: 'Mesmo que resumo_geral, mas de um canal só.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: PERIOD_DESC } }, required: ['canal', 'period'] } } },
   { type: 'function', function: { name: 'top_produtos', description: 'Produtos mais vendidos (por unidades) num período. Omita "canal" para trazer os top de TODOS os canais de uma vez.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: PERIOD_DESC }, limite: { type: 'integer', description: 'quantos por canal (padrão 3)' } }, required: ['period'] } } },
   { type: 'function', function: { name: 'consulta_banco', description: 'Executa uma consulta SQL de LEITURA (SELECT) no banco da loja para responder qualquer pergunta sobre os dados. Veja o esquema das tabelas nas instruções.', parameters: { type: 'object', properties: { sql: { type: 'string', description: 'uma única consulta SELECT em Postgres' } }, required: ['sql'] } } },
+  { type: 'function', function: { name: 'perguntas_ml', description: 'Quantas perguntas de clientes estão SEM RESPOSTA no Mercado Livre agora (ao vivo).', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'chat_shopee', description: 'Situação do chat da Shopee agora (ao vivo): quantas conversas e quantas aguardando resposta (não lidas).', parameters: { type: 'object', properties: {} } } },
 ];
 
 async function answer({ chat, tools, model, history = [], text }) {
