@@ -44,16 +44,23 @@ async function nsSummary(fetchOrders, period) {
   return { revenue, net: revenue, orders: count };
 }
 
-async function safe(fn) {
-  try { return await fn(); }
-  catch (e) { console.error('bot-data canal:', e.message); return { error: true, revenue: 0, net: 0, orders: 0 }; }
+function withTimeout(p, ms, label) {
+  return Promise.race([
+    p,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout ' + label)), ms)),
+  ]);
 }
 
-async function overview(deps, period) {
+async function safe(fn, ms, label) {
+  try { return await withTimeout(Promise.resolve().then(fn), ms, label); }
+  catch (e) { console.error('bot-data canal ' + label + ':', e.message); return { error: true, revenue: 0, net: 0, orders: 0 }; }
+}
+
+async function overview(deps, period, timeoutMs = 30000) {
   const [shopee, mercadolivre, nuvemshop] = await Promise.all([
-    safe(() => shopeeSummary(deps.shopeeRest, period)),
-    safe(() => mlSummary(deps.mlFetch, period)),
-    safe(() => nsSummary(deps.nsFetch, period)),
+    safe(() => shopeeSummary(deps.shopeeRest, period), timeoutMs, 'shopee'),
+    safe(() => mlSummary(deps.mlFetch, period), timeoutMs, 'mercadolivre'),
+    safe(() => nsSummary(deps.nsFetch, period), timeoutMs, 'nuvemshop'),
   ]);
   const channels = { shopee, mercadolivre, nuvemshop };
   const total = { revenue: 0, net: 0, orders: 0 };

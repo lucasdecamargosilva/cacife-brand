@@ -446,10 +446,18 @@ try {
         return p;
     };
     const botDeps = { shopeeRest: botShopeeRest, mlFetch: botMlFetch, nsFetch: botNsFetch };
+    const chSummary = (ov) => Object.fromEntries(Object.entries(ov.channels).map(([k, v]) => [k, v.error ? 'erro' : v.orders + 'ped']));
     const botTools = {
-        resumo_geral: async ({ period }) => overview(botDeps, resolvePeriod(parsePeriodArg(period))),
-        resumo_canal: async ({ canal, period }) => {
+        resumo_geral: async ({ period }) => {
+            const t0 = Date.now();
             const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
+            pushDebug({ step: 'tool', tool: 'resumo_geral', period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
+            return ov;
+        },
+        resumo_canal: async ({ canal, period }) => {
+            const t0 = Date.now();
+            const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
+            pushDebug({ step: 'tool', tool: 'resumo_canal:' + canal, period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
             return { canal, ...(ov.channels[canal] || { error: true }), period: ov.period };
         },
     };
