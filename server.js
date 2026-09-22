@@ -410,6 +410,66 @@ try {
         catch (e) { console.error('TikTok status:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // --- Robô WhatsApp (consulta de dados da Cacife) ---
+    const { resolvePeriod } = require('./bot-period');
+    const { isAllowed } = require('./bot-gate');
+    const { parseInbound, sendText } = require('./bot-wa');
+    const { overview } = require('./bot-data');
+    const { makeMlFetch, makeNsFetch } = require('./bot-fetchers');
+    const { makeChat } = require('./bot-openrouter');
+    const { answer } = require('./bot-brain');
+
+    const BOT = {
+        model: process.env.BOT_MODEL || 'google/gemini-2.0-flash-001',
+        openrouterKey: process.env.OPENROUTER_KEY || '',
+        uazapi: { serverUrl: process.env.UAZAPI_SERVER_URL || '', token: process.env.UAZAPI_TOKEN || '' },
+        webhookSecret: process.env.BOT_WEBHOOK_SECRET || '',
+        nsToken: process.env.NUVEMSHOP_TOKEN || '',
+        nsStore: process.env.NUVEMSHOP_STORE_ID || '1081093',
+        allowed: process.env.BOT_ALLOWED_NUMBER || '11938034714',
+    };
+    const botReady = Boolean(BOT.openrouterKey && BOT.uazapi.token && BOT.webhookSecret);
+    if (botReady) console.log('💬 Robô WhatsApp ligado (modelo ' + BOT.model + ')');
+    else console.log('💬 Robô WhatsApp: aguardando OPENROUTER_KEY / UAZAPI_TOKEN / BOT_WEBHOOK_SECRET no ambiente.');
+
+    const botShopeeRest = async (q) => {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${q}`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
+        if (!r.ok) throw new Error(`Supabase ${r.status}`);
+        return r.json();
+    };
+    const botMlFetch = makeMlFetch({ getMlToken: getMLToken, mlUserId: ML_USER_ID });
+    const botNsFetch = makeNsFetch({ token: BOT.nsToken, storeId: BOT.nsStore });
+    const botChat = BOT.openrouterKey ? makeChat({ apiKey: BOT.openrouterKey }) : null;
+
+    const parsePeriodArg = (p) => {
+        if (typeof p === 'string' && p.includes(':')) { const [from, to] = p.split(':'); return { from, to }; }
+        return p;
+    };
+    const botDeps = { shopeeRest: botShopeeRest, mlFetch: botMlFetch, nsFetch: botNsFetch };
+    const botTools = {
+        resumo_geral: async ({ period }) => overview(botDeps, resolvePeriod(parsePeriodArg(period))),
+        resumo_canal: async ({ canal, period }) => {
+            const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
+            return { canal, ...(ov.channels[canal] || { error: true }), period: ov.period };
+        },
+    };
+
+    const botMemory = []; // últimas trocas (só o número autorizado)
+    app.post('/api/bot/whatsapp', async (req, res) => {
+        if (!botReady) return res.sendStatus(503);
+        const secret = req.headers['x-webhook-secret'] || req.query.secret || '';
+        if (!timingEq(String(secret), BOT.webhookSecret)) return res.sendStatus(401);
+        const inbound = parseInbound(req.body);
+        res.sendStatus(200); // responde já ao Uazapi; processa em background
+        if (!inbound || !isAllowed(inbound.sender, BOT.allowed)) return;
+        try {
+            const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text });
+            botMemory.push({ role: 'user', content: inbound.text }, { role: 'assistant', content: reply });
+            if (botMemory.length > 12) botMemory.splice(0, botMemory.length - 12);
+            await sendText(BOT.uazapi, BOT.allowed, reply);
+        } catch (e) { console.error('bot whatsapp:', e.message); }
+    });
+
     // --- Health Check ---
     app.get('/health', (req, res) => {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
