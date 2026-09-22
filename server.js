@@ -438,8 +438,10 @@ try {
         if (!r.ok) throw new Error(`Supabase ${r.status}`);
         return r.json();
     };
+    // Roda a consulta sob o papel read-only bot_ro (só SELECT nas 4 tabelas; SET LOCAL reseta no commit).
     const botPgQuery = async (sql) => {
-        const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }), signal: AbortSignal.timeout(15000) });
+        const wrapped = `begin; set local role bot_ro; ${sql}; commit`;
+        const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: wrapped }), signal: AbortSignal.timeout(15000) });
         if (!r.ok) throw new Error(`Supabase pg ${r.status}`);
         return r.json();
     };
