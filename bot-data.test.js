@@ -1,7 +1,40 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { shopeeSummary, channelSummary, overview, topProducts } = require('./bot-data');
+const { shopeeSummary, channelSummary, overview, topProducts, productSales, productSql } = require('./bot-data');
+
+test('topProducts devolve valor formatado, nome curto e completo', async () => {
+  const pgQuery = async () => ([{ produto: 'Óculos de Sol Madrid Quadrado Premium Clássico Vintage Retrô', unidades: 640, pedidos: 636, valor: '40410.31' }]);
+  const r = await topProducts({ pgQuery }, resolvePeriod('6m', NOW), 'shopee', 1);
+  assert.strictEqual(r[0].valor, 'R$ 40.410,31');
+  assert.strictEqual(r[0].valor_tipo, 'exato');
+  assert.ok(r[0].produto.endsWith('…'));
+  assert.ok(r[0].produto_completo.startsWith('Óculos de Sol Madrid Quadrado Premium Clássico'));
+});
+
+test('ML/NS marcam valor aproximado quando há pedido com vários itens', async () => {
+  const pgQuery = async () => ([{ produto: 'A', unidades: 3, pedidos: 3, valor: '100.00', aproximado: true }]);
+  const r = await topProducts({ pgQuery }, resolvePeriod('30d', NOW), 'nuvemshop', 1);
+  assert.ok(r[0].valor_tipo.startsWith('aproximado'));
+});
+
+test('productSales filtra por trecho do nome (ILIKE) e escapa aspas', async () => {
+  let seen = '';
+  const pgQuery = async (sql) => { seen = sql; return []; };
+  await productSales({ pgQuery }, resolvePeriod('30d', NOW), 'shopee', "Óculos madrid' or 1=1 --");
+  // sem acento, por palavra, e aspas escapadas
+  assert.ok(seen.includes("like '%oculos%'"), 'sem acento: ' + seen);
+  assert.ok(seen.includes("like '%madrid''%'"), 'aspa escapada: ' + seen);
+  assert.ok(seen.includes('translate(lower(item_name)'), 'normaliza a coluna: ' + seen);
+  await assert.rejects(() => productSales({ pgQuery }, resolvePeriod('30d', NOW), 'shopee', 'a'), /nome do produto/);
+});
+
+test('productSql Shopee rateia pelo total pago e cai em divisão igual sem preço', () => {
+  const sql = productSql(resolvePeriod('30d', NOW), 'shopee', { limit: 3 });
+  assert.ok(sql.includes('total * bruto_item / bruto_pedido'));
+  assert.ok(sql.includes('total / greatest(n_itens, 1)'));
+  assert.ok(sql.includes("payment_status = 'paid'"));
+});
 const { resolvePeriod } = require('./bot-period');
 const NOW = new Date('2026-09-21T18:00:00.000Z');
 

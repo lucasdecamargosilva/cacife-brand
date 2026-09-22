@@ -414,7 +414,7 @@ try {
     const { resolvePeriod } = require('./bot-period');
     const { isAllowed } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
-    const { overview, topProducts } = require('./bot-data');
+    const { overview, topProducts, productSales } = require('./bot-data');
     const { fmtOverview, toWhatsApp } = require('./bot-format');
     const { guardSelect } = require('./bot-sql');
     const { makeChat } = require('./bot-openrouter');
@@ -442,7 +442,11 @@ try {
     const botPgQuery = async (sql) => {
         const wrapped = `begin; set local role bot_ro; ${sql}; commit`;
         const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: wrapped }), signal: AbortSignal.timeout(15000) });
-        if (!r.ok) throw new Error(`Supabase pg ${r.status}`);
+        if (!r.ok) {
+            let msg = `HTTP ${r.status}`;
+            try { const j = await r.json(); msg = (j && (j.message || j.error)) || msg; } catch (e) {}
+            throw new Error(String(msg).replace(/\s+/g, ' ').slice(0, 200));
+        }
         return r.json();
     };
     const botChat = BOT.openrouterKey ? makeChat({ apiKey: BOT.openrouterKey }) : null;
@@ -479,6 +483,18 @@ try {
             pushDebug({ step: 'tool', tool: 'top_produtos', period: per.label, ms: Date.now() - t0, canais: canais.join(',') });
             return { periodo: per.label, top };
         },
+        vendas_produto: async ({ produto, canal, period, limite }) => {
+            const t0 = Date.now();
+            const per = resolvePeriod(parsePeriodArg(period));
+            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop'];
+            const resultado = {};
+            await Promise.all(canais.map(async (c) => {
+                try { resultado[c] = await productSales(botDeps, per, c, produto, limite || 5); }
+                catch (e) { console.error('vendas_produto ' + c + ':', e.message); resultado[c] = { erro: true }; }
+            }));
+            pushDebug({ step: 'tool', tool: 'vendas_produto', period: per.label, ms: Date.now() - t0, produto: String(produto || '').slice(0, 40), canais: canais.join(',') });
+            return { periodo: per.label, busca: produto, resultado };
+        },
         consulta_banco: async ({ sql }) => {
             const t0 = Date.now();
             let safe;
@@ -489,7 +505,12 @@ try {
                 const arr = Array.isArray(rows) ? rows : [];
                 pushDebug({ step: 'tool', tool: 'consulta_banco', ms: Date.now() - t0, linhas: arr.length, sql: safe.slice(0, 160) });
                 return { linhas: arr.slice(0, 100) };
-            } catch (e) { console.error('consulta_banco:', e.message); pushDebug({ step: 'tool', tool: 'consulta_banco', erro: 'falha' }); return { erro: 'não consegui consultar agora' }; }
+            } catch (e) {
+                console.error('consulta_banco:', e.message);
+                pushDebug({ step: 'tool', tool: 'consulta_banco', erro: String(e.message).slice(0, 200), sql: safe.slice(0, 160) });
+                // devolve o motivo (sem dados sensíveis) para a IA poder corrigir a consulta na próxima tentativa
+                return { erro: 'a consulta falhou no banco: ' + String(e.message).slice(0, 160) + '. Corrija o SQL e tente de novo.' };
+            }
         },
         perguntas_ml: async () => {
             const t0 = Date.now();
