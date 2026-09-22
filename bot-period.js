@@ -28,9 +28,10 @@ function resolvePeriod(spec, now = new Date()) {
   const today = ymd(p.y, p.m, p.d);
   let start = today, end = today, label = 'hoje';
 
+  const DATE = /^\d{4}-\d{2}-\d{2}$/;
   const asDays = typeof spec === 'string' && /^(\d{1,3})d$/.exec(spec);
   const asMonths = typeof spec === 'string' && /^(\d{1,2})m(?:eses|ês)?$/.exec(spec);
-  if (spec && typeof spec === 'object' && spec.from && spec.to) {
+  if (spec && typeof spec === 'object' && DATE.test(String(spec.from || '')) && DATE.test(String(spec.to || ''))) {
     start = spec.from; end = spec.to; label = `${spec.from} a ${spec.to}`;
   } else if (asDays) {
     const n = Math.max(1, Number(asDays[1]));

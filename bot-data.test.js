@@ -45,6 +45,18 @@ test('channelSummary NS: net = revenue (sem comissão), aceita Confirmado+paid',
   assert.strictEqual(r.orders, 5);
 });
 
+test('channelSummary rejeita datas fora do formato ISO (anti-injeção)', async () => {
+  const pgQuery = async () => { throw new Error('não deveria consultar'); };
+  const periodMalicioso = { start: "x", end: "y", startISO: "2026-01-01' OR '1'='1", endExclusiveISO: '2026-02-01T03:00:00.000Z', label: 'x' };
+  await assert.rejects(() => channelSummary(pgQuery, periodMalicioso, 'mercadolivre'), /período inválido/);
+});
+
+test('resolvePeriod ignora datas customizadas malformadas (cai em 30d)', () => {
+  const p = resolvePeriod({ from: "2026-01-01' OR 1=1--", to: '2026-02-01' }, NOW);
+  assert.strictEqual(p.start, '2026-08-23'); // default 30d
+  assert.strictEqual(p.end, '2026-09-21');
+});
+
 test('overview agrega canais e soma total; canal que falha não derruba', async () => {
   const deps = {
     shopeeRest: async () => ([{ total: 100.00, escrow_amount: 80.00 }]),

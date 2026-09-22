@@ -24,9 +24,12 @@ const PAID_CLAUSE = {
 };
 
 // --- Mercado Livre / Nuvemshop (cacife_orders via SQL agregado) ---
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 async function channelSummary(pgQuery, period, channel) {
-  const paid = PAID_CLAUSE[channel];
+  const paid = PAID_CLAUSE[channel]; // canal restrito ao conjunto fixo
   if (!paid) throw new Error('canal desconhecido: ' + channel);
+  // datas só entram no SQL se forem instantes ISO estritos (blinda contra injeção)
+  if (!ISO_RE.test(period.startISO) || !ISO_RE.test(period.endExclusiveISO)) throw new Error('período inválido');
   const sql = `select
       count(*) filter (where ${paid}) as orders,
       coalesce(round(sum(total) filter (where ${paid}) * 100), 0) as revenue,
