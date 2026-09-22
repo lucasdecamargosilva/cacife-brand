@@ -455,19 +455,28 @@ try {
     };
 
     const botMemory = []; // últimas trocas (só o número autorizado)
+    const botDebug = []; // diagnóstico temporário (últimos eventos)
+    const pushDebug = (o) => { botDebug.push({ at: new Date().toISOString(), ...o }); if (botDebug.length > 15) botDebug.shift(); };
     app.post('/api/bot/whatsapp', async (req, res) => {
         if (!botReady) return res.sendStatus(503);
         const secret = req.headers['x-webhook-secret'] || req.query.secret || '';
-        if (!timingEq(String(secret), BOT.webhookSecret)) return res.sendStatus(401);
+        if (!timingEq(String(secret), BOT.webhookSecret)) { pushDebug({ step: 'secret-ruim' }); return res.sendStatus(401); }
         const inbound = parseInbound(req.body);
         res.sendStatus(200); // responde já ao Uazapi; processa em background
-        if (!inbound || !isAllowed(inbound.sender, BOT.allowed)) return;
+        const allowed = inbound && isAllowed(inbound.sender, BOT.allowed);
+        pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, sender: inbound && inbound.sender, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
+        if (!inbound || !allowed) return;
         try {
             const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text });
             botMemory.push({ role: 'user', content: inbound.text }, { role: 'assistant', content: reply });
             if (botMemory.length > 12) botMemory.splice(0, botMemory.length - 12);
-            await sendText(BOT.uazapi, BOT.allowed, reply);
-        } catch (e) { console.error('bot whatsapp:', e.message); }
+            await sendText(BOT.uazapi, inbound.sender, reply); // responde no mesmo JID que mandou
+            pushDebug({ step: 'respondido', reply: reply.slice(0, 120) });
+        } catch (e) { console.error('bot whatsapp:', e.message); pushDebug({ step: 'erro', erro: e.message }); }
+    });
+    app.get('/api/bot/debug', (req, res) => {
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
+        res.json({ botReady, model: BOT.model, allowed: BOT.allowed, events: botDebug });
     });
 
     // --- Health Check ---
