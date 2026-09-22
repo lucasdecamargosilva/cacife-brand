@@ -1,4 +1,6 @@
 node_modules/
+.local/
+.env.local
 .env
 *.log
 debug-sso.js

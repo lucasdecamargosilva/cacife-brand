@@ -1,0 +1,32 @@
+.market-layout{display:flex;min-height:100vh}.market-layout>.sidebar{width:218px;flex:0 0 218px;padding:24px 14px;background:#fff;border-right:1px solid #e6dff0;height:100vh;position:sticky;top:0;display:flex;flex-direction:column}.sidebar .brand{display:grid;padding:0 12px 30px}.sidebar .brand>img{width:164px;height:auto}.sidebar .market-nav{display:grid;gap:8px;padding:0}.sidebar .market-nav a{display:flex;gap:13px;align-items:center;min-height:48px;border-radius:9px;padding:12px;color:#62536f;font-size:14px;text-decoration:none}.sidebar .market-nav a>span{font-size:23px;width:24px;text-align:center}.sidebar .market-nav a.active{background:#7c3aed;color:#fff}.sidebar-foot{margin-top:auto;padding:20px 10px 0;color:#756582;font-size:12px}.sidebar-foot button{display:block;margin-top:14px;padding:0;border:0;background:none;color:#7c3aed;cursor:pointer}.local-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#137d58;margin-right:5px}.market-content{flex:1;min-width:0;margin:0;padding:26px 28px 12px;max-width:2200px}.market-header{padding:0;margin-bottom:28px;background:transparent;border:0;min-height:52px}.market-header h1{font-size:27px;font-weight:600}.market-content main{padding:0}.market-header .account-avatar{display:none}
+@media(max-width:720px){.market-layout{display:block}.market-layout>.sidebar{width:100%;height:auto;position:static;padding:12px}.sidebar .brand{padding-bottom:8px}.sidebar .brand>img{width:130px}.sidebar .market-nav{display:flex;overflow:auto}.sidebar .market-nav a{flex-shrink:0;font-size:11px;padding:8px}.sidebar-foot{display:none}.market-content{padding:18px 14px}.market-header{flex-wrap:wrap}}
+
+.sidebar .market-nav a.active{background:#7c3aed!important;color:#fff!important;opacity:1}.sidebar .market-nav a{opacity:1}
+
+
+.overview-date-controls{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}.overview-date-controls .period-presets{display:flex;gap:6px;margin:0;padding:0;border:0}.overview-date-controls .period-presets button{border:0;border-radius:20px;background:#fff;color:#62536f;padding:10px 12px;font-size:12px;cursor:pointer;white-space:nowrap}.overview-date-controls .period-presets button[aria-pressed="true"]{background:#7c3aed;color:#fff}.overview-date-controls .period-presets button:hover{background:#f0e9fc;color:#6325ce}.overview-date-controls .period-presets button:focus-visible{outline:3px solid #b99ae9;outline-offset:2px}.market-header{gap:20px;flex-wrap:wrap}@media(max-width:720px){.overview-date-controls{justify-content:flex-start;width:100%}.overview-date-controls .period-presets{flex-wrap:wrap}}
+
+.overview-chart-tooltip{position:fixed;z-index:9999;pointer-events:none;max-width:290px;padding:12px 15px;background:#fff;color:#241635;border:1px solid #d8c9ed;border-radius:10px;box-shadow:0 8px 28px #24163522;font-size:13px;line-height:1.7}.overview-chart-tooltip[hidden]{display:none}.overview-chart-tooltip strong{display:block;margin-bottom:3px}.chart-hover-zone:hover,.chart-hover-zone:focus{fill:#7c3aed0d;outline:none}.donut-center{pointer-events:none}
+
+.overview-product-row{display:grid;grid-template-columns:minmax(0,1fr) 100px 50px;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #e6dff0;font-size:11px}.overview-product-row>strong,.overview-product-row>span{text-align:right}.overview-product-name{display:flex;align-items:center;gap:8px;min-width:0}.overview-product-name small{display:block;color:#756582;margin-top:4px}.product-rank{display:grid;place-items:center;flex:0 0 23px;height:23px;background:#f0e9fc;border-radius:6px;color:#7c3aed}.products-head{grid-template-columns:minmax(0,1fr) 100px 50px}
+
+.overview-product-name .product-channel-badge{display:table;width:fit-content;margin-top:5px;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:600;line-height:1.35;background:#f0e9fc;color:#6325ce}.overview-product-name .product-channel-badge.mercadolivre{background:#fff2ad;color:#665000}.overview-product-name .product-channel-badge.nuvemshop{background:#e6efff;color:#174ca8}.overview-product-name .product-channel-badge.shopee{background:#ffebe3;color:#a8320c}.overview-product-name .product-channel-badge.tiktokshop{background:#e9e8ed;color:#272332}
+
+.tooltip-channel-dot{display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:50%;box-shadow:0 0 0 1px #00000012}.chart-legend .dot,.share-legend .dot{box-shadow:0 0 0 1px #00000012}
+
+/* Channel cards retain each marketplace identity. */
+.channel-cards .channel-card.mercadolivre{background:#ffe600;border-color:#ecd400;color:#29264c}
+.channel-cards .channel-card.nuvemshop{background:#1769df;border-color:#1769df;color:#fff}
+.channel-cards .channel-card.shopee{background:#c73518;border-color:#c73518;color:#fff}
+.channel-cards .channel-card.tiktokshop{background:#161616;border-color:#161616;color:#fff}
+.channel-cards .channel-card:is(.mercadolivre,.nuvemshop,.shopee,.tiktokshop) :is(.channel-card-title,small,strong,.card-status,.card-delta){color:inherit}
+.channel-cards .channel-card:is(.nuvemshop,.shopee,.tiktokshop) .card-stats>div+div{border-color:#ffffff40}
+.channel-cards .channel-card.mercadolivre .card-stats>div+div{border-color:#29264c30}
+.channel-cards .channel-card:is(.mercadolivre,.nuvemshop,.shopee,.tiktokshop){opacity:1}
+.channel-cards .channel-card.nuvemshop .channel-emblem img{filter:brightness(0) invert(1)}
+.channel-cards .channel-card.shopee .official-channel-icon{background:#fff;border-radius:6px;padding:2px}
+
+#metrics-filters{grid-template-columns:repeat(2,minmax(0,1fr))}#metrics-filters .period-hint,#metrics-filters .date-channel-field,#metrics-filters .apply-button{grid-column:1/-1}#metrics-filters .date-start-field{grid-column:1;grid-row:2}#metrics-filters .date-end-field{grid-column:2;grid-row:2}#metrics-filters input[type="date"]{min-width:0;width:100%}
+
+/* Padroniza o item ativo do menu (roxo, igual às outras telas) */
+.market-layout .market-nav a.active{background:#7c3aed;color:#fff;box-shadow:none}

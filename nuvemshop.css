@@ -1,0 +1,11 @@
+.ns-mark{font-size:44px;line-height:1;color:var(--purple)}
+.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ns-operation{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--line);color:var(--secondary)}
+.ns-operation strong{font-size:25px;color:var(--ink)}
+.ns-ages{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.ns-ages strong{font-size:24px}.ns-ages progress{width:100%;height:8px;accent-color:var(--purple)}
+[hidden]{display:none!important}
+@media(max-width:1150px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.kpi:first-child{grid-column:auto}.kpi strong{font-size:24px}.ns-ages{grid-template-columns:repeat(2,1fr)}}
+
+.product small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ns-ages progress{display:block}

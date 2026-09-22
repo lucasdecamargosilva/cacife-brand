@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { shopeeSummary, mlSummary, nsSummary, overview } = require('./bot-data');
+const { shopeeSummary, channelSummary, overview } = require('./bot-data');
 const { resolvePeriod } = require('./bot-period');
 const NOW = new Date('2026-09-21T18:00:00.000Z');
 
@@ -21,38 +21,42 @@ test('shopeeSummary: bruto (total) e líquido (escrow) em centavos, conta pedido
   assert.strictEqual(r.orders, 2);
 });
 
-test('mlSummary: revenue em centavos, net = revenue - taxas (sale_fee)', async () => {
-  const fetchOrders = async () => ([
-    { id: 1, status: 'paid', currency_id: 'BRL', total_amount: 100, date_created: '2026-09-21T12:00:00Z', order_items: [{ quantity: 1, unit_price: 100, sale_fee: 10 }] },
-    { id: 2, status: 'cancelled', currency_id: 'BRL', total_amount: 999, order_items: [] },
-  ]);
-  const r = await mlSummary(fetchOrders, resolvePeriod('hoje', NOW));
-  assert.strictEqual(r.revenue, 10000);
-  assert.strictEqual(r.net, 9000);
-  assert.strictEqual(r.orders, 1);
+test('channelSummary ML: net = revenue - fees; SQL filtra canal e período', async () => {
+  const pgQuery = async (sql) => {
+    assert.ok(sql.includes("channel = 'mercadolivre'"));
+    assert.ok(sql.includes("payment_status = 'paid'"));
+    assert.ok(sql.includes(resolvePeriod('30d', NOW).startISO));
+    return [{ orders: 3, revenue: 30000, fees: 3000 }];
+  };
+  const r = await channelSummary(pgQuery, resolvePeriod('30d', NOW), 'mercadolivre');
+  assert.strictEqual(r.revenue, 30000);
+  assert.strictEqual(r.net, 27000);
+  assert.strictEqual(r.orders, 3);
 });
 
-test('nsSummary: net = revenue (sem comissão de marketplace)', async () => {
-  const fetchOrders = async () => ([
-    { id: 1, total: '100.00', paid_at: '2026-09-21T12:00:00Z', status: 'paid' },
-    { id: 2, total: '50.00', paid_at: null, status: 'pending' },
-  ]);
-  const r = await nsSummary(fetchOrders, resolvePeriod('hoje', NOW));
-  assert.strictEqual(r.revenue, 10000);
-  assert.strictEqual(r.net, 10000);
-  assert.strictEqual(r.orders, 1);
+test('channelSummary NS: net = revenue (sem comissão), aceita Confirmado+paid', async () => {
+  const pgQuery = async (sql) => {
+    assert.ok(sql.includes("payment_status in ('paid','Confirmado')"));
+    return [{ orders: 5, revenue: 50000, fees: 0 }];
+  };
+  const r = await channelSummary(pgQuery, resolvePeriod('30d', NOW), 'nuvemshop');
+  assert.strictEqual(r.revenue, 50000);
+  assert.strictEqual(r.net, 50000);
+  assert.strictEqual(r.orders, 5);
 });
 
 test('overview agrega canais e soma total; canal que falha não derruba', async () => {
   const deps = {
     shopeeRest: async () => ([{ total: 100.00, escrow_amount: 80.00 }]),
-    mlFetch: async () => { throw new Error('ml caiu'); },
-    nsFetch: async () => ([]),
+    pgQuery: async (sql) => {
+      if (sql.includes("'mercadolivre'")) throw new Error('ml caiu');
+      return [{ orders: 2, revenue: 20000, fees: 0 }]; // nuvemshop
+    },
   };
   const r = await overview(deps, resolvePeriod('hoje', NOW));
   assert.strictEqual(r.channels.shopee.revenue, 10000);
   assert.strictEqual(r.channels.mercadolivre.error, true);
-  assert.strictEqual(r.channels.nuvemshop.revenue, 0);
-  assert.strictEqual(r.total.revenue, 10000);
-  assert.strictEqual(r.total.net, 8000);
+  assert.strictEqual(r.channels.nuvemshop.revenue, 20000);
+  assert.strictEqual(r.total.revenue, 30000);
+  assert.strictEqual(r.total.net, 28000);
 });

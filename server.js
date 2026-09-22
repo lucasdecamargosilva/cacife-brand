@@ -415,7 +415,6 @@ try {
     const { isAllowed } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
     const { overview } = require('./bot-data');
-    const { makeMlFetch, makeNsFetch } = require('./bot-fetchers');
     const { makeChat } = require('./bot-openrouter');
     const { answer } = require('./bot-brain');
 
@@ -437,15 +436,18 @@ try {
         if (!r.ok) throw new Error(`Supabase ${r.status}`);
         return r.json();
     };
-    const botMlFetch = makeMlFetch({ getMlToken: getMLToken, mlUserId: ML_USER_ID });
-    const botNsFetch = makeNsFetch({ token: BOT.nsToken, storeId: BOT.nsStore });
+    const botPgQuery = async (sql) => {
+        const r = await fetch(`${SUPABASE_URL}/pg/query`, { method: 'POST', headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) });
+        if (!r.ok) throw new Error(`Supabase pg ${r.status}`);
+        return r.json();
+    };
     const botChat = BOT.openrouterKey ? makeChat({ apiKey: BOT.openrouterKey }) : null;
 
     const parsePeriodArg = (p) => {
         if (typeof p === 'string' && p.includes(':')) { const [from, to] = p.split(':'); return { from, to }; }
         return p;
     };
-    const botDeps = { shopeeRest: botShopeeRest, mlFetch: botMlFetch, nsFetch: botNsFetch };
+    const botDeps = { shopeeRest: botShopeeRest, pgQuery: botPgQuery };
     const chSummary = (ov) => Object.fromEntries(Object.entries(ov.channels).map(([k, v]) => [k, v.error ? 'erro' : v.orders + 'ped']));
     const botTools = {
         resumo_geral: async ({ period }) => {

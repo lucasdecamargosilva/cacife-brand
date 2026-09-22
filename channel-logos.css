@@ -1,0 +1,88 @@
+/* Official supplied artwork; compact placements show the symbol without distorting it. */
+.platform-icon.channel-emblem,.sidebar nav a>span.channel-emblem{position:relative;display:inline-block;overflow:hidden;background:#fff;width:30px;height:30px;flex:0 0 30px;border-radius:7px;vertical-align:middle}
+.channel-emblem img{position:absolute;max-width:none;height:auto;display:block}
+.channel-emblem.mercadolivre img{width:253%;left:4%;top:18%}
+.channel-emblem.nuvemshop img{width:430%;left:-20%;top:-9%}
+.nav-item .channel-emblem,.platform-name .channel-emblem,.sidebar nav a>span.channel-emblem{width:26px;height:26px;flex-basis:26px}
+.channel-heading{flex-shrink:0}
+.channel-heading h1{margin:0;line-height:1}
+.channel-wordmark{display:block;object-fit:contain}
+.ml-wordmark{width:205px;height:auto}
+.ns-wordmark-frame{position:relative;overflow:hidden;width:220px;height:47px;background:#fff;border-radius:4px}
+.ns-wordmark{position:absolute;width:252px;max-width:none;height:auto;left:-16px;top:-16px}
+.heading .channel-heading p{font-size:12px;margin-top:7px}
+@media(max-width:720px){.ml-wordmark{width:175px}.ns-wordmark-frame{width:190px;height:40px}.ns-wordmark{width:218px;left:-14px;top:-14px}.sidebar nav a>span.channel-emblem{width:23px;height:23px;flex-basis:23px}}
+
+/* Preserve the supplied transparent artwork, rendered in solid black. */
+.market-brand .cacife-brand-logo,.brand img[src="cacife-logo.png"]{filter:brightness(0);display:block;height:auto}
+
+.market-brand{height:auto;min-height:96px;flex-shrink:0}.market-brand .cacife-brand-logo{margin-bottom:2px}
+
+
+.platform-icon.official-channel-icon,.sidebar nav a>span.official-channel-icon{display:inline-flex;width:26px;height:26px;flex:0 0 26px;background:transparent;align-items:center;justify-content:center}.official-channel-icon img{display:block;width:100%;height:100%;object-fit:contain;border-radius:5px}
+
+.platform-icon.channel-emblem.nuvemshop,.sidebar nav a>span.channel-emblem.nuvemshop,.ns-wordmark-frame{background:transparent}
+
+/* Cacife visual refinement: shared across overview and marketplace workspaces. */
+:root{--cacife-depth-1:0 2px 4px #25153b04,0 8px 24px #25153b07;--cacife-depth-2:0 3px 8px #25153b08,0 16px 32px #25153b12;--cacife-depth-popover:0 8px 16px #25153b0d,0 24px 60px #25153b20;--cacife-edge:#32204710;--cacife-radius:16px}
+body{background:radial-gradient(ellipse at 75% 0%,#ece5fb70,transparent 48%),#f7f6fa}
+.market-layout>.sidebar,.ml-layout>.sidebar{background:linear-gradient(180deg,#fff,#fcfbfe);border-right:1px solid var(--cacife-edge);box-shadow:6px 0 28px #25153b04}
+.sidebar .brand{padding-bottom:28px}
+.sidebar nav a{transition:background .18s ease,box-shadow .18s ease,transform .18s ease}
+.sidebar nav a.active,.sidebar .market-nav a.active{background:linear-gradient(120deg,#8b46f1,#6d28d9)!important;box-shadow:0 4px 10px #7c3aed1c,0 8px 22px #7c3aed20;color:#fff!important}
+.sidebar nav a:not(.active):hover{background:#f0eafa;transform:translateX(2px)}
+.market-content,.workspace{padding-top:30px}
+.market-header, .workspace>header{margin-bottom:28px}
+.market-header h1{letter-spacing:-.7px;line-height:1.2}
+.market-header p{line-height:1.5;color:#756982}
+.panel,.card,.channel-card{border:1px solid var(--cacife-edge);border-radius:var(--cacife-radius);box-shadow:var(--cacife-depth-1);transition:box-shadow .2s ease,border-color .2s ease,transform .2s ease}
+.panel,.card{background:#fff}
+.panel>h2,.card h2{font-weight:600;letter-spacing:-.25px}
+.panel>h2{padding-bottom:4px}
+.channel-cards{gap:16px;margin-bottom:20px}
+.channel-cards .channel-card{position:relative;padding:18px 14px;border-radius:16px;box-shadow:0 2px 4px #25153b08,0 10px 22px #25153b12,inset 0 1px 0 #ffffff40;isolation:isolate}
+.channel-cards .channel-card::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;background:linear-gradient(135deg,#ffffff20,transparent 65%);pointer-events:none}
+.channel-cards .channel-card.all{background:linear-gradient(135deg,#f4edff,#e9dbfc);border-color:#d9c3f6;box-shadow:0 8px 24px #7c3aed12,inset 0 1px 0 #ffffffb3}
+.channel-cards .channel-card .channel-card-title{font-weight:600;margin-bottom:20px}
+.channel-cards .channel-card .card-status{margin-top:14px;padding-top:10px;border-top:1px solid #ffffff26;font-size:10px;line-height:1.45}
+.channel-cards .channel-card:is(.all,.mercadolivre) .card-status{border-top-color:#25153b15}
+.channel-cards .channel-card .card-stats{gap:10px}
+.channel-cards .channel-card .card-stats>div{min-width:0}
+.channel-cards .channel-card .card-stats strong{font-size:clamp(14px,1.2vw,20px);letter-spacing:-.35px;line-height:1.35}
+.card.kpi{padding:22px;border-top:2px solid #e8dcfa}
+.kpi-icon{box-shadow:inset 0 1px 0 #fff,0 3px 8px #7c3aed09;border:1px solid #7c3aed09;border-radius:10px}
+.kpi .kpi-label{font-weight:500;line-height:1.4}
+.kpi small{color:#80748d}
+.tabs{border:1px solid var(--cacife-edge);border-radius:14px;box-shadow:0 3px 12px #25153b05;padding:6px;gap:4px;background:#fff}
+.tabs a{border-radius:9px;transition:background .18s ease,color .18s ease}
+.tabs a[aria-current="page"]{background:#f1eafb;color:#6d28d9}
+.tabs a:hover{background:#f7f3fc}
+.presets,.overview-date-controls .period-presets{padding:4px!important;background:#efebf4;border:1px solid #32204708!important;border-radius:24px;gap:3px!important}
+.presets button,.overview-date-controls .period-presets button{background:transparent;border-radius:20px;transition:background .18s ease,box-shadow .18s ease;color:#62536f}
+.presets button[aria-pressed="true"],.overview-date-controls .period-presets button[aria-pressed="true"]{background:#7c3aed!important;color:#fff!important;box-shadow:0 3px 8px #7c3aed26}
+.date-menu>summary,#date-menu>summary{background:#fff;border:1px solid #e8e1ee;border-radius:10px;box-shadow:0 2px 5px #25153b05;transition:border-color .18s ease,box-shadow .18s ease}
+.date-menu>summary:hover,#date-menu>summary:hover{border-color:#c4a6ed;box-shadow:0 3px 10px #7c3aed0c}
+.date-menu form,#date-form{border-radius:14px;border-color:#e6ddef;box-shadow:var(--cacife-depth-popover)}
+input,select,textarea{border-color:#e4dceb}
+input:focus,select:focus,textarea:focus{outline:2px solid #a77ce766;outline-offset:2px}
+.table-scroll tbody tr,.overview-product-row{transition:background .16s ease}
+.table-scroll tbody tr:hover,.overview-product-row:hover{background:#f8f5fd}
+.overview-product-row{padding:14px 4px;border-bottom-color:#3220470a;border-radius:6px}
+.overview-product-row:last-child{border-bottom:0}
+.product-rank{box-shadow:inset 0 1px 0 #fff;font-weight:600}
+.chart-legend,.share-legend{line-height:1.5}
+.overview-chart-tooltip,.chart-tooltip{box-shadow:var(--cacife-depth-popover);border-radius:12px}
+.insights-strip{border:1px solid var(--cacife-edge);box-shadow:var(--cacife-depth-1);border-radius:14px;background:#fff}
+.panel-caption,.caption{line-height:1.55}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #b99ae9;outline-offset:3px}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.channel-cards .channel-card:hover{transform:translateY(-3px);box-shadow:var(--cacife-depth-2),inset 0 1px 0 #ffffff50}.panel:hover,.card:hover{box-shadow:var(--cacife-depth-2);border-color:#32204718}}
+@media(max-width:720px){.market-content,.workspace{padding-top:18px}.channel-cards{gap:12px}.channel-cards .channel-card{padding:16px}.channel-cards .channel-card .card-stats strong{font-size:18px}.presets,.overview-date-controls .period-presets{max-width:100%;flex-wrap:wrap}.sidebar nav a:not(.active):hover{transform:none}.card.kpi{padding:18px}}
+@media(prefers-reduced-motion:reduce){.panel,.card,.channel-card,.sidebar nav a,.tabs a,.presets button,.overview-date-controls .period-presets button{transition:none!important;transform:none!important}}
+
+/* Keep compact side-by-side metrics; scale figures to their own column. */
+.channel-cards .channel-card{min-width:0}
+.channel-cards .channel-card .card-stats{grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:8px;max-width:none}
+.channel-cards .channel-card .card-stats>div{container-type:inline-size;min-width:0}
+.channel-cards .channel-card .card-stats>div+div{padding-left:8px}
+.channel-cards .channel-card .card-stats strong{font-size:min(20px,13cqi);white-space:nowrap;letter-spacing:-.35px;line-height:1.35;font-variant-numeric:tabular-nums}
+.channel-cards .channel-card .card-stats>div+div strong{font-size:min(20px,25cqi)}

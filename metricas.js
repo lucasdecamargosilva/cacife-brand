@@ -34,11 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
    const heading=node('div','channel-card-title');heading.append(icon(c.id),node('span','',c.name));card.append(heading);
    const stats=node('div','card-stats');
    for(const [key,label] of [['revenue','Vendas'],['paid','Pedidos pagos']]){
-    const group=node('div');const value=node('strong','',ready?(key==='revenue'?brl(b[key]):number(b[key])):'—');
+    const group=node('div');const value=node('strong','',ready?(key==='revenue'?brl(b?.[key]):number(b?.[key])):'—');
     if(c.id==='all')value.id='metrics-'+key;
-    const d=ready?delta(b[key],p?.[key]):{text:'—',style:''};group.append(node('small','',label),value,node('span','card-delta '+d.style,d.text));stats.append(group);
+    const d=ready?delta(b?.[key],p?.[key]):{text:'—',style:''};group.append(node('small','',label),value,node('span','card-delta '+d.style,d.text));stats.append(group);
    }
-   card.append(stats,node('p','card-status',!c.available?'Conexão não configurada':!included(c,selected)?'Fora do filtro':summary?'vs. período anterior':state));
+   const liq=node('p','card-liquido',ready?'Líquido: '+brl(b?.net??b?.revenue):'Líquido: —');liq.style.cssText='margin-top:8px;font-size:11px;font-weight:700;opacity:.92';
+   card.append(stats,liq,node('p','card-status',!c.available?'Conexão não configurada':!included(c,selected)?'Fora do filtro':summary?'vs. período anterior':state));
    card.addEventListener('click',()=>selectChannel(c.id));el('results').append(card);
   }
  }
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   for(const c of [...channels,all]){
    const ready=summary&&included(c,selected),b=bucket(summary,c),tr=node('tr',c.id==='all'?'total-row':'');
    const name=node('td'),nameWrap=node('span','platform-name');nameWrap.append(icon(c.id),node('span','',c.name));name.append(nameWrap);tr.append(name);
-   for(const value of [ready?brl(b.revenue):'—',ready?number(b.paid):'—',ready&&b.paid?brl(b.revenue/b.paid):'—','—'])tr.append(node('td','',value));
+   for(const value of [ready?brl(b?.revenue):'—',ready?brl(b?.net??b?.revenue):'—',ready?number(b?.paid):'—',ready&&b?.paid?brl(b.revenue/b.paid):'—','—'])tr.append(node('td','',value));
    tr.lastChild.title='Visitas por canal ainda não conectadas';el('channels').append(tr);
   }
  }
@@ -114,11 +115,12 @@ document.addEventListener('DOMContentLoaded', async () => {
  }
  async function mergeShopee(summary,start,end){
   try{
-   if(!window.CacifeShopee)return;
+   if(!window.CacifeShopee||summary.__shopeeMerged)return;
    const s=await window.CacifeShopee.overview(start,end);
    if(!s)return;
-   summary.byChannel.shopee={revenue:s.revenue,paid:s.paid,orders:s.orders,byDay:s.byDay,ranking:s.ranking};
-   summary.revenue=(summary.revenue||0)+s.revenue;summary.paid=(summary.paid||0)+s.paid;summary.orders=(summary.orders||0)+s.orders;summary.cancelled=(summary.cancelled||0)+s.cancelled;
+   summary.__shopeeMerged=true;
+   summary.byChannel.shopee={revenue:s.revenue,paid:s.paid,orders:s.orders,byDay:s.byDay,ranking:s.ranking,net:s.liquido,fees:s.fees};
+   summary.revenue=(summary.revenue||0)+s.revenue;summary.paid=(summary.paid||0)+s.paid;summary.orders=(summary.orders||0)+s.orders;summary.cancelled=(summary.cancelled||0)+s.cancelled;summary.net=(summary.net||0)+(s.liquido||0);summary.fees=(summary.fees||0)+(s.fees||0);
    for(const [d,v] of Object.entries(s.byDay||{}))summary.byDay[d]=(summary.byDay[d]||0)+v;
    summary.ticket=summary.paid?summary.revenue/summary.paid:0;
    const list=(summary.topProducts?summary.topProducts.slice():[]);

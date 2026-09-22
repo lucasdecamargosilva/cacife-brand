@@ -1,10 +1,11 @@
 'use strict';
 // Camada de dados do robô: números por canal, sempre em CENTAVOS.
-// Shopee vem do Supabase (reais -> *100). ML e NS vêm crus das APIs.
+// Shopee: tabela shopee_orders. Mercado Livre e Nuvemshop: tabela cacife_orders.
+// Tudo lido do banco (Supabase) — soma no SQL, instantâneo para qualquer período.
 const num = (v) => (typeof v === 'number' ? v : Number(v) || 0);
 const cents = (reais) => Math.round(num(reais) * 100);
 
-// --- Shopee (Supabase) ---
+// --- Shopee (shopee_orders, valores em reais -> centavos) ---
 async function shopeeSummary(rest, period) {
   const q = `shopee_orders?select=total,escrow_amount`
     + `&payment_status=eq.paid`
@@ -16,32 +17,28 @@ async function shopeeSummary(rest, period) {
   return { revenue, net, orders: rows.length };
 }
 
-// --- Mercado Livre (pedidos crus da API) ---
-const ML_PAID = new Set(['paid', 'partially_refunded']);
-async function mlSummary(fetchOrders, period) {
-  const orders = (await fetchOrders(period.start, period.end)) || [];
-  let revenue = 0, fees = 0, count = 0;
-  for (const o of orders) {
-    if (!ML_PAID.has(o.status)) continue;
-    if (o.currency_id && o.currency_id !== 'BRL') continue;
-    revenue += cents(o.total_amount);
-    for (const it of (o.order_items || [])) fees += cents(it.sale_fee);
-    count++;
-  }
-  return { revenue, net: revenue - fees, orders: count };
-}
+// Filtro de "pago" por canal em cacife_orders (status vêm em PT e EN misturados).
+const PAID_CLAUSE = {
+  mercadolivre: "payment_status = 'paid'",
+  nuvemshop: "payment_status in ('paid','Confirmado')",
+};
 
-// --- Nuvemshop (pedidos crus da API) ---
-async function nsSummary(fetchOrders, period) {
-  const orders = (await fetchOrders(period.start, period.end)) || [];
-  let revenue = 0, count = 0;
-  for (const o of orders) {
-    const paid = o.paid_at || o.status === 'paid';
-    if (!paid) continue;
-    revenue += cents(o.total);
-    count++;
-  }
-  return { revenue, net: revenue, orders: count };
+// --- Mercado Livre / Nuvemshop (cacife_orders via SQL agregado) ---
+async function channelSummary(pgQuery, period, channel) {
+  const paid = PAID_CLAUSE[channel];
+  if (!paid) throw new Error('canal desconhecido: ' + channel);
+  const sql = `select
+      count(*) filter (where ${paid}) as orders,
+      coalesce(round(sum(total) filter (where ${paid}) * 100), 0) as revenue,
+      coalesce(round(sum(coalesce(sale_fee,0)) filter (where ${paid}) * 100), 0) as fees
+    from cacife_orders
+    where channel = '${channel}'
+      and created_at >= '${period.startISO}' and created_at < '${period.endExclusiveISO}'`;
+  const rows = (await pgQuery(sql)) || [];
+  const r = rows[0] || { orders: 0, revenue: 0, fees: 0 };
+  const revenue = num(r.revenue), fees = num(r.fees);
+  const net = channel === 'nuvemshop' ? revenue : revenue - fees; // NS não tem comissão
+  return { revenue, net, orders: num(r.orders) };
 }
 
 function withTimeout(p, ms, label) {
@@ -56,11 +53,11 @@ async function safe(fn, ms, label) {
   catch (e) { console.error('bot-data canal ' + label + ':', e.message); return { error: true, revenue: 0, net: 0, orders: 0 }; }
 }
 
-async function overview(deps, period, timeoutMs = 30000) {
+async function overview(deps, period, timeoutMs = 20000) {
   const [shopee, mercadolivre, nuvemshop] = await Promise.all([
     safe(() => shopeeSummary(deps.shopeeRest, period), timeoutMs, 'shopee'),
-    safe(() => mlSummary(deps.mlFetch, period), timeoutMs, 'mercadolivre'),
-    safe(() => nsSummary(deps.nsFetch, period), timeoutMs, 'nuvemshop'),
+    safe(() => channelSummary(deps.pgQuery, period, 'mercadolivre'), timeoutMs, 'mercadolivre'),
+    safe(() => channelSummary(deps.pgQuery, period, 'nuvemshop'), timeoutMs, 'nuvemshop'),
   ]);
   const channels = { shopee, mercadolivre, nuvemshop };
   const total = { revenue: 0, net: 0, orders: 0 };
@@ -71,4 +68,4 @@ async function overview(deps, period, timeoutMs = 30000) {
   return { channels, total, period: { start: period.start, end: period.end, label: period.label } };
 }
 
-module.exports = { shopeeSummary, mlSummary, nsSummary, overview };
+module.exports = { shopeeSummary, channelSummary, overview, PAID_CLAUSE };
