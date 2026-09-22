@@ -66,7 +66,8 @@ async function topProducts(deps, period, channel, limit = 3) {
       group by trim(prod) order by unidades desc limit ${lim}`;
   }
   const rows = (await deps.pgQuery(sql)) || [];
-  return rows.map((r) => ({ produto: r.produto, unidades: num(r.unidades), pedidos: num(r.pedidos) }));
+  const short = (s) => { const t = String(s || '').trim(); return t.length > 42 ? t.slice(0, 42).trim() + '…' : t; };
+  return rows.map((r) => ({ produto: short(r.produto), unidades: num(r.unidades), pedidos: num(r.pedidos) }));
 }
 
 function withTimeout(p, ms, label) {
