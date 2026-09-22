@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { shopeeSummary, channelSummary, overview } = require('./bot-data');
+const { shopeeSummary, channelSummary, overview, topProducts } = require('./bot-data');
 const { resolvePeriod } = require('./bot-period');
 const NOW = new Date('2026-09-21T18:00:00.000Z');
 
@@ -55,6 +55,28 @@ test('resolvePeriod ignora datas customizadas malformadas (cai em 30d)', () => {
   const p = resolvePeriod({ from: "2026-01-01' OR 1=1--", to: '2026-02-01' }, NOW);
   assert.strictEqual(p.start, '2026-08-23'); // default 30d
   assert.strictEqual(p.end, '2026-09-21');
+});
+
+test('topProducts shopee: junta itens com pedidos pagos', async () => {
+  const pgQuery = async (sql) => {
+    assert.ok(sql.includes('shopee_order_items'));
+    assert.ok(sql.includes("payment_status = 'paid'"));
+    assert.ok(sql.includes('limit 3'));
+    return [{ produto: 'Óculos X', unidades: 12, pedidos: 10 }];
+  };
+  const r = await topProducts({ pgQuery }, resolvePeriod('30d', NOW), 'shopee', 3);
+  assert.strictEqual(r[0].produto, 'Óculos X');
+  assert.strictEqual(r[0].unidades, 12);
+});
+
+test('topProducts ML/NS: agrupa product_name de cacife_orders', async () => {
+  const pgQuery = async (sql) => {
+    assert.ok(sql.includes('cacife_orders'));
+    assert.ok(sql.includes("channel = 'nuvemshop'"));
+    return [{ produto: 'Camisa Y', unidades: 5, pedidos: 5 }];
+  };
+  const r = await topProducts({ pgQuery }, resolvePeriod('30d', NOW), 'nuvemshop', 3);
+  assert.strictEqual(r[0].produto, 'Camisa Y');
 });
 
 test('overview agrega canais e soma total; canal que falha não derruba', async () => {

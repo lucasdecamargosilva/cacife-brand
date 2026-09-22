@@ -414,7 +414,8 @@ try {
     const { resolvePeriod } = require('./bot-period');
     const { isAllowed } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
-    const { overview } = require('./bot-data');
+    const { overview, topProducts } = require('./bot-data');
+    const { fmtOverview } = require('./bot-format');
     const { makeChat } = require('./bot-openrouter');
     const { answer } = require('./bot-brain');
 
@@ -454,13 +455,26 @@ try {
             const t0 = Date.now();
             const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
             pushDebug({ step: 'tool', tool: 'resumo_geral', period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
-            return ov;
+            return fmtOverview(ov);
         },
         resumo_canal: async ({ canal, period }) => {
             const t0 = Date.now();
             const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
             pushDebug({ step: 'tool', tool: 'resumo_canal:' + canal, period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
-            return { canal, ...(ov.channels[canal] || { error: true }), period: ov.period };
+            const f = fmtOverview(ov);
+            return { periodo: f.periodo, canal, ...(f.canais[canal] || { erro: true }) };
+        },
+        top_produtos: async ({ canal, period, limite }) => {
+            const t0 = Date.now();
+            const per = resolvePeriod(parsePeriodArg(period));
+            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop'];
+            const top = {};
+            await Promise.all(canais.map(async (c) => {
+                try { top[c] = await topProducts(botDeps, per, c, limite || 3); }
+                catch (e) { console.error('top_produtos ' + c + ':', e.message); top[c] = { erro: true }; }
+            }));
+            pushDebug({ step: 'tool', tool: 'top_produtos', period: per.label, ms: Date.now() - t0, canais: canais.join(',') });
+            return { periodo: per.label, top };
         },
     };
 

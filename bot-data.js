@@ -44,6 +44,31 @@ async function channelSummary(pgQuery, period, channel) {
   return { revenue, net, orders: num(r.orders) };
 }
 
+// --- Top produtos por canal ---
+async function topProducts(deps, period, channel, limit = 3) {
+  if (!ISO_RE.test(period.startISO) || !ISO_RE.test(period.endExclusiveISO)) throw new Error('período inválido');
+  const lim = Math.min(20, Math.max(1, Number(limit) || 3));
+  const win = `created_at >= '${period.startISO}' and created_at < '${period.endExclusiveISO}'`;
+  let sql;
+  if (channel === 'shopee') {
+    sql = `select i.item_name as produto, sum(i.qty) as unidades, count(distinct i.id_pedido) as pedidos
+      from shopee_order_items i
+      join shopee_orders o on o.shop_id = i.shop_id and o.id_pedido = i.id_pedido
+      where o.payment_status = 'paid' and o.${win}
+      group by i.item_name order by unidades desc nulls last limit ${lim}`;
+  } else {
+    const paid = PAID_CLAUSE[channel];
+    if (!paid) throw new Error('canal desconhecido: ' + channel);
+    // product_name em cacife_orders lista vários produtos por vírgula ("A, B, C"); separa e conta cada um.
+    sql = `select trim(prod) as produto, count(*) as unidades, count(distinct id_pedido) as pedidos
+      from cacife_orders, unnest(string_to_array(product_name, ',')) as prod
+      where channel = '${channel}' and ${paid} and ${win} and product_name is not null and trim(prod) <> ''
+      group by trim(prod) order by unidades desc limit ${lim}`;
+  }
+  const rows = (await deps.pgQuery(sql)) || [];
+  return rows.map((r) => ({ produto: r.produto, unidades: num(r.unidades), pedidos: num(r.pedidos) }));
+}
+
 function withTimeout(p, ms, label) {
   return Promise.race([
     p,
@@ -71,4 +96,4 @@ async function overview(deps, period, timeoutMs = 20000) {
   return { channels, total, period: { start: period.start, end: period.end, label: period.label } };
 }
 
-module.exports = { shopeeSummary, channelSummary, overview, PAID_CLAUSE };
+module.exports = { shopeeSummary, channelSummary, overview, topProducts, PAID_CLAUSE };

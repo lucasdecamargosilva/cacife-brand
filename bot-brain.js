@@ -1,19 +1,21 @@
 'use strict';
 const SYSTEM = [
   'Você é o assistente de dados da loja Cacife no WhatsApp.',
-  'Responda em português do Brasil, curto e direto, com no máximo poucas linhas.',
-  'Valores sempre em reais (R$), com duas casas. Os dados vêm em centavos: divida por 100.',
+  'Responda em português do Brasil, curto e direto.',
+  'Os valores JÁ VÊM FORMATADOS em reais (ex: "R$ 823.584,01"). Apenas repita exatamente; NUNCA recalcule, divida ou multiplique.',
   'NUNCA invente números: use somente o que as ferramentas retornarem.',
-  'Ao comparar canais ou dar um total, use resumo_geral (traz todos de uma vez) e cite a quebra por canal, dizendo em qual vendeu mais.',
+  'Ao comparar canais ou dar um total, use resumo_geral (traz todos de uma vez) e diga em qual vendeu mais.',
+  'Para produtos mais vendidos use top_produtos (omita o canal para trazer de todos).',
   'Períodos aceitos no parâmetro period: hoje, ontem, 7d, 30d, 90d, mes, "Nd" (N dias), "Nm" (N meses, ex: 3m = 3 meses), ou "AAAA-MM-DD:AAAA-MM-DD".',
-  'Se um canal vier com "error", diga que aquele canal não respondeu agora, mas mostre os demais.',
-  'Se a pergunta não for sobre vendas/canais, explique gentilmente o que você faz.',
+  'Se um canal vier com "erro", diga que aquele canal não respondeu agora, mas mostre os demais.',
+  'Se a pergunta não for sobre vendas/canais/produtos, explique gentilmente o que você faz.',
 ].join(' ');
 
 const PERIOD_DESC = "hoje|ontem|7d|30d|90d|mes, ou 'Nd'/'Nm' (ex: 3m = 3 meses), ou 'AAAA-MM-DD:AAAA-MM-DD'";
 const TOOL_DEFS = [
   { type: 'function', function: { name: 'resumo_geral', description: 'Vendas (bruto), líquido e nº de pedidos de TODOS os canais (Shopee, Mercado Livre, Nuvemshop) + total, num período. Use para comparar canais.', parameters: { type: 'object', properties: { period: { type: 'string', description: PERIOD_DESC } }, required: ['period'] } } },
   { type: 'function', function: { name: 'resumo_canal', description: 'Mesmo que resumo_geral, mas de um canal só.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: PERIOD_DESC } }, required: ['canal', 'period'] } } },
+  { type: 'function', function: { name: 'top_produtos', description: 'Produtos mais vendidos (por unidades) num período. Omita "canal" para trazer os top de TODOS os canais de uma vez.', parameters: { type: 'object', properties: { canal: { type: 'string', enum: ['shopee', 'mercadolivre', 'nuvemshop'] }, period: { type: 'string', description: PERIOD_DESC }, limite: { type: 'integer', description: 'quantos por canal (padrão 3)' } }, required: ['period'] } } },
 ];
 
 async function answer({ chat, tools, model, history = [], text }) {
