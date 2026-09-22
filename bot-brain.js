@@ -13,7 +13,7 @@ const SYSTEM = [
   'No banco o dinheiro está em REAIS (não centavos): formate como R$ com pontos de milhar e vírgula decimal.',
   'Para perguntas sem resposta no Mercado Livre use perguntas_ml; para o chat da Shopee (conversas aguardando) use chat_shopee.',
   'Se a pergunta não for sobre a loja, explique gentilmente o que você faz.',
-  'FORMATAÇÃO (sempre, em toda resposta, para WhatsApp): use *negrito* nos títulos/rótulos; uma informação por linha; listas numeradas (1., 2., 3.) para rankings; uma linha em branco entre seções/canais; nomes de produto curtos; poucos emojis para ajudar a leitura. Nada de parágrafos longos ou itens grudados por vírgula. Seja enxuto e escaneável.',
+  'FORMATAÇÃO (sempre, em toda resposta, para WhatsApp): negrito é com UM asterisco só (*texto*), NUNCA dois (**texto**) nem markdown. Use *negrito* nos títulos/rótulos; uma informação por linha; listas numeradas (1., 2., 3.) para rankings; uma linha em branco entre seções/canais; nomes de produto curtos; poucos emojis. Nada de parágrafos longos ou itens grudados por vírgula. Enxuto e escaneável.',
 ].join(' ');
 
 const SCHEMA = [
