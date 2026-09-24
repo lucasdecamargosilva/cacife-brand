@@ -383,9 +383,22 @@ try {
     } else { console.log('🎵 TikTok Shop: aguardando TIKTOK_APP_KEY / TIKTOK_APP_SECRET no ambiente.'); }
     const requireTiktok = (res) => { if (!tiktok) { res.status(503).json({ error: 'TikTok ainda não configurado no servidor.' }); return false; } return true; };
 
+    // Link de autorização assinado (HMAC + validade) para o lojista clicar sem receber a senha de admin.
+    const connectSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-connect:' + exp).digest('hex');
+    const connectLinkOk = (t) => {
+        const m = /^(d{10,13}).([0-9a-f]{64})$/.exec(String(t || '')); if (!m) return false;
+        if (Number(m[1]) < Date.now()) return false;
+        return timingEq(m[2], connectSign(m[1]));
+    };
+    app.get('/api/tiktok/connect-link', (req, res) => {
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
+        const exp = String(Date.now() + 48 * 3600000);
+        res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${exp}.${connectSign(exp)}`, expira: new Date(Number(exp)).toISOString() });
+    });
     app.get('/tiktok/connect', (req, res) => {
         if (!requireTiktok(res)) return;
-        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.status(401).send('não autorizado');
+        const ok = adminOk(req.query.key || req.headers['x-admin-token']) || connectLinkOk(req.query.t);
+        if (!ok) return res.status(401).send('Link inválido ou expirado. Peça um novo link de autorização.');
         res.set('Referrer-Policy', 'no-referrer');
         const flow = crypto.randomBytes(16).toString('hex');
         res.cookie('tiktok_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
@@ -401,7 +414,7 @@ try {
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
             res.clearCookie('tiktok_flow');
             const r = await tiktok.exchange(code);
-            res.redirect('/metricas.html?tiktok=conectado&lojas=' + (r.shops?.length || 0));
+            res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
     app.get('/api/tiktok/status', async (req, res) => {
