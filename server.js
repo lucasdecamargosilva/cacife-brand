@@ -404,7 +404,11 @@ try {
         res.cookie('tiktok_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
         res.redirect(tiktok.authUrl(flow));
     });
+    const tiktokDebug = [];
+    const tkLog = (o) => { tiktokDebug.push({ at: new Date().toISOString(), ...o }); if (tiktokDebug.length > 20) tiktokDebug.shift(); };
+    app.get('/api/tiktok/debug', (req, res) => { if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401); res.json(tiktokDebug); });
     app.get('/tiktok/callback', async (req, res) => {
+        tkLog({ step: 'callback', query: Object.keys(req.query), temCookie: Boolean(readCookie(req, 'tiktok_flow')), state: typeof req.query.state === 'string' ? req.query.state.slice(0, 8) : null });
         try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
             const cookie = readCookie(req, 'tiktok_flow');
@@ -413,9 +417,9 @@ try {
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
             res.clearCookie('tiktok_flow');
-            const r = await tiktok.exchange(code);
+            const r = await tiktok.exchange(code); tkLog({ step: 'ok', lojas: r.shops });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
-        } catch (e) { console.error('TikTok callback:', e.message); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
+        } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) }); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
     app.get('/api/tiktok/status', async (req, res) => {
         if (!(await requireViewer(req, res))) return;
