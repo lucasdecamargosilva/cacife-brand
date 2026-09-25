@@ -410,7 +410,7 @@ try {
     const tkLog = (o) => { tiktokDebug.push({ at: new Date().toISOString(), ...o }); if (tiktokDebug.length > 20) tiktokDebug.shift(); };
     app.get('/api/tiktok/debug', (req, res) => { if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401); res.json(tiktokDebug); });
     app.get('/tiktok/callback', async (req, res) => {
-        tkLog({ step: 'callback', query: Object.keys(req.query), temCookie: Boolean(readCookie(req, 'tiktok_flow')), state: typeof req.query.state === 'string' ? req.query.state.slice(0, 8) : null });
+        tkLog({ step: 'callback', query: Object.keys(req.query), app_key: req.query.app_key, error: req.query.error, error_description: req.query.error_description, shop_region: req.query.shop_region, locale: req.query.locale, codeLen: typeof req.query.code === 'string' ? req.query.code.length : 0, state: typeof req.query.state === 'string' ? req.query.state.slice(0, 8) : null });
         try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
             const state = req.query.state;

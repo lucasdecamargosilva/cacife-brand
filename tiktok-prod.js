@@ -58,7 +58,7 @@ class TikTokProd {
     u.searchParams.set('auth_code', authCode);
     u.searchParams.set('grant_type', 'authorized_code');
     let j; try { const r = await this.fetchImpl(u, { signal: AbortSignal.timeout(20000) }); j = await r.json(); } catch { throw new Error('Não foi possível falar com o TikTok.'); }
-    if (j.code !== 0 || !j.data?.access_token) throw new Error('O TikTok recusou a autorização (' + (j.message || j.code) + ').');
+    if (j.code !== 0 || !j.data?.access_token) throw new Error('O TikTok recusou a autorização (code ' + j.code + ': ' + (j.message || '?') + '; request_id ' + (j.request_id || '-') + ').');
     const d = j.data;
     const shops = await this.getShops(d.access_token);
     const now = this.now();
