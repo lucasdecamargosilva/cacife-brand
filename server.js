@@ -386,9 +386,9 @@ try {
     // Link de autorização assinado (HMAC + validade) para o lojista clicar sem receber a senha de admin.
     const connectSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-connect:' + exp).digest('hex');
     const stateSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-state:' + exp).digest('hex');
-    const stateOk = (st) => { const m = /^(d{10,13}).([0-9a-f]{64})$/.exec(String(st || '')); return Boolean(m) && Number(m[1]) >= Date.now() && timingEq(m[2], stateSign(m[1])); };
+    const stateOk = (st) => { const m = /^(\d{10,13})\.([0-9a-f]{64})$/.exec(String(st || '')); return Boolean(m) && Number(m[1]) >= Date.now() && timingEq(m[2], stateSign(m[1])); };
     const connectLinkOk = (t) => {
-        const m = /^(d{10,13}).([0-9a-f]{64})$/.exec(String(t || '')); if (!m) return false;
+        const m = /^(\d{10,13})\.([0-9a-f]{64})$/.exec(String(t || '')); if (!m) return false;
         if (Number(m[1]) < Date.now()) return false;
         return timingEq(m[2], connectSign(m[1]));
     };
