@@ -421,6 +421,15 @@ try {
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) }); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
+    // Fallback: trocar um auth_code obtido fora do redirect (ex.: exibido na tela do TikTok) — admin only.
+    app.post('/api/tiktok/exchange', async (req, res) => {
+        if (!requireTiktok(res)) return;
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
+        const code = req.body && req.body.code;
+        if (typeof code !== 'string' || !code.trim() || code.length > 2048) return res.status(400).json({ error: 'code inválido' });
+        try { const r = await tiktok.exchange(code.trim()); tkLog({ step: 'exchange-manual', lojas: r.shops }); res.json(r); }
+        catch (e) { tkLog({ step: 'exchange-manual-erro', erro: String(e.message).slice(0, 200) }); res.status(400).json({ error: String(e.message).slice(0, 200) }); }
+    });
     app.get('/api/tiktok/status', async (req, res) => {
         if (!(await requireViewer(req, res))) return;
         try { res.json(tiktok ? await tiktok.status() : { configured: false, shops: [] }); }
