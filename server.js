@@ -385,6 +385,8 @@ try {
 
     // Link de autorização assinado (HMAC + validade) para o lojista clicar sem receber a senha de admin.
     const connectSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-connect:' + exp).digest('hex');
+    const stateSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-state:' + exp).digest('hex');
+    const stateOk = (st) => { const m = /^(d{10,13}).([0-9a-f]{64})$/.exec(String(st || '')); return Boolean(m) && Number(m[1]) >= Date.now() && timingEq(m[2], stateSign(m[1])); };
     const connectLinkOk = (t) => {
         const m = /^(d{10,13}).([0-9a-f]{64})$/.exec(String(t || '')); if (!m) return false;
         if (Number(m[1]) < Date.now()) return false;
@@ -400,9 +402,9 @@ try {
         const ok = adminOk(req.query.key || req.headers['x-admin-token']) || connectLinkOk(req.query.t);
         if (!ok) return res.status(401).send('Link inválido ou expirado. Peça um novo link de autorização.');
         res.set('Referrer-Policy', 'no-referrer');
-        const flow = crypto.randomBytes(16).toString('hex');
-        res.cookie('tiktok_flow', flow, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 10 * 60000 });
-        res.redirect(tiktok.authUrl(flow));
+        // state assinado com validade (2h): o TikTok devolve e a gente confere a assinatura — não depende de cookie.
+        const exp = String(Date.now() + 2 * 3600000);
+        res.redirect(tiktok.authUrl(exp + '.' + stateSign(exp)));
     });
     const tiktokDebug = [];
     const tkLog = (o) => { tiktokDebug.push({ at: new Date().toISOString(), ...o }); if (tiktokDebug.length > 20) tiktokDebug.shift(); };
@@ -411,12 +413,10 @@ try {
         tkLog({ step: 'callback', query: Object.keys(req.query), temCookie: Boolean(readCookie(req, 'tiktok_flow')), state: typeof req.query.state === 'string' ? req.query.state.slice(0, 8) : null });
         try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
-            const cookie = readCookie(req, 'tiktok_flow');
             const state = req.query.state;
-            if (!cookie || typeof state !== 'string' || state.length !== cookie.length || !timingEq(state, cookie)) return res.status(400).send('Autorização inválida ou expirada. Comece de novo em /tiktok/connect.');
+            if (!stateOk(state)) { tkLog({ step: 'state-invalido' }); return res.status(400).send('Autorização inválida ou expirada. Peça um novo link e tente de novo.'); }
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
-            res.clearCookie('tiktok_flow');
             const r = await tiktok.exchange(code); tkLog({ step: 'ok', lojas: r.shops });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) }); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
