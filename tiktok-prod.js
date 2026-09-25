@@ -40,6 +40,7 @@ class TikTokProd {
     if (!appKey || !appSecret) throw new Error('Configure TIKTOK_APP_KEY e TIKTOK_APP_SECRET.');
     if (!db) throw new Error('Persistência (Supabase) não configurada.');
     Object.assign(this, { appKey, appSecret, serviceId, db, fetchImpl, now });
+    this.fallbackShopId = arguments[0].fallbackShopId || null;
     this.refreshes = new Map();
   }
 
@@ -60,8 +61,19 @@ class TikTokProd {
     let j; try { const r = await this.fetchImpl(u, { signal: AbortSignal.timeout(20000) }); j = await r.json(); } catch { throw new Error('Não foi possível falar com o TikTok.'); }
     if (j.code !== 0 || !j.data?.access_token) throw new Error('O TikTok recusou a autorização (code ' + j.code + ': ' + (j.message || '?') + '; request_id ' + (j.request_id || '-') + ').');
     const d = j.data;
-    const shops = await this.getShops(d.access_token);
     const now = this.now();
+    let shops = [];
+    try { shops = await this.getShops(d.access_token); }
+    catch (e) {
+      // Sem scope de Authorization o TikTok nega /shops. Guarda o token mesmo assim (shop_id de fallback) para não perder a chave.
+      const fallback = this.fallbackShopId || 'pending';
+      await this.db.saveToken({ shop_id: String(fallback), cipher: null, shop_name: '(scopes pendentes)', region: null,
+        access_token: d.access_token, refresh_token: d.refresh_token || null,
+        expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
+        refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+        updated_at: new Date(now * 1000).toISOString() });
+      throw new Error('Token salvo, mas o app está sem permissões (scopes) no Partner Center: ' + e.message);
+    }
     if (!shops.length) throw new Error('Nenhuma loja autorizada retornada pelo TikTok.');
     for (const s of shops) {
       await this.db.saveToken({
