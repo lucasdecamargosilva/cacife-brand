@@ -284,10 +284,16 @@ class TikTokProd {
     const orderId = data.order_id ? String(data.order_id) : null;
     await this.db.logWebhook({ notification_id: String(id), shop_id: shopId, type: Number(payload.type) || null, order_id: orderId, payload });
     if (Number(payload.type) === 1 && orderId && shopId) {
-      const [o] = await this.fetchOrderDetail(shopId, [orderId]);
+      // Tenta enriquecer com o detalhe do pedido; se a API não estiver disponível para a loja, grava só o status da notificação.
+      let o = null, apiErro = null;
+      try { [o] = await this.fetchOrderDetail(shopId, [orderId]); } catch (e) { apiErro = String(e.message).slice(0, 120); }
       if (o) { await this.db.upsertOrders([normalizeOrder(o, shopId)]); await this.db.upsertItems(itemsOf(o, shopId)); return { updated: orderId, status: o.status }; }
-      await this.db.upsertOrders([{ shop_id: shopId, id_pedido: orderId, status: String(data.order_status || '?'), raw_status: String(data.order_status || '?'), updated_at: tsIso(data.update_time) || new Date().toISOString() }]);
-      return { updated: orderId, status: data.order_status, detail: false };
+      const st = String(data.order_status || '?');
+      const row = { shop_id: shopId, id_pedido: orderId, status: st, raw_status: st, payment_status: st === 'CANCELLED' ? 'cancelled' : (st === 'UNPAID' || st === 'ON_HOLD') ? 'pending' : 'paid', updated_at: tsIso(data.update_time) || new Date().toISOString() };
+      // created_at só no primeiro evento (UNPAID), para não sobrescrever a data real de pedidos já sincronizados
+      if (st === 'UNPAID' && Number(data.update_time || payload.timestamp) > 0) row.created_at = tsIso(data.update_time || payload.timestamp);
+      await this.db.upsertOrders([row]);
+      return { updated: orderId, status: st, detail: false, apiErro };
     }
     return { logged: true, type: payload.type };
   }
