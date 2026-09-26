@@ -11,7 +11,7 @@
   "version": "1.0.0",
   "main": "chatwoot-sso.js",
   "scripts": {
-    "test": "node --test metricas-core.test.js metricas-channel.test.js shopee-prod.test.js tiktok-prod.test.js bot-period.test.js bot-gate.test.js bot-wa.test.js bot-data.test.js bot-format.test.js bot-sql.test.js bot-brain.test.js bot-openrouter.test.js local/shopee.test.js local/mercadolivre.test.js local/nuvemshop.test.js local/ml-workspace.test.js local/ml-auth.test.js local/ns-workspace.test.js local/channel-cache.test.js local/overview-summary.test.js local/metric-queries.test.js",
+    "test": "node --test metricas-core.test.js metricas-channel.test.js shopee-prod.test.js tiktok-prod.test.js tiktok-sync.test.js bot-period.test.js bot-gate.test.js bot-wa.test.js bot-data.test.js bot-format.test.js bot-sql.test.js bot-brain.test.js bot-openrouter.test.js local/shopee.test.js local/mercadolivre.test.js local/nuvemshop.test.js local/ml-workspace.test.js local/ml-auth.test.js local/ns-workspace.test.js local/channel-cache.test.js local/overview-summary.test.js local/metric-queries.test.js",
     "dev:metricas": "node local/server.js",
     "dev": "nodemon server.js",
     "start": "node server.js"

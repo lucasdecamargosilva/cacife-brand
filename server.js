@@ -7,7 +7,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 try {
     const app = express();
     app.set('trust proxy', 1);
-    app.use(express.json());
+    app.use(express.json({ verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); } }));
 
     const PORT = process.env.PORT || 3000;
 
@@ -438,6 +438,94 @@ try {
         try { res.json(tiktok ? await tiktok.status() : { configured: false, shops: [] }); }
         catch (e) { console.error('TikTok status:', e); res.status(500).json({ error: 'erro interno' }); }
     });
+
+    // Loja principal do TikTok: a primeira com cipher (prefere a Cacife se estiver liberada).
+    const tiktokShopId = async () => {
+        const st = await tiktok.status();
+        const withCipher = st.shops.filter((x) => x.cipher);
+        const pref = withCipher.find((x) => x.shop_id === (process.env.TIKTOK_SHOP_ID || '')) || withCipher[0];
+        return pref ? String(pref.shop_id) : '';
+    };
+
+    app.post('/api/tiktok/sync', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!requireTiktok(res)) return;
+        try {
+            const shop = await tiktokShopId(); if (!shop) return res.status(400).json({ error: 'Nenhuma loja do TikTok liberada.' });
+            const to = Math.floor(Date.now() / 1000), days = Math.min(90, Math.max(1, Number(req.query.days) || 30));
+            const r = await tiktok.sync(shop, to - days * 86400, to, 'update_time');
+            tkLog({ step: 'sync', shop, ...r });
+            res.json(r);
+        } catch (e) { console.error('TikTok sync:', e.message); tkLog({ step: 'sync-erro', erro: String(e.message).slice(0, 200) }); res.status(500).json({ error: 'sincronização falhou' }); }
+    });
+
+    app.get('/api/tiktok/overview', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!requireTiktok(res)) return;
+        try {
+            const re = /^\d{4}-\d{2}-\d{2}$/;
+            const { start, end } = req.query;
+            if (!re.test(start || '') || !re.test(end || '') || start > end) return res.status(400).json({ error: 'período inválido' });
+            const shop = await tiktokShopId();
+            const shopF = shop ? "shop_id='" + shop.replace(/[^0-9a-zA-Z_:-]/g, '') + "' and " : '';
+            const lo = "'" + start + " 00:00:00-03'", hi = "('" + end + " 00:00:00-03'::timestamptz + interval '1 day')";
+            const per = shopF + 'created_at >= ' + lo + ' and created_at < ' + hi;
+            const q1 = "select count(*) filter (where payment_status='paid') paid, count(*) orders, count(*) filter (where payment_status='cancelled') cancelled, " +
+                "round(coalesce(sum(total*100) filter (where payment_status='paid'),0)) revenue, round(coalesce(sum(settlement_amount*100) filter (where payment_status='paid'),0)) liquido, " +
+                "round(coalesce(sum(fee_amount*100) filter (where payment_status='paid'),0)) fees from tiktok_orders where " + per;
+            const qDay = "select to_char((created_at at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(total*100),0)) c from tiktok_orders where payment_status='paid' and " + per + " group by 1";
+            const qRank = "select coalesce(i.product_id,'0') id, max(i.product_name) title, max(i.image_url) image, sum(i.qty)::int units, round(coalesce(sum(i.price*i.qty*100),0))::bigint value " +
+                "from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido where o.payment_status='paid' and " + per.replace(/created_at/g, 'o.created_at').replace(/shop_id=/g, 'o.shop_id=') + " group by i.product_id order by value desc limit 8";
+            const qPay = "select coalesce(payment_method,'?') metodo, count(*) n, round(coalesce(sum(total*100),0)) bruto from tiktok_orders where payment_status='paid' and " + per + " group by 1 order by n desc";
+            const qShip = "select coalesce(delivery_option,'?') tipo, count(*) n from tiktok_orders where payment_status='paid' and " + per + " group by 1 order by n desc";
+            const qRet = "select count(*) n, round(coalesce(sum(refund_amount*100),0)) valor from tiktok_returns where " + per;
+            const qStatus = "select coalesce(status,'?') status, count(*) n, round(coalesce(sum(total*100),0)) valor from tiktok_orders where " + per + " group by 1 order by n desc";
+            const qRecent = "select id_pedido, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM HH24:MI') dt, coalesce(status,'?') status, coalesce(payment_status,'?') pay_status, coalesce(payment_method,'-') pay, round(coalesce(total*100,0)) total from tiktok_orders where " + per + " order by created_at desc limit 40";
+            const qDev = "select return_id, order_id, coalesce(status,'?') status, coalesce(reason,'-') reason, round(coalesce(refund_amount*100,0)) refund, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM') dt from tiktok_returns where " + per + " order by created_at desc limit 30";
+            const qSync = "select to_char(max(updated_at) at time zone 'America/Sao_Paulo','DD/MM HH24:MI') last from tiktok_orders where " + (shopF ? shopF.replace(/ and $/, '') : 'true');
+            const db = tiktok.db;
+            const [base, days, rank, pay, ship, ret, sts, recent, dev, last] = await Promise.all([db.query(q1), db.query(qDay), db.query(qRank), db.query(qPay), db.query(qShip), db.query(qRet), db.query(qStatus), db.query(qRecent), db.query(qDev), db.query(qSync)]);
+            const b = base[0] || {}; const N = (v) => Math.round(Number(v) || 0);
+            const revenue = N(b.revenue), paid = N(b.paid);
+            const byDay = {}; for (const r of days) byDay[r.d] = N(r.c);
+            const st = await tiktok.status(); const shopRow = st.shops.find((x) => String(x.shop_id) === shop);
+            res.json({
+                shop: shopRow ? shopRow.shop_name : null, lastSync: (last[0] && last[0].last) || null,
+                revenue, paid, orders: N(b.orders), cancelled: N(b.cancelled), ticket: paid ? Math.round(revenue / paid) : 0,
+                liquido: N(b.liquido), fees: N(b.fees), byDay,
+                ranking: rank.map((r) => ({ id: r.id, title: r.title || 'Produto', image: r.image || null, units: N(r.units), value: N(r.value) })),
+                pagamento: pay.map((r) => ({ metodo: r.metodo, n: N(r.n), bruto: N(r.bruto) })),
+                envio: ship.map((r) => ({ tipo: r.tipo, n: N(r.n) })),
+                devolucoes: { n: N(ret[0] && ret[0].n), valor: N(ret[0] && ret[0].valor) },
+                porStatus: sts.map((r) => ({ status: r.status, n: N(r.n), valor: N(r.valor) })),
+                recentes: recent.map((r) => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total) })),
+                devList: dev.map((r) => ({ return_id: r.return_id, order_id: r.order_id, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt })),
+            });
+        } catch (e) { console.error('TikTok overview:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    // Webhook do TikTok Shop (ORDER_STATUS_CHANGE etc.): assinatura HMAC no header Authorization; responde 200 rápido.
+    app.post('/tiktok/webhook', async (req, res) => {
+        if (!tiktok) return res.sendStatus(503);
+        const raw = req.rawBody || '';
+        if (!raw || !tiktok.verifyWebhook(raw, req.headers['authorization'])) { tkLog({ step: 'webhook-assinatura-invalida' }); return res.sendStatus(401); }
+        res.sendStatus(200);
+        try { const r = await tiktok.handleWebhook(req.body); tkLog({ step: 'webhook', type: req.body && req.body.type, ...r }); }
+        catch (e) { console.error('TikTok webhook:', e.message); tkLog({ step: 'webhook-erro', erro: String(e.message).slice(0, 200) }); }
+    });
+
+    // Sync automático do TikTok: 2 min após subir e a cada 6h (últimos 7 dias por atualização).
+    if (tiktok) {
+        const runTikTokSync = async () => {
+            try {
+                const shop = await tiktokShopId(); if (!shop) return;
+                const to = Math.floor(Date.now() / 1000);
+                console.log('🎵 sync TikTok:', JSON.stringify(await tiktok.sync(shop, to - 7 * 86400, to, 'update_time')));
+            } catch (e) { console.error('sync TikTok falhou:', e.message); }
+        };
+        setTimeout(runTikTokSync, 120000);
+        setInterval(runTikTokSync, 6 * 60 * 60 * 1000);
+    }
 
     // --- Robô WhatsApp (consulta de dados da Cacife) ---
     const { resolvePeriod } = require('./bot-period');

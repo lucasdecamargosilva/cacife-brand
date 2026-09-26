@@ -4,7 +4,7 @@
         { id: 'nuvemshop', name: 'Nuvemshop', available: true },
         { id: 'mercadolivre', name: 'Mercado Livre', available: true },
         { id: 'shopee', name: 'Shopee', available: true },
-        { id: 'tiktokshop', name: 'TikTok Shop', available: false }
+        { id: 'tiktokshop', name: 'TikTok Shop', available: true }
     ];
     function money(value) {
         if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value * 100);

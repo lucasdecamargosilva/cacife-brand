@@ -97,6 +97,13 @@ document.addEventListener('DOMContentLoaded', async () => {
    window.CacifeShopee.overview(el('start').value,el('end').value).then(d=>{if(el('channel').value==='shopee')window.CacifeShopee.render(target,d);});
    return;
   }
+  if(selected==='tiktokshop'&&window.CacifeTikTok){
+   const target=el('channel-detail');target.hidden=false;
+   window.CacifeTikTok.render(target,null,state||'Carregando dados do TikTok Shop…');
+   const paintTk=()=>window.CacifeTikTok.overview(el('start').value,el('end').value).then(d=>{if(el('channel').value==='tiktokshop')window.CacifeTikTok.render(target,d,null,paintTk);});
+   paintTk();
+   return;
+  }
   window.CacifeMarketplaces.render(el('channel-detail'),selected,rows,state);
  }
  function selectChannel(id){if(['mercadolivre','nuvemshop'].includes(id)){location.href=id+'.html?'+new URLSearchParams({start:el('start').value,end:el('end').value});return;}el('channel').value=id;load();}
@@ -128,6 +135,21 @@ document.addEventListener('DOMContentLoaded', async () => {
    summary.topProducts=list.sort((a,b)=>b.value-a.value||b.units-a.units).slice(0,5);
   }catch(_){/* Shopee é complementar; não quebra a Visão Geral */}
  }
+ async function mergeTikTok(summary,start,end){
+  try{
+   if(!window.CacifeTikTok||summary.__tiktokMerged)return;
+   const s=await window.CacifeTikTok.overview(start,end);
+   if(!s)return;
+   summary.__tiktokMerged=true;
+   summary.byChannel.tiktokshop={revenue:s.revenue,paid:s.paid,orders:s.orders,byDay:s.byDay,ranking:s.ranking,net:s.liquido||s.revenue,fees:s.fees};
+   summary.revenue=(summary.revenue||0)+s.revenue;summary.paid=(summary.paid||0)+s.paid;summary.orders=(summary.orders||0)+s.orders;summary.cancelled=(summary.cancelled||0)+s.cancelled;summary.net=(summary.net||0)+(s.liquido||s.revenue||0);summary.fees=(summary.fees||0)+(s.fees||0);
+   for(const [d,v] of Object.entries(s.byDay||{}))summary.byDay[d]=(summary.byDay[d]||0)+v;
+   summary.ticket=summary.paid?summary.revenue/summary.paid:0;
+   const list=(summary.topProducts?summary.topProducts.slice():[]);
+   for(const it of (s.ranking||[]))list.push({id:it.id,channel:'tiktokshop',title:it.title,units:it.units,value:it.value});
+   summary.topProducts=list.sort((a,b)=>b.value-a.value||b.units-a.units).slice(0,5);
+  }catch(_){/* TikTok é complementar */}
+ }
  async function load(event){
   event?.preventDefault();if(['mercadolivre','nuvemshop'].includes(el('channel').value)){selectChannel(el('channel').value);return;}const current=++generation,selected=el('channel').value,start=el('start').value,end=el('end').value;
   reset(selected,'Aguardando consulta');el('results').setAttribute('aria-busy','true');
@@ -140,15 +162,15 @@ document.addEventListener('DOMContentLoaded', async () => {
    if(selected!=='all'&&!M.channels.find(c=>c.id===selected)?.available){notice('Este canal ainda não está configurado. É necessário autorizar a loja e sincronizar os pedidos.');reset(selected,'Aguardando conexão');channelDetail(selected,null,selected==='shopee'?'Aplicativo da Cacife em análise pela Shopee. Nenhum pedido real foi importado.':'Conexão ainda não configurada.');return;}
    if(!client)throw new Error('Configuração de acesso indisponível. Recarregue a página e entre novamente.');
    if((new Date(end)-new Date(start))/86400000>=366)throw Error('Selecione até 366 dias por consulta.');
-   notice('Consultando as integrações do Mercado Livre, Nuvemshop e Shopee…');let summary=await liveSummary(start,end);if(current!==generation)return;await mergeShopee(summary,start,end);if(current!==generation)return;
+   notice('Consultando as integrações do Mercado Livre, Nuvemshop, Shopee e TikTok Shop…');let summary=await liveSummary(start,end);if(current!==generation)return;await mergeShopee(summary,start,end);if(current!==generation)return;await mergeTikTok(summary,start,end);if(current!==generation)return;
    let comparison=null;
    function paint(previous){comparison=previous;cards(summary,previous,selected,'');table(summary,selected);share(summary,selected);bars(summary,selected);series(summary,start,end,false,el('chart'));series(summary,start,end,true,el('evolution'));insights(summary);products(summary);}
    paint(null);exportSummary={summary,selected,start,end};if(el('export'))el('export').disabled=false;
    el('updated').textContent='Consultado às '+new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo'});
    notice('');
-   async function refreshCurrent(){if(current!==generation)return;if(document.hidden){setTimeout(refreshCurrent,60000);return;}try{summary=await liveSummary(start,end);if(current!==generation)return;await mergeShopee(summary,start,end);if(current!==generation)return;paint(comparison);el('updated').textContent='Consultado às '+new Date().toLocaleTimeString('pt-BR');notice('');}catch(error){if(current===generation)notice('Últimos dados exibidos. '+error.message,'error');}if(current===generation)setTimeout(refreshCurrent,summary.refreshing?3000:60000);}
+   async function refreshCurrent(){if(current!==generation)return;if(document.hidden){setTimeout(refreshCurrent,60000);return;}try{summary=await liveSummary(start,end);if(current!==generation)return;await mergeShopee(summary,start,end);if(current!==generation)return;await mergeTikTok(summary,start,end);if(current!==generation)return;paint(comparison);el('updated').textContent='Consultado às '+new Date().toLocaleTimeString('pt-BR');notice('');}catch(error){if(current===generation)notice('Últimos dados exibidos. '+error.message,'error');}if(current===generation)setTimeout(refreshCurrent,summary.refreshing?3000:60000);}
    setTimeout(refreshCurrent,summary.refreshing?3000:60000);
-   liveSummary(period.previous.slice(0,10),M.shift(start,-1)).then(async previous=>{await mergeShopee(previous,period.previous.slice(0,10),M.shift(start,-1));if(current===generation)paint(previous);}).catch(()=>{if(current===generation)notice('Dados atuais carregados. Comparação anterior indisponível.');});
+   liveSummary(period.previous.slice(0,10),M.shift(start,-1)).then(async previous=>{await mergeShopee(previous,period.previous.slice(0,10),M.shift(start,-1));await mergeTikTok(previous,period.previous.slice(0,10),M.shift(start,-1));if(current===generation)paint(previous);}).catch(()=>{if(current===generation)notice('Dados atuais carregados. Comparação anterior indisponível.');});
   }catch(error){if(current!==generation)return;reset(selected,'Dados indisponíveis');channelDetail(selected,null,'Dados indisponíveis. Tente novamente.');notice(error.message,'error');}finally{if(current===generation)el('results').setAttribute('aria-busy','false');}
  }
  const localLink=document.getElementById('local-shopee-link');if(localLink&&location.hostname==='127.0.0.1'&&location.port==='8879'){localLink.hidden=false;localLink.style.removeProperty('display');}
