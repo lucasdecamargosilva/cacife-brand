@@ -370,5 +370,5 @@
     target.append(wrap);
   }
 
-  root.CacifeShopee = { overview, render };
+  root.CacifeShopee = { overview, render, ensureStyle };
 })(window);

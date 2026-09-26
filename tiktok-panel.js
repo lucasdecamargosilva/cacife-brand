@@ -49,6 +49,7 @@
   const badge = (text, color) => { const e = n('span', 'shp-badge', text); e.style.color = color; e.style.background = color + '22'; return e; };
 
   function ensureStyle() {
+    if (root.CacifeShopee && root.CacifeShopee.ensureStyle) root.CacifeShopee.ensureStyle();
     if (document.getElementById('ttk-style')) return;
     // Reaproveita o CSS da Shopee (classes shp-*) e só troca a cor de destaque das abas.
     const css = `.ttk .shp-tab.on{color:${TT};border-bottom-color:${TT}} .ttk .shp-kpi{--accent:${TT}} .ttk-sync{margin-left:auto;background:${TT};color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8rem} .ttk-sync:disabled{opacity:.5;cursor:wait} .ttk-note{font-size:.78rem;color:var(--muted,#756582);padding:6px 2px}`;

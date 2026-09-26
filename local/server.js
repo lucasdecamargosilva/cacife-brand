@@ -99,7 +99,7 @@ function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-
   });
   app.use((req, res) => {
     const name = req.path.slice(1);
-    if (!(PUBLIC.has(name) || ['metricas-channel.js','metricas-marketplaces.js','shopee-panel.js','mercadolivre.html','mercadolivre.css','mercadolivre.js','ml-core.js','nuvemshop.html','nuvemshop.js','nuvemshop.css','ns-core.js','channel-logos.css','mercadolivre-logo.png','nuvemshop-logo.png'].includes(name)) || !['GET', 'HEAD'].includes(req.method)) return res.sendStatus(404);
+    if (!(PUBLIC.has(name) || ['metricas-channel.js','metricas-marketplaces.js','shopee-panel.js','tiktok-panel.js','mercadolivre.html','mercadolivre.css','mercadolivre.js','ml-core.js','nuvemshop.html','nuvemshop.js','nuvemshop.css','ns-core.js','channel-logos.css','mercadolivre-logo.png','nuvemshop-logo.png'].includes(name)) || !['GET', 'HEAD'].includes(req.method)) return res.sendStatus(404);
     res.sendFile(path.join(name.startsWith('shopee-local.') ? __dirname : ROOT, name));
   });
   app.use((error, req, res, next) => res.status(400).json({ error: error instanceof SyntaxError ? 'Solicitação inválida.' : error.message }));
