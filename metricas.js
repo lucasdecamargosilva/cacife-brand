@@ -161,6 +161,8 @@ document.addEventListener('DOMContentLoaded', async () => {
    const period=M.range(start,end),label=displayDate(start)+' – '+displayDate(end);el('period-label').textContent=label;el('header-period').textContent=label;el('date-menu').open=false;
    if(selected!=='all'&&!M.channels.find(c=>c.id===selected)?.available){notice('Este canal ainda não está configurado. É necessário autorizar a loja e sincronizar os pedidos.');reset(selected,'Aguardando conexão');channelDetail(selected,null,selected==='shopee'?'Aplicativo da Cacife em análise pela Shopee. Nenhum pedido real foi importado.':'Conexão ainda não configurada.');return;}
    if(!client)throw new Error('Configuração de acesso indisponível. Recarregue a página e entre novamente.');
+   // Shopee e TikTok Shop têm painel próprio (dados do servidor de produção): não dependem da Visão Geral (que só existe no servidor local).
+   if(selected==='shopee'||selected==='tiktokshop'){channelDetail(selected,null,null);notice('');el('updated').textContent='Consultado às '+new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo'});return;}
    if((new Date(end)-new Date(start))/86400000>=366)throw Error('Selecione até 366 dias por consulta.');
    notice('Consultando as integrações do Mercado Livre, Nuvemshop, Shopee e TikTok Shop…');let summary=await liveSummary(start,end);if(current!==generation)return;await mergeShopee(summary,start,end);if(current!==generation)return;await mergeTikTok(summary,start,end);if(current!==generation)return;
    let comparison=null;
