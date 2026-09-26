@@ -419,7 +419,9 @@ try {
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
             const r = await tiktok.exchange(code); tkLog({ step: 'ok', lojas: r.shops });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
-        } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) }); res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
+        } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) });
+            if (/Token salvo/.test(e.message)) return res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">🟡</div><h2>Autorização recebida!</h2><p>A chave da loja foi salva. Falta só liberar as permissões de API do app no Partner Center.<br>Pode fechar esta página.</p></div></body>');
+            res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
     // Fallback: trocar um auth_code obtido fora do redirect (ex.: exibido na tela do TikTok) — admin only.
     app.post('/api/tiktok/exchange', async (req, res) => {
