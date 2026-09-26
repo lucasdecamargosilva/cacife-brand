@@ -13,8 +13,8 @@ test('order identities include channel, and legacy null channel is Nuvemshop', (
     assert.equal(M.summarize(rows, 'nuvemshop').revenue, 12550);
 });
 test('unknown and unconfigured channels are excluded from the consolidated view', () => {
-    // nuvemshop e shopee são configurados; tiktokshop e canais desconhecidos ficam de fora
-    assert.equal(M.summarize([row(1), row(2, { channel: 'shopee' }), row(3, { channel: 'tiktokshop' }), row(4, { channel: 'other' })]).orders, 2);
+    // nuvemshop, shopee e tiktokshop são configurados; canais desconhecidos ficam de fora
+    assert.equal(M.summarize([row(1), row(2, { channel: 'shopee' }), row(3, { channel: 'tiktokshop' }), row(4, { channel: 'other' })]).orders, 3);
 });
 test('ambiguous duplicate orders and missing IDs stop aggregation', () => {
     assert.throws(() => M.summarize([row(1), row(1)]), /mais de uma linha/);
