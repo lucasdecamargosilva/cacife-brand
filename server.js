@@ -377,7 +377,7 @@ try {
     let tiktok = null;
     if (TIKTOK_APP_KEY && TIKTOK_APP_SECRET) {
         try {
-            tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }) });
+            tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }) });
             console.log('🎵 TikTok Shop ligado (service ' + TIKTOK_SERVICE_ID + ')');
         } catch (e) { console.error('TikTok init falhou:', e.message); }
     } else { console.log('🎵 TikTok Shop: aguardando TIKTOK_APP_KEY / TIKTOK_APP_SECRET no ambiente.'); }
@@ -414,7 +414,8 @@ try {
         try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
             const state = req.query.state;
-            if (!stateOk(state)) { tkLog({ step: 'state-invalido' }); return res.status(400).send('Autorização inválida ou expirada. Peça um novo link e tente de novo.'); }
+            if (state !== undefined && !stateOk(state)) { tkLog({ step: 'state-invalido' }); return res.status(400).send('Autorização inválida ou expirada. Peça um novo link e tente de novo.'); }
+            // Sem state = veio pelo link de autorização do próprio TikTok; a trava passa a ser a allowlist de lojas (TIKTOK_ALLOWED_SHOP_IDS).
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
             const r = await tiktok.exchange(code); tkLog({ step: 'ok', lojas: r.shops });

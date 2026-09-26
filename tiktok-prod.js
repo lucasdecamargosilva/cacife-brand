@@ -41,6 +41,7 @@ class TikTokProd {
     if (!db) throw new Error('Persistência (Supabase) não configurada.');
     Object.assign(this, { appKey, appSecret, serviceId, db, fetchImpl, now });
     this.fallbackShopId = arguments[0].fallbackShopId || null;
+    this.allowedShopIds = arguments[0].allowedShopIds || [];
     this.refreshes = new Map();
   }
 
@@ -66,15 +67,20 @@ class TikTokProd {
     try { shops = await this.getShops(d.access_token); }
     catch (e) {
       // Sem scope de Authorization o TikTok nega /shops. Guarda o token mesmo assim (shop_id de fallback) para não perder a chave.
-      const fallback = this.fallbackShopId || 'pending';
+      const fallback = (d.seller_name ? 'pending:' + String(d.seller_name).replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40) : (this.fallbackShopId || 'pending'));
       await this.db.saveToken({ shop_id: String(fallback), cipher: null, shop_name: '(scopes pendentes)', region: null,
         access_token: d.access_token, refresh_token: d.refresh_token || null,
         expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
         refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
         updated_at: new Date(now * 1000).toISOString() });
-      throw new Error('Token salvo, mas o app está sem permissões (scopes) no Partner Center: ' + e.message);
+      throw new Error('Token salvo (' + (d.seller_name || '?') + '), mas o app está sem permissões (scopes) no Partner Center: ' + e.message);
     }
     if (!shops.length) throw new Error('Nenhuma loja autorizada retornada pelo TikTok.');
+    if (this.allowedShopIds && this.allowedShopIds.length) {
+      const ok = shops.filter((s) => this.allowedShopIds.includes(String(s.id)));
+      if (!ok.length) throw new Error('Loja não permitida (' + shops.map((s) => s.id).join(',') + ').');
+      shops = ok;
+    }
     for (const s of shops) {
       await this.db.saveToken({
         shop_id: String(s.id), cipher: s.cipher || null, shop_name: s.name || null, region: s.region || null,
