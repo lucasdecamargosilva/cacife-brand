@@ -118,7 +118,9 @@ class TikTokProd {
     let shops = [];
     try { shops = await this.getShops(d.access_token); }
     catch (e) {
-      // Sem scope de Authorization o TikTok nega /shops. Guarda o token mesmo assim (shop_id de fallback) para não perder a chave.
+      // Sem scope de Authorization o TikTok nega /shops. Só guarda o token de fallback se não houver allowlist
+      // (com allowlist, a loja não pode ser verificada -> não persiste nada).
+      if (this.allowedShopIds && this.allowedShopIds.length) throw new Error('Loja não verificável (sem scope de autorização) — token não salvo: ' + e.message);
       const fallback = (d.seller_name ? 'pending:' + String(d.seller_name).replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40) : (this.fallbackShopId || 'pending'));
       await this.db.saveToken({ shop_id: String(fallback), cipher: null, shop_name: '(scopes pendentes)', region: null,
         access_token: d.access_token, refresh_token: d.refresh_token || null,
