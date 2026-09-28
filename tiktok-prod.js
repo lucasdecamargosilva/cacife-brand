@@ -66,7 +66,20 @@ function normalizeOrder(o, shopId) {
     cancel_reason: o.cancel_reason || null,
     region: (o.recipient_address && (o.recipient_address.region_code || (o.recipient_address.district_info && o.recipient_address.district_info[0] && o.recipient_address.district_info[0].address_name))) || null,
     items_count: Array.isArray(o.line_items) ? o.line_items.length : null,
+    ...buyerOf(o),
     created_at: tsIso(o.create_time), updated_at: tsIso(o.update_time) || tsIso(o.create_time), paid_at: tsIso(o.paid_time),
+  };
+}
+function buyerOf(o) {
+  const a = o.recipient_address || {}; const lv = {};
+  for (const d of (a.district_info || [])) if (d && d.address_level) lv[d.address_level] = d.address_name || null;
+  const pkg = (o.packages || [])[0] || {};
+  const nm = String(a.name || [a.first_name, a.last_name].filter(Boolean).join(' ') || '').trim().slice(0, 80);
+  return {
+    buyer_user_id: o.user_id ? String(o.user_id) : null, buyer_name: nm || null,
+    buyer_phone: a.phone_number ? String(a.phone_number).slice(0, 30) : null,
+    state: lv.L1 || null, city: lv.L2 || null,
+    tracking_number: o.tracking_number || pkg.tracking_number || null, shipping_provider: o.shipping_provider || pkg.shipping_provider_name || null,
   };
 }
 function itemsOf(o, shopId) {
@@ -307,6 +320,7 @@ class TikTokProd {
     let returns = 0; try { returns = await this.syncReturns(shopId, from, to); } catch (e) { /* complementar */ }
     let finance = null; try { finance = await this.syncFinance(shopId, from, to); } catch (e) { finance = { erro: String(e.message).slice(0, 120) }; }
     let stock = null; try { stock = await this.syncStock(shopId); } catch (e) { stock = { erro: String(e.message).slice(0, 120) }; }
+    try { Object.assign(finance || {}, await this.syncStatementDetails(shopId, 30)); } catch (e) { /* complementar */ }
     return { at: new Date(this.now() * 1000).toISOString(), count: saved, withSettlement, returns, finance, stock, from, to, field };
   }
 
@@ -328,6 +342,34 @@ class TikTokProd {
       }
     }
     return { statements, payments };
+  }
+
+  // Abre cada extrato ainda não detalhado e soma as taxas por tipo.
+  async syncStatementDetails(shopId, limit = 30) {
+    const esc = String(shopId).replace(/[^0-9]/g, '');
+    const pend = await this.db.query("select id from tiktok_statements where shop_id='" + esc + "' and not detalhado order by statement_time desc limit " + Math.max(1, Math.min(200, limit | 0)));
+    const A = (x, k) => Number(x[k] || 0);
+    let done = 0;
+    for (const { id } of pend) {
+      const t = { com_tiktok: 0, com_afiliados: 0, frete: 0, ajustes: 0, fee: 0 }; let pageToken = ''; const seen = new Set();
+      for (let pages = 0; pages < 60; pages++) {
+        const query = { page_size: 100, sort_field: 'order_create_time' }; if (pageToken) query.page_token = pageToken;
+        const d = await this.shopRequest(shopId, '/finance/202309/statements/' + encodeURIComponent(id) + '/statement_transactions', { query });
+        for (const x of (d && d.statement_transactions) || []) {
+          t.com_tiktok += A(x, 'platform_commission_amount') + A(x, 'referral_fee_amount') + A(x, 'transaction_fee_amount');
+          t.com_afiliados += A(x, 'affiliate_commission_amount') + A(x, 'affiliate_ads_commission_amount') + A(x, 'affiliate_partner_commission_amount');
+          t.fee += A(x, 'fee_amount');
+        }
+        if (pages === 0 && d) { t.frete = Number(d.shipping_cost_amount || 0); t.ajustes = Number(d.adjustment_amount || 0); t.feeTotal = Number(d.fee_amount || 0); }
+        pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
+      }
+      const r2 = (v) => Math.round(Math.abs(v) * 100) / 100;
+      const feeTot = t.feeTotal != null ? t.feeTotal : t.fee;
+      await this.db.upsertStatements([{ shop_id: String(shopId), id: String(id), com_tiktok: r2(t.com_tiktok), com_afiliados: r2(t.com_afiliados),
+        outras_taxas: r2(Math.min(0, feeTot - t.com_tiktok - t.com_afiliados)), frete: r2(Math.min(0, t.frete)), ajustes: Math.round(t.ajustes * 100) / 100, detalhado: true }]);
+      done++;
+    }
+    return { extratosDetalhados: done };
   }
 
   // Estoque atual de todas as variações (produtos ativos e esgotados).

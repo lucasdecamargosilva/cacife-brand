@@ -487,7 +487,10 @@ try {
             const qRet = "select count(*) n, round(coalesce(sum(refund_amount*100),0)) valor from tiktok_returns where " + per;
             const qStatus = "select coalesce(status,'?') status, count(*) n, round(coalesce(sum(total*100),0)) valor from tiktok_orders where " + per + " group by 1 order by n desc";
             const qRecent = "select id_pedido, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM HH24:MI') dt, coalesce(status,'?') status, coalesce(payment_status,'?') pay_status, coalesce(payment_method,'-') pay, round(coalesce(total*100,0)) total from tiktok_orders where " + per + " order by created_at desc limit 40";
-            const qDev = "select return_id, order_id, coalesce(status,'?') status, coalesce(reason,'-') reason, round(coalesce(refund_amount*100,0)) refund, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM') dt from tiktok_returns where " + per + " order by created_at desc limit 30";
+            const qDev = "select r.return_id, r.order_id, coalesce(r.status,'?') status, coalesce(r.reason,'-') reason, round(coalesce(r.refund_amount*100,0)) refund, to_char(r.created_at at time zone 'America/Sao_Paulo','DD/MM') dt, it.product_name, it.sku_name, it.image_url " +
+                "from tiktok_returns r left join lateral (select product_name, sku_name, image_url from tiktok_order_items i where i.shop_id=r.shop_id and i.id_pedido=r.order_id limit 1) it on true where " + per.replace(/shop_id=/g, 'r.shop_id=').replace(/created_at/g, 'r.created_at') + " order by r.created_at desc limit 30";
+            const qDevMot = "select coalesce(reason,'Sem motivo') reason, count(*) n from tiktok_returns where " + per + " group by 1 order by 2 desc limit 6";
+            const qDevSt = "select coalesce(status,'?') status, count(*) n from tiktok_returns where " + per + " group by 1";
             const qSync = "select to_char(max(updated_at) at time zone 'America/Sao_Paulo','DD/MM HH24:MI') last from tiktok_orders where " + (shopF ? shopF.replace(/ and $/, '') : 'true');
             const db = tiktok.db;
             const shopOnly = shopF ? shopF.replace(/ and $/, '') : 'true';
@@ -496,7 +499,11 @@ try {
             // Financeiro: o que caiu (depósitos), extratos do período, taxa média de repasse (últimos 30d) e o que falta cair.
             const qRecebido = "select round(coalesce(sum(amount*100),0)) v, count(*) n from tiktok_payments where status='PAID' and " + perPaid;
             const qRecDia = "select to_char((paid_time at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(amount*100),0)) c from tiktok_payments where status='PAID' and " + perPaid + " group by 1";
-            const qExtr = "select round(coalesce(sum(revenue*100),0)) rev, round(coalesce(sum(settlement*100),0)) settle, round(coalesce(sum(fee*100),0)) fee from tiktok_statements where " + perStmt;
+            const qExtr = "select round(coalesce(sum(revenue*100),0)) rev, round(coalesce(sum(settlement*100),0)) settle, round(coalesce(sum(fee*100),0)) fee, " +
+                "round(coalesce(sum(com_tiktok*100) filter (where detalhado),0)) com_tiktok, round(coalesce(sum(com_afiliados*100) filter (where detalhado),0)) com_afiliados, round(coalesce(sum(outras_taxas*100) filter (where detalhado),0)) outras, " +
+                "round(coalesce(sum(frete*100) filter (where detalhado),0)) frete, round(coalesce(sum(ajustes*100) filter (where detalhado),0)) ajustes, count(*) n, count(*) filter (where detalhado) n_det from tiktok_statements where " + perStmt;
+            const qExtrList = "select to_char(statement_time at time zone 'America/Sao_Paulo','DD/MM/YYYY') dt, round(coalesce(revenue*100,0)) rev, round(coalesce(com_tiktok*100,0)) com_tiktok, round(coalesce(com_afiliados*100,0)) com_afiliados, " +
+                "round(coalesce(frete*100,0)) frete, round(coalesce(outras_taxas*100,0)) outras, round(coalesce(fee*100,0)) fee, round(coalesce(settlement*100,0)) settle, coalesce(payment_status,'?') status, detalhado from tiktok_statements where " + perStmt + " order by statement_time desc limit 15";
             const qTaxa = "select coalesce(sum(settlement)/nullif(sum(revenue),0),0) r from tiktok_statements where " + shopOnly + " and statement_time >= now() - interval '30 days'";
             const qPendConf = "select round(coalesce(sum(settlement*100),0)) v, count(*) n, to_char(min(statement_time) at time zone 'America/Sao_Paulo','DD/MM') desde from tiktok_statements where " + shopOnly + " and coalesce(payment_status,'') <> 'PAID'";
             const qPendEst = "select case when status in ('DELIVERED','COMPLETED') then 'entregue' when status in ('IN_TRANSIT','AWAITING_COLLECTION','PARTIALLY_SHIPPING') then 'transito' else 'aguardando' end grupo, count(*) n, round(coalesce(sum(total*100),0)) bruto " +
@@ -505,11 +512,12 @@ try {
             // Estoque: quantidade por variação x velocidade de venda (unidades pagas nos últimos 30 dias).
             const qEstoque = "with vend as (select i.sku_id, sum(i.qty) u30 from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido " +
                 "where o.payment_status='paid' and o.created_at >= now() - interval '30 days' and " + shopOnly.replace(/shop_id=/g, 'o.shop_id=') + " group by 1) " +
-                "select s.sku_id, s.title, s.seller_sku, coalesce(s.qty,0) qty, coalesce(v.u30,0) u30, " +
+                ", nm as (select distinct on (sku_id) sku_id, sku_name, image_url from tiktok_order_items where " + shopOnly + " and sku_id is not null order by sku_id, (sku_name is null), (image_url is null)) " +
+                "select s.sku_id, s.title, s.seller_sku, nm.sku_name, coalesce(nm.image_url, p.image_url) img, coalesce(s.qty,0) qty, coalesce(v.u30,0) u30, " +
                 "case when coalesce(v.u30,0) > 0 then round(coalesce(s.qty,0) / (v.u30/30.0), 1) else null end dias " +
-                "from tiktok_skus s left join vend v on v.sku_id=s.sku_id where " + shopOnly.replace(/shop_id=/g, 's.shop_id=') + " and s.status='ACTIVATE'";
-            const [base, days, rank, pay, ship, ret, sts, recent, dev, last, recebido, recDia, extr, taxa, pendConf, pendEst, depositos, estoque] = await Promise.all([db.query(q1), db.query(qDay), db.query(qRank), db.query(qPay), db.query(qShip), db.query(qRet), db.query(qStatus), db.query(qRecent), db.query(qDev), db.query(qSync),
-                db.query(qRecebido), db.query(qRecDia), db.query(qExtr), db.query(qTaxa), db.query(qPendConf), db.query(qPendEst), db.query(qDepositos), db.query(qEstoque)]);
+                "from tiktok_skus s left join vend v on v.sku_id=s.sku_id left join nm on nm.sku_id=s.sku_id left join tiktok_products p on p.shop_id=s.shop_id and p.product_id=s.product_id where " + shopOnly.replace(/shop_id=/g, 's.shop_id=') + " and s.status='ACTIVATE'";
+            const [base, days, rank, pay, ship, ret, sts, recent, dev, last, recebido, recDia, extr, taxa, pendConf, pendEst, depositos, estoque, devMot, devSt, extrList] = await Promise.all([db.query(q1), db.query(qDay), db.query(qRank), db.query(qPay), db.query(qShip), db.query(qRet), db.query(qStatus), db.query(qRecent), db.query(qDev), db.query(qSync),
+                db.query(qRecebido), db.query(qRecDia), db.query(qExtr), db.query(qTaxa), db.query(qPendConf), db.query(qPendEst), db.query(qDepositos), db.query(qEstoque), db.query(qDevMot), db.query(qDevSt), db.query(qExtrList)]);
             const b = base[0] || {}; const N = (v) => Math.round(Number(v) || 0);
             const revenue = N(b.revenue), paid = N(b.paid);
             const byDay = {}; for (const r of days) byDay[r.d] = N(r.c);
@@ -524,7 +532,9 @@ try {
                 devolucoes: { n: N(ret[0] && ret[0].n), valor: N(ret[0] && ret[0].valor) },
                 porStatus: sts.map((r) => ({ status: r.status, n: N(r.n), valor: N(r.valor) })),
                 recentes: recent.map((r) => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total) })),
-                devList: dev.map((r) => ({ return_id: r.return_id, order_id: r.order_id, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt })),
+                devList: dev.map((r) => ({ return_id: r.return_id, order_id: r.order_id, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt, produto: r.product_name || null, variacao: r.sku_name || null, img: r.image_url || null })),
+                devMotivos: devMot.map((r) => ({ reason: r.reason, n: N(r.n) })),
+                devStatus: devSt.map((r) => ({ status: r.status, n: N(r.n) })),
                 financeiro: (() => {
                     const r = Number(taxa[0] && taxa[0].r) || 0;
                     const grupos = { entregue: { n: 0, bruto: 0 }, transito: { n: 0, bruto: 0 }, aguardando: { n: 0, bruto: 0 } };
@@ -533,7 +543,9 @@ try {
                     const recDay = {}; for (const x of recDia) recDay[x.d] = N(x.c);
                     return {
                         recebido: N(recebido[0] && recebido[0].v), depositos: N(recebido[0] && recebido[0].n), recebidoPorDia: recDay,
-                        extratos: { bruto: N(extr[0] && extr[0].rev), repasse: N(extr[0] && extr[0].settle), taxas: N(extr[0] && extr[0].fee) },
+                        extratos: { bruto: N(extr[0] && extr[0].rev), repasse: N(extr[0] && extr[0].settle), taxas: N(extr[0] && extr[0].fee),
+                            detalhe: { comTiktok: N(extr[0] && extr[0].com_tiktok), comAfiliados: N(extr[0] && extr[0].com_afiliados), outras: N(extr[0] && extr[0].outras), frete: N(extr[0] && extr[0].frete), ajustes: N(extr[0] && extr[0].ajustes), n: N(extr[0] && extr[0].n), nDetalhados: N(extr[0] && extr[0].n_det) } },
+                        lista: extrList.map((x) => ({ dt: x.dt, bruto: N(x.rev), comTiktok: N(x.com_tiktok), comAfiliados: N(x.com_afiliados), frete: N(x.frete), outras: N(x.outras), taxas: N(x.fee), liquido: N(x.settle), status: x.status, detalhado: !!x.detalhado })),
                         taxaRepasse: Math.round(r * 1000) / 10,
                         aReceberConfirmado: { v: N(pendConf[0] && pendConf[0].v), n: N(pendConf[0] && pendConf[0].n), desde: pendConf[0] && pendConf[0].desde },
                         aReceberEstimado: {
@@ -546,13 +558,87 @@ try {
                     };
                 })(),
                 estoque: (() => {
-                    const rows = estoque.map((x) => ({ sku: x.sku_id, title: x.title, seller_sku: x.seller_sku, qty: N(x.qty), u30: N(x.u30), dias: x.dias == null ? null : Number(x.dias) }));
+                    const rows = estoque.map((x) => ({ sku: x.sku_id, title: x.title, seller_sku: x.seller_sku, variacao: x.sku_name || null, img: x.img || null, qty: N(x.qty), u30: N(x.u30), dias: x.dias == null ? null : Number(x.dias) }));
                     const esgotados = rows.filter((x) => x.qty <= 0 && x.u30 > 0).sort((a, b) => b.u30 - a.u30);
                     const criticos = rows.filter((x) => x.qty > 0 && x.dias != null && x.dias <= 10).sort((a, b) => a.dias - b.dias);
                     return { skus: rows.length, semEstoque: rows.filter((x) => x.qty <= 0).length, esgotados: esgotados.slice(0, 30), criticos: criticos.slice(0, 30), nEsgotadosVendendo: esgotados.length, nCriticos: criticos.length };
                 })(),
             });
         } catch (e) { console.error('TikTok overview:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    // Nome do comprador abreviado ("Ana L.") — o painel não precisa do nome completo.
+    const nomeCurto = (nm) => { const p = String(nm || '').trim().split(/\s+/).filter(Boolean); if (!p.length) return null; const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); return p.length > 1 ? cap(p[0]) + ' ' + p[p.length - 1].charAt(0).toUpperCase() + '.' : cap(p[0]); };
+    const GRUPOS_TT = { aguardando: "('AWAITING_SHIPMENT','ON_HOLD')", transito: "('IN_TRANSIT','AWAITING_COLLECTION','PARTIALLY_SHIPPING')", entregue: "('DELIVERED','COMPLETED')", cancelado: "('CANCELLED')", naopago: "('UNPAID')" };
+    const periodoTT = (req) => { const re = /^\d{4}-\d{2}-\d{2}$/; const { start, end } = req.query; if (!re.test(start || '') || !re.test(end || '') || start > end) return null; return { start, end, lo: "'" + start + " 00:00:00-03'", hi: "('" + end + " 00:00:00-03'::timestamptz + interval '1 day')" }; };
+
+    app.get('/api/tiktok/orders', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!requireTiktok(res)) return;
+        try {
+            const p = periodoTT(req); if (!p) return res.status(400).json({ error: 'período inválido' });
+            const grupo = String(req.query.grupo || ''); if (grupo && !GRUPOS_TT[grupo]) return res.status(400).json({ error: 'filtro inválido' });
+            const q = String(req.query.q || '').trim().slice(0, 40).replace(/[^0-9A-Za-zÀ-ÿ .-]/g, '');
+            const page = Math.max(1, Math.min(2000, parseInt(req.query.page, 10) || 1));
+            const shop = String(await tiktokShopId()).replace(/[^0-9]/g, '');
+            const base = "o.shop_id='" + shop + "' and o.created_at >= " + p.lo + " and o.created_at < " + p.hi;
+            let where = base + (grupo ? ' and o.status in ' + GRUPOS_TT[grupo] : '');
+            if (q) where += /^\d{6,}$/.test(q) ? " and o.id_pedido like '%" + q + "%'" : " and o.buyer_name ilike '%" + q.replace(/[%_]/g, '') + "%'";
+            const db = tiktok.db; const N = (v) => Math.round(Number(v) || 0);
+            const [cnt, tot, rows] = await Promise.all([
+                db.query("select case when status in " + GRUPOS_TT.aguardando + " then 'aguardando' when status in " + GRUPOS_TT.transito + " then 'transito' when status in " + GRUPOS_TT.entregue + " then 'entregue' when status in " + GRUPOS_TT.cancelado + " then 'cancelado' else 'naopago' end g, count(*) n from tiktok_orders o where " + base + " group by 1"),
+                db.query("select count(*) n from tiktok_orders o where " + where),
+                db.query("select o.id_pedido, to_char(o.created_at at time zone 'America/Sao_Paulo','DD/MM/YYYY HH24:MI') dt, o.status, o.payment_status, o.payment_method, round(coalesce(o.total*100,0)) total, " +
+                    "round(o.settlement_amount*100) repasse, o.buyer_name, o.buyer_phone, o.city, o.state, o.tracking_number, o.shipping_provider, o.items_count, it.product_name, it.sku_name, it.image_url " +
+                    "from tiktok_orders o left join lateral (select product_name, sku_name, image_url from tiktok_order_items i where i.shop_id=o.shop_id and i.id_pedido=o.id_pedido limit 1) it on true where " + where + " order by o.created_at desc limit 10 offset " + ((page - 1) * 10)),
+            ]);
+            const contagem = { todos: 0 }; for (const r of cnt) { contagem[r.g] = N(r.n); contagem.todos += N(r.n); }
+            res.json({ total: N(tot[0] && tot[0].n), page, contagem, pedidos: rows.map((r) => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.payment_status, metodo: r.payment_method || null, total: N(r.total),
+                repasse: r.repasse == null ? null : N(r.repasse), cliente: nomeCurto(r.buyer_name), telefone: r.buyer_phone || null, cidade: [r.city, r.state].filter(Boolean).join(' / ') || null,
+                rastreio: r.tracking_number || null, transportadora: r.shipping_provider || null, itens: N(r.items_count) || 1, produto: r.product_name || null, variacao: r.sku_name || null, img: r.image_url || null })) });
+        } catch (e) { console.error('TikTok orders:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    app.get('/api/tiktok/products', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!requireTiktok(res)) return;
+        try {
+            const p = periodoTT(req); if (!p) return res.status(400).json({ error: 'período inválido' });
+            const shop = String(await tiktokShopId()).replace(/[^0-9]/g, '');
+            const per = "o.shop_id='" + shop + "' and o.payment_status='paid' and o.created_at >= " + p.lo + " and o.created_at < " + p.hi;
+            const db = tiktok.db; const N = (v) => Math.round(Number(v) || 0);
+            const [prods, daily, tops] = await Promise.all([
+                db.query("select coalesce(i.product_id,'0') id, max(i.product_name) title, coalesce(max(pr.image_url), max(i.image_url)) img, sum(i.qty)::int units, count(distinct i.id_pedido) pedidos, round(sum(i.price*i.qty)*100)::bigint gmv " +
+                    "from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido left join tiktok_products pr on pr.shop_id=i.shop_id and pr.product_id=i.product_id where " + per + " group by 1 order by gmv desc limit 60"),
+                db.query("select coalesce(i.product_id,'0') id, to_char((o.created_at at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(sum(i.price*i.qty)*100)::bigint v " +
+                    "from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido where " + per + " group by 1,2"),
+                db.query("select distinct on (id) id, sku_name, u from (select coalesce(i.product_id,'0') id, i.sku_name, sum(i.qty) u from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido where " + per + " group by 1,2) t order by id, u desc"),
+            ]);
+            const dias = []; for (let d = new Date(p.start + 'T12:00:00Z'); d <= new Date(p.end + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1)) dias.push(d.toISOString().slice(0, 10));
+            const serie = {}; for (const r of daily) { (serie[r.id] = serie[r.id] || {})[r.d] = N(r.v); }
+            const topSku = {}; for (const r of tops) topSku[r.id] = r.sku_name;
+            res.json({ dias: dias.length, produtos: prods.map((r) => ({ id: r.id, title: r.title || 'Produto', img: r.img || null, units: N(r.units), pedidos: N(r.pedidos), gmv: N(r.gmv), variacaoTop: topSku[r.id] || null,
+                porDia: dias.length <= 120 ? dias.map((d) => (serie[r.id] || {})[d] || 0) : [] })) });
+        } catch (e) { console.error('TikTok products:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    app.get('/api/tiktok/chat/customer', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!requireTiktok(res)) return;
+        const uid = String(req.query.user_id || ''); if (!/^\d{5,30}$/.test(uid)) return res.status(400).json({ error: 'cliente inválido' });
+        try {
+            const shop = String(await tiktokShopId()).replace(/[^0-9]/g, '');
+            const db = tiktok.db; const N = (v) => Math.round(Number(v) || 0);
+            const w = "o.shop_id='" + shop + "' and o.buyer_user_id='" + uid + "'";
+            const [agg, last] = await Promise.all([
+                db.query("select count(*) n, count(*) filter (where payment_status='paid') pagos, round(coalesce(sum(total*100) filter (where payment_status='paid'),0)) gasto, to_char(min(created_at) at time zone 'America/Sao_Paulo','DD/MM/YYYY') desde from tiktok_orders o where " + w),
+                db.query("select o.id_pedido, to_char(o.created_at at time zone 'America/Sao_Paulo','DD/MM/YYYY HH24:MI') dt, o.status, round(coalesce(o.total*100,0)) total, o.buyer_name, o.city, o.state, o.tracking_number, o.shipping_provider, it.product_name, it.sku_name, it.image_url " +
+                    "from tiktok_orders o left join lateral (select product_name, sku_name, image_url from tiktok_order_items i where i.shop_id=o.shop_id and i.id_pedido=o.id_pedido limit 1) it on true where " + w + " order by o.created_at desc limit 3"),
+            ]);
+            const a = agg[0] || {}; const l = last[0];
+            res.json({ pedidos: N(a.n), pagos: N(a.pagos), gasto: N(a.gasto), desde: a.desde || null, nome: l ? nomeCurto(l.buyer_name) : null, cidade: l ? [l.city, l.state].filter(Boolean).join(' / ') || null : null,
+                ultimos: last.map((r) => ({ id: r.id_pedido, dt: r.dt, status: r.status, total: N(r.total), rastreio: r.tracking_number || null, transportadora: r.shipping_provider || null, produto: r.product_name || null, variacao: r.sku_name || null, img: r.image_url || null })) });
+        } catch (e) { console.error('TikTok chat customer:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
     // Insights (app 2): desempenho da loja, top produtos, top vídeos e criadores — com imagens. Cache de 10 min por período.
@@ -602,13 +688,14 @@ try {
             const N = (v) => Math.round(Number(v) || 0);
             const data = {
                 shop: iv ? {
-                    gmv: cents(iv.gmv), orders: N(iv.orders), units: N(iv.units_sold), visitors: N(iv.avg_product_page_visitors), pageViews: N(iv.product_page_views), impressions: N(iv.product_impressions),
+                    gmv: cents(iv.gmv), orders: N(iv.orders), units: N(iv.units_sold), visitors: N(iv.avg_product_page_visitors), buyers: N(iv.buyers), pageViews: N(iv.product_page_views), impressions: N(iv.product_impressions),
                     ticket: cents(iv.avg_order_value), refunds: cents(iv.refunds), cancellations: N(iv.cancellations_and_returns),
                     conversao: iv.product_page_views ? Math.round(N(iv.orders) / N(iv.product_page_views) * 10000) / 100 : 0,
                     gmvPor: brk(iv.gmv_breakdowns), viewsPor: brk(iv.product_page_view_breakdowns), imprPor: brk(iv.product_impression_breakdowns),
                 } : null,
                 disponivelAte: perf && perf.latest_available_date || null,
                 porDia: ((daily && daily.performance && daily.performance.intervals) || []).reduce((o, x) => { o[x.start_date] = cents(x.gmv); return o; }, {}),
+                porDiaVisitas: ((daily && daily.performance && daily.performance.intervals) || []).reduce((o, x) => { o[x.start_date] = { visitantes: N(x.avg_product_page_visitors), pedidos: N(x.orders), compradores: N(x.buyers), views: N(x.product_page_views) }; return o; }, {}),
                 produtos: prods.map((p) => ({ id: String(p.id), title: (imgs[String(p.id)] || {}).title || 'Produto', img: (imgs[String(p.id)] || {}).img || null, gmv: cents(p.gmv), orders: N(p.orders), units: N(p.units_sold), ctr: Math.round(Number(p.click_through_rate || 0) * 10000) / 100 })),
                 videos: vids.videos.map((v) => { const pid = v.products && v.products[0] && String(v.products[0].id); return { id: String(v.id), title: v.title || '', user: v.username || '', views: N(v.views), gmv: cents(v.gmv), units: N(v.units_sold), ctr: Math.round(Number(v.click_through_rate || 0) * 10000) / 100, postado: v.video_post_time || null, produto: pid ? ((imgs[pid] || {}).title || (v.products[0].name || '')) : '', img: pid ? (imgs[pid] || {}).img || null : null, url: 'https://www.tiktok.com/@' + encodeURIComponent(v.username || '') + '/video/' + v.id }; }),
                 totalVideos: vids.total,
