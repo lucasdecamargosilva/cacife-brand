@@ -35,7 +35,7 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch }) {
     async upsertReturns(rows) { if (rows.length) await rest('tiktok_returns?on_conflict=shop_id,return_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async seenWebhook(id) { const r = await rest('tiktok_webhook_events?notification_id=eq.' + encodeURIComponent(id) + '&select=notification_id'); return Boolean(r && r.length); },
     async logWebhook(row) { await rest('tiktok_webhook_events?on_conflict=notification_id', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row) }); },
-    async pendingSettlement(shopId, limit = 40) { return (await rest('tiktok_orders?shop_id=eq.' + encodeURIComponent(shopId) + '&payment_status=eq.paid&settlement_synced=eq.false&select=id_pedido&order=created_at.desc&limit=' + limit)) || []; },
+    async pendingSettlement(shopId, limit = 40) { return (await rest('tiktok_orders?shop_id=eq.' + encodeURIComponent(shopId) + '&payment_status=eq.paid&settlement_synced=eq.false&created_at=lt.' + encodeURIComponent(new Date(Date.now() - 5 * 86400000).toISOString()) + '&select=id_pedido&order=created_at.asc&limit=' + limit)) || []; },
     async query(sql) { const r = await fetchImpl(`${url}/pg/query`, { method: 'POST', headers, body: JSON.stringify({ query: sql }) }); if (!r.ok) throw new Error(`Consulta HTTP ${r.status}`); return r.json(); },
   };
 }
@@ -230,7 +230,7 @@ class TikTokProd {
     const d = await this.shopRequest(shopId, '/finance/202309/orders/' + encodeURIComponent(orderId) + '/statement_transactions');
     const txs = (d && (d.statement_transactions || d.transactions)) || (d && d.order_id ? [d] : []);
     let settlement = 0, fee = 0, any = false;
-    for (const x of txs) { any = true; settlement += Number(x.settlement_amount || 0); fee += Number(x.fee_amount || 0); }
+    for (const x of txs) { any = true; settlement += Number(x.settlement_amount || 0); fee += Math.abs(Number(x.fee_amount || 0)); }
     if (!any) return null;
     return { shop_id: String(shopId), id_pedido: String(orderId), settlement_amount: Math.round(settlement * 100) / 100, fee_amount: Math.round(fee * 100) / 100, settlement_synced: true };
   }
