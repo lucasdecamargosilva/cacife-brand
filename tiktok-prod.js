@@ -391,7 +391,7 @@ class TikTokProd {
     return this.shopRequest(shopId, '/customer_service/202309/conversations', { query });
   }
   async chatMessages(shopId, conversationId) {
-    return this.shopRequest(shopId, '/customer_service/202309/conversations/' + encodeURIComponent(conversationId) + '/messages', { query: { page_size: 30 } });
+    return this.shopRequest(shopId, '/customer_service/202309/conversations/' + encodeURIComponent(conversationId) + '/messages', { query: { page_size: 10 } });
   }
   async chatSend(shopId, conversationId, text) {
     return this.shopRequest(shopId, '/customer_service/202309/conversations/' + encodeURIComponent(conversationId) + '/messages', { body: { type: 'TEXT', content: JSON.stringify({ content: String(text).slice(0, 2000) }) } });

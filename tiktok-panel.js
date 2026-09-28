@@ -298,7 +298,7 @@
     return box;
   }
 
-  const cur = () => [document.getElementById('start')?.value, document.getElementById('end')?.value];
+  const cur = () => [(document.getElementById('metrics-start') || document.getElementById('start'))?.value, (document.getElementById('metrics-end') || document.getElementById('end'))?.value];
   function asyncSection(build) {
     const box = n('div', 'shp-wrap'); const [s, e] = cur();
     box.append(n('p', 'cap', 'Carregando dados do TikTok Shop…'));
