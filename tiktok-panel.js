@@ -193,7 +193,69 @@
     box.append(lst); return box;
   }
 
-  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes]];
+  function secFinanceiro(data) {
+    const box = n('div', 'shp-wrap'); const f = data.financeiro;
+    if (!f) { box.append(n('p', 'cap', 'Sem dados financeiros.')); return box; }
+    const e = f.aReceberEstimado || {};
+    const kp = n('div', 'shp-kpis');
+    kp.append(
+      kpi('Caiu na conta', brl(f.recebido), num(f.depositos) + ' depósitos no período', GREEN),
+      kpi('Repasse do período', brl(f.extratos.repasse), 'extratos do TikTok', '#06b6d4'),
+      kpi('Taxas do período', brl(f.extratos.taxas), f.extratos.bruto > 0 ? (f.extratos.taxas / f.extratos.bruto * 100).toFixed(1) + '% do bruto' : '—', AMBER),
+      kpi('A receber (estimado)', brl(e.total), 'pedidos pagos ainda não liquidados', TT),
+      kpi('Taxa de repasse', (f.taxaRepasse || 0).toLocaleString('pt-BR') + '%', 'quanto sobra do bruto (30 dias)', BLUE),
+    );
+    box.append(kp);
+    const cols = n('div', 'shp-cols');
+    const quando = panel('Quando vai cair', 'O TikTok paga todo dia. O repasse sai depois que o pedido é entregue.');
+    const linhas = [
+      ['Pedidos entregues', 'cai nos próximos dias', e.entregue, GREEN],
+      ['Pedidos em trânsito', 'cai depois da entrega', e.transito, BLUE],
+      ['Aguardando envio', 'cai depois de enviar e entregar', e.aguardando, AMBER],
+    ];
+    for (const [lbl, sub, g, cor] of linhas) {
+      const row = n('div', 'shp-hbar'); const top = n('div', 'hb-top');
+      const left = n('span'); left.append(n('b', '', lbl + ' '), n('span', 'cap', '· ' + num(g && g.n) + ' pedidos · ' + sub));
+      top.append(left, n('strong', '', brl(g && g.v)));
+      const tr = n('div', 'hb-track'); const fl = n('div', 'hb-fill'); fl.style.width = (e.total > 0 ? (g && g.v || 0) / e.total * 100 : 0) + '%'; fl.style.background = cor; tr.append(fl);
+      row.append(top, tr); quando.append(row);
+    }
+    if (f.aReceberConfirmado && f.aReceberConfirmado.v > 0) quando.append(n('p', 'cap', 'Já confirmado pelo TikTok (extratos ainda não pagos): ' + brl(f.aReceberConfirmado.v) + ' desde ' + (f.aReceberConfirmado.desde || '—') + '.'));
+    quando.append(n('p', 'cap', 'Estimativa = valor dos pedidos × taxa média de repasse dos últimos 30 dias (' + (f.taxaRepasse || 0).toLocaleString('pt-BR') + '%).'));
+    const dep = panel('Últimos depósitos', 'Pagamentos do TikTok para a conta da loja.');
+    dep.append(table([{ t: 'Data' }, { t: 'Status' }, { t: 'Valor', r: true }], (f.ultimosDepositos || []).map((d) => [d.dt || '—', { node: badge(d.status === 'PAID' ? 'Pago' : (d.status || '—'), d.status === 'PAID' ? GREEN : AMBER) }, { r: true, t: brl(d.v) }])));
+    cols.append(quando, dep); box.append(cols);
+    const ch = panel('Depósitos por dia', 'Valor que caiu na conta em cada dia do período (R$).'); ch.append(salesChart(f.recebidoPorDia || {})); box.append(ch);
+    return box;
+  }
+  function secEstoque(data) {
+    const box = n('div', 'shp-wrap'); const s = data.estoque;
+    if (!s) { box.append(n('p', 'cap', 'Sem dados de estoque.')); return box; }
+    const kp = n('div', 'shp-kpis');
+    kp.append(
+      kpi('Variações ativas', num(s.skus), 'produtos × cores/modelos', BLUE),
+      kpi('Esgotados que vendem', num(s.nEsgotadosVendendo), 'sem estoque e com venda em 30 dias', RED),
+      kpi('Acabando (até 10 dias)', num(s.nCriticos), 'no ritmo atual de vendas', AMBER),
+      kpi('Sem estoque (total)', num(s.semEstoque), 'variações zeradas', '#94a3b8'),
+    );
+    box.append(kp);
+    const lista = (rows, titulo, cap, esgot) => {
+      const p = panel(titulo, cap);
+      const body = rows.map((x) => [
+        { node: (() => { const d = n('div'); const b = n('b', '', x.title || 'Produto'); b.style.cssText = 'display:block;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; b.title = x.title || ''; d.append(b, n('span', 'cap', x.seller_sku || '')); return d; })() },
+        { r: true, t: num(x.qty) }, { r: true, t: num(x.u30) },
+        { node: badge(esgot ? 'Esgotado' : (x.dias <= 3 ? 'Acaba em ' + x.dias + ' d' : 'Acaba em ' + x.dias + ' d'), esgot || x.dias <= 3 ? RED : AMBER) },
+      ]);
+      p.append(table([{ t: 'Produto / SKU' }, { t: 'Estoque', r: true }, { t: 'Vendas 30d', r: true }, { t: 'Situação' }], body));
+      if (!rows.length) p.append(n('p', 'cap', esgot ? 'Nenhum produto esgotado com venda recente. 🎉' : 'Nenhum produto acabando nos próximos 10 dias.'));
+      return p;
+    };
+    box.append(lista(s.esgotados || [], 'Esgotados que estão vendendo', 'Repor com prioridade: venderam nos últimos 30 dias e estão zerados.', true));
+    box.append(lista(s.criticos || [], 'Acabando em breve', 'Dias restantes = estoque ÷ média diária de vendas dos últimos 30 dias.', false));
+    return box;
+  }
+
+  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes], ['Financeiro', secFinanceiro], ['Estoque', secEstoque]];
 
   function render(target, data, state, onSync) {
     ensureStyle();

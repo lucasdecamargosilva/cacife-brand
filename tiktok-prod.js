@@ -35,6 +35,9 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch }) {
     async upsertReturns(rows) { if (rows.length) await rest('tiktok_returns?on_conflict=shop_id,return_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async seenWebhook(id) { const r = await rest('tiktok_webhook_events?notification_id=eq.' + encodeURIComponent(id) + '&select=notification_id'); return Boolean(r && r.length); },
     async logWebhook(row) { await rest('tiktok_webhook_events?on_conflict=notification_id', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify(row) }); },
+    async upsertStatements(rows) { if (rows.length) await rest('tiktok_statements?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
+    async upsertPayments(rows) { if (rows.length) await rest('tiktok_payments?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
+    async upsertSkus(rows) { if (rows.length) await rest('tiktok_skus?on_conflict=shop_id,sku_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async pendingSettlement(shopId, limit = 40) { return (await rest('tiktok_orders?shop_id=eq.' + encodeURIComponent(shopId) + '&payment_status=eq.paid&settlement_synced=eq.false&created_at=lt.' + encodeURIComponent(new Date(Date.now() - 5 * 86400000).toISOString()) + '&select=id_pedido&order=created_at.asc&limit=' + limit)) || []; },
     async query(sql) { const r = await fetchImpl(`${url}/pg/query`, { method: 'POST', headers, body: JSON.stringify({ query: sql }) }); if (!r.ok) throw new Error(`Consulta HTTP ${r.status}`); return r.json(); },
   };
@@ -83,6 +86,27 @@ function normalizeReturn(r, shopId) {
     refund_amount: money(total), currency: amt.currency || 'BRL',
     created_at: tsIso(r.create_time),
   };
+}
+function normalizeStatement(x, shopId) {
+  return {
+    shop_id: String(shopId), id: String(x.id), statement_time: tsIso(x.statement_time), payment_status: x.payment_status || null,
+    payment_id: x.payment_id ? String(x.payment_id) : null, payment_time: tsIso(x.payment_time),
+    revenue: money(x.revenue_amount), settlement: money(x.settlement_amount), fee: money(Math.abs(Number(x.fee_amount || 0))), currency: x.currency || 'BRL',
+  };
+}
+function normalizePayment(p, shopId) {
+  const v = (o) => (o && o.value != null ? money(o.value) : null);
+  return {
+    shop_id: String(shopId), id: String(p.id), status: p.status || null, amount: v(p.amount), reserve: v(p.reserve_amount),
+    currency: (p.amount && p.amount.currency) || 'BRL', create_time: tsIso(p.create_time), paid_time: tsIso(p.paid_time),
+  };
+}
+function skusOf(prod, shopId) {
+  return (prod.skus || []).map((s) => ({
+    shop_id: String(shopId), sku_id: String(s.id), product_id: String(prod.id), title: prod.title || null, seller_sku: s.seller_sku || null,
+    qty: (s.inventory || []).reduce((a, i) => a + (Number(i.quantity) || 0), 0),
+    price: money(s.price && (s.price.sale_price || s.price.tax_exclusive_price)), status: prod.status || null, updated_at: new Date().toISOString(),
+  }));
 }
 // Assinatura do webhook: HMAC-SHA256(app_secret, app_key + corpo cru), hex minúsculo, no header Authorization.
 function webhookSignature(appKey, appSecret, rawBody) { return createHmac('sha256', appSecret).update(appKey + rawBody).digest('hex'); }
@@ -264,7 +288,42 @@ class TikTokProd {
       for (const p of pend) { try { const s = await this.fetchSettlement(shopId, p.id_pedido); if (s) { await this.db.upsertOrders([s]); withSettlement++; } } catch (e) { /* tenta no próximo sync */ } }
     } catch (e) { /* financeiro é complementar */ }
     let returns = 0; try { returns = await this.syncReturns(shopId, from, to); } catch (e) { /* complementar */ }
-    return { at: new Date(this.now() * 1000).toISOString(), count: saved, withSettlement, returns, from, to, field };
+    let finance = null; try { finance = await this.syncFinance(shopId, from, to); } catch (e) { finance = { erro: String(e.message).slice(0, 120) }; }
+    let stock = null; try { stock = await this.syncStock(shopId); } catch (e) { stock = { erro: String(e.message).slice(0, 120) }; }
+    return { at: new Date(this.now() * 1000).toISOString(), count: saved, withSettlement, returns, finance, stock, from, to, field };
+  }
+
+  // Extratos diários (o que o TikTok liquida) + pagamentos (o que caiu na conta) numa janela.
+  async syncFinance(shopId, from, to) {
+    let statements = 0, payments = 0;
+    for (const [path, list, key, norm, save, q] of [
+      ['/finance/202309/statements', 'statements', 'statement_time', normalizeStatement, 'upsertStatements', { statement_time_ge: from, statement_time_lt: to, sort_field: 'statement_time', sort_order: 'DESC' }],
+      ['/finance/202309/payments', 'payments', 'create_time', normalizePayment, 'upsertPayments', { create_time_ge: from, create_time_lt: to, sort_field: 'create_time', sort_order: 'DESC' }],
+    ]) {
+      let pageToken = ''; const seen = new Set();
+      for (let pages = 0; pages < 100; pages++) {
+        const query = Object.assign({ page_size: 100 }, q); if (pageToken) query.page_token = pageToken;
+        const d = await this.shopRequest(shopId, path, { query });
+        const rows = ((d && d[list]) || []).map((x) => norm(x, shopId)).filter((r) => r.id && r.id !== 'undefined');
+        await this.db[save](rows);
+        if (list === 'statements') statements += rows.length; else payments += rows.length;
+        pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
+      }
+    }
+    return { statements, payments };
+  }
+
+  // Estoque atual de todas as variações (produtos ativos e esgotados).
+  async syncStock(shopId) {
+    let skus = 0, pageToken = ''; const seen = new Set();
+    for (let pages = 0; pages < 100; pages++) {
+      const query = { page_size: 100 }; if (pageToken) query.page_token = pageToken;
+      const d = await this.shopRequest(shopId, '/product/202309/products/search', { query, body: {} });
+      const rows = ((d && d.products) || []).flatMap((p) => skusOf(p, shopId));
+      await this.db.upsertSkus(rows); skus += rows.length;
+      pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
+    }
+    return { skus };
   }
 
   verifyWebhook(rawBody, authorization) {
@@ -304,4 +363,4 @@ class TikTokProd {
   }
 }
 
-module.exports = { TikTokProd, tiktokDb, sign, API, AUTH, AUTHORIZE, normalizeOrder, itemsOf, normalizeReturn, webhookSignature };
+module.exports = { TikTokProd, tiktokDb, sign, API, AUTH, AUTHORIZE, normalizeOrder, itemsOf, normalizeReturn, webhookSignature, normalizeStatement, normalizePayment, skusOf };

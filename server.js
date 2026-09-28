@@ -484,7 +484,26 @@ try {
             const qDev = "select return_id, order_id, coalesce(status,'?') status, coalesce(reason,'-') reason, round(coalesce(refund_amount*100,0)) refund, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM') dt from tiktok_returns where " + per + " order by created_at desc limit 30";
             const qSync = "select to_char(max(updated_at) at time zone 'America/Sao_Paulo','DD/MM HH24:MI') last from tiktok_orders where " + (shopF ? shopF.replace(/ and $/, '') : 'true');
             const db = tiktok.db;
-            const [base, days, rank, pay, ship, ret, sts, recent, dev, last] = await Promise.all([db.query(q1), db.query(qDay), db.query(qRank), db.query(qPay), db.query(qShip), db.query(qRet), db.query(qStatus), db.query(qRecent), db.query(qDev), db.query(qSync)]);
+            const shopOnly = shopF ? shopF.replace(/ and $/, '') : 'true';
+            const perPaid = shopF + "paid_time >= " + lo + " and paid_time < " + hi;
+            const perStmt = shopF + "statement_time >= " + lo + " and statement_time < " + hi;
+            // Financeiro: o que caiu (depósitos), extratos do período, taxa média de repasse (últimos 30d) e o que falta cair.
+            const qRecebido = "select round(coalesce(sum(amount*100),0)) v, count(*) n from tiktok_payments where status='PAID' and " + perPaid;
+            const qRecDia = "select to_char((paid_time at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(amount*100),0)) c from tiktok_payments where status='PAID' and " + perPaid + " group by 1";
+            const qExtr = "select round(coalesce(sum(revenue*100),0)) rev, round(coalesce(sum(settlement*100),0)) settle, round(coalesce(sum(fee*100),0)) fee from tiktok_statements where " + perStmt;
+            const qTaxa = "select coalesce(sum(settlement)/nullif(sum(revenue),0),0) r from tiktok_statements where " + shopOnly + " and statement_time >= now() - interval '30 days'";
+            const qPendConf = "select round(coalesce(sum(settlement*100),0)) v, count(*) n, to_char(min(statement_time) at time zone 'America/Sao_Paulo','DD/MM') desde from tiktok_statements where " + shopOnly + " and coalesce(payment_status,'') <> 'PAID'";
+            const qPendEst = "select case when status in ('DELIVERED','COMPLETED') then 'entregue' when status in ('IN_TRANSIT','AWAITING_COLLECTION','PARTIALLY_SHIPPING') then 'transito' else 'aguardando' end grupo, count(*) n, round(coalesce(sum(total*100),0)) bruto " +
+                "from tiktok_orders where " + shopOnly + " and payment_status='paid' and coalesce(settlement_synced,false)=false and created_at >= now() - interval '60 days' group by 1";
+            const qDepositos = "select to_char(paid_time at time zone 'America/Sao_Paulo','DD/MM') dt, status, round(coalesce(amount*100,0)) v from tiktok_payments where " + shopOnly + " order by coalesce(paid_time,create_time) desc limit 12";
+            // Estoque: quantidade por variação x velocidade de venda (unidades pagas nos últimos 30 dias).
+            const qEstoque = "with vend as (select i.sku_id, sum(i.qty) u30 from tiktok_order_items i join tiktok_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido " +
+                "where o.payment_status='paid' and o.created_at >= now() - interval '30 days' and " + shopOnly.replace(/shop_id=/g, 'o.shop_id=') + " group by 1) " +
+                "select s.sku_id, s.title, s.seller_sku, coalesce(s.qty,0) qty, coalesce(v.u30,0) u30, " +
+                "case when coalesce(v.u30,0) > 0 then round(coalesce(s.qty,0) / (v.u30/30.0), 1) else null end dias " +
+                "from tiktok_skus s left join vend v on v.sku_id=s.sku_id where " + shopOnly.replace(/shop_id=/g, 's.shop_id=') + " and s.status='ACTIVATE'";
+            const [base, days, rank, pay, ship, ret, sts, recent, dev, last, recebido, recDia, extr, taxa, pendConf, pendEst, depositos, estoque] = await Promise.all([db.query(q1), db.query(qDay), db.query(qRank), db.query(qPay), db.query(qShip), db.query(qRet), db.query(qStatus), db.query(qRecent), db.query(qDev), db.query(qSync),
+                db.query(qRecebido), db.query(qRecDia), db.query(qExtr), db.query(qTaxa), db.query(qPendConf), db.query(qPendEst), db.query(qDepositos), db.query(qEstoque)]);
             const b = base[0] || {}; const N = (v) => Math.round(Number(v) || 0);
             const revenue = N(b.revenue), paid = N(b.paid);
             const byDay = {}; for (const r of days) byDay[r.d] = N(r.c);
@@ -500,6 +519,32 @@ try {
                 porStatus: sts.map((r) => ({ status: r.status, n: N(r.n), valor: N(r.valor) })),
                 recentes: recent.map((r) => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total) })),
                 devList: dev.map((r) => ({ return_id: r.return_id, order_id: r.order_id, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt })),
+                financeiro: (() => {
+                    const r = Number(taxa[0] && taxa[0].r) || 0;
+                    const grupos = { entregue: { n: 0, bruto: 0 }, transito: { n: 0, bruto: 0 }, aguardando: { n: 0, bruto: 0 } };
+                    for (const g of pendEst) grupos[g.grupo] = { n: N(g.n), bruto: N(g.bruto) };
+                    const est = (b) => Math.round(b * r);
+                    const recDay = {}; for (const x of recDia) recDay[x.d] = N(x.c);
+                    return {
+                        recebido: N(recebido[0] && recebido[0].v), depositos: N(recebido[0] && recebido[0].n), recebidoPorDia: recDay,
+                        extratos: { bruto: N(extr[0] && extr[0].rev), repasse: N(extr[0] && extr[0].settle), taxas: N(extr[0] && extr[0].fee) },
+                        taxaRepasse: Math.round(r * 1000) / 10,
+                        aReceberConfirmado: { v: N(pendConf[0] && pendConf[0].v), n: N(pendConf[0] && pendConf[0].n), desde: pendConf[0] && pendConf[0].desde },
+                        aReceberEstimado: {
+                            entregue: { n: grupos.entregue.n, v: est(grupos.entregue.bruto) },
+                            transito: { n: grupos.transito.n, v: est(grupos.transito.bruto) },
+                            aguardando: { n: grupos.aguardando.n, v: est(grupos.aguardando.bruto) },
+                            total: est(grupos.entregue.bruto + grupos.transito.bruto + grupos.aguardando.bruto),
+                        },
+                        ultimosDepositos: depositos.map((x) => ({ dt: x.dt, status: x.status, v: N(x.v) })),
+                    };
+                })(),
+                estoque: (() => {
+                    const rows = estoque.map((x) => ({ sku: x.sku_id, title: x.title, seller_sku: x.seller_sku, qty: N(x.qty), u30: N(x.u30), dias: x.dias == null ? null : Number(x.dias) }));
+                    const esgotados = rows.filter((x) => x.qty <= 0 && x.u30 > 0).sort((a, b) => b.u30 - a.u30);
+                    const criticos = rows.filter((x) => x.qty > 0 && x.dias != null && x.dias <= 10).sort((a, b) => a.dias - b.dias);
+                    return { skus: rows.length, semEstoque: rows.filter((x) => x.qty <= 0).length, esgotados: esgotados.slice(0, 30), criticos: criticos.slice(0, 30), nEsgotadosVendendo: esgotados.length, nCriticos: criticos.length };
+                })(),
             });
         } catch (e) { console.error('TikTok overview:', e); res.status(500).json({ error: 'erro interno' }); }
     });
