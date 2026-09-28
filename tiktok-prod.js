@@ -38,6 +38,8 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch, tokensTable = 'tiktok_to
     async upsertStatements(rows) { if (rows.length) await rest('tiktok_statements?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertPayments(rows) { if (rows.length) await rest('tiktok_payments?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertSkus(rows) { if (rows.length) await rest('tiktok_skus?on_conflict=shop_id,sku_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
+    async upsertAffiliate(rows) { if (rows.length) await rest('tiktok_affiliate_orders?on_conflict=shop_id,order_id,sku_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
+    async upsertProducts(rows) { if (rows.length) await rest('tiktok_products?on_conflict=shop_id,product_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async pendingSettlement(shopId, limit = 40) { return (await rest('tiktok_orders?shop_id=eq.' + encodeURIComponent(shopId) + '&payment_status=eq.paid&settlement_synced=eq.false&created_at=lt.' + encodeURIComponent(new Date(Date.now() - 5 * 86400000).toISOString()) + '&select=id_pedido&order=created_at.asc&limit=' + limit)) || []; },
     async query(sql) { const r = await fetchImpl(`${url}/pg/query`, { method: 'POST', headers, body: JSON.stringify({ query: sql }) }); if (!r.ok) throw new Error(`Consulta HTTP ${r.status}`); return r.json(); },
   };
@@ -336,6 +338,61 @@ class TikTokProd {
       pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
     }
     return { skus };
+  }
+
+  // Vendas via afiliados (criadores) numa janela -> tiktok_affiliate_orders.
+  async syncAffiliate(shopId, from, to) {
+    let saved = 0, pageToken = ''; const seen = new Set();
+    for (let pages = 0; pages < 600; pages++) {
+      const query = { page_size: 20 }; if (pageToken) query.page_token = pageToken;
+      const d = await this.shopRequest(shopId, '/affiliate_seller/202410/orders/search', { query, body: { create_time_ge: from, create_time_lt: to } });
+      const rows = [];
+      for (const o of (d && d.orders) || []) for (const s of (o.skus || [])) {
+        const amt = (x) => (x && x.amount != null ? money(x.amount) : null);
+        rows.push({ shop_id: String(shopId), order_id: String(o.id), sku_id: String(s.sku_id || s.product_id || '0'), creator: s.creator_username || null,
+          content_id: s.content_id || null, content_type: s.content_type || null, product_id: s.product_id ? String(s.product_id) : null,
+          price: amt(s.price), qty: Number(s.quantity) || 1, commission: amt(s.actual_paid_commission) ?? amt(s.estimated_paid_commission),
+          rate: s.commission_rate != null ? Number(s.commission_rate) / 100 : null, settlement_status: s.settlement_status || null, create_time: tsIso(o.create_time) });
+      }
+      await this.db.upsertAffiliate(rows); saved += rows.length;
+      pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
+    }
+    return { affiliate: saved };
+  }
+
+  // Foto principal de um produto (API de produto) -> tiktok_products.
+  async productInfo(shopId, productId) {
+    const p = await this.shopRequest(shopId, '/product/202309/products/' + encodeURIComponent(productId));
+    const img = (p && p.main_images && p.main_images[0]) || {};
+    const url = (img.thumb_urls && img.thumb_urls[0]) || (img.urls && img.urls[0]) || null;
+    const row = { shop_id: String(shopId), product_id: String(productId), title: (p && p.title) || null, image_url: url, updated_at: new Date().toISOString() };
+    await this.db.upsertProducts([row]);
+    return row;
+  }
+
+  async shopPerformance(shopId, startDate, endDate, granularity = 'ALL') {
+    const d = await this.shopRequest(shopId, '/analytics/202405/shop/performance', { query: { start_date_ge: startDate, end_date_lt: endDate, granularity, currency: 'LOCAL' } });
+    return d && d.performance ? d : null;
+  }
+  async topProducts(shopId, startDate, endDate, n = 10) {
+    const d = await this.shopRequest(shopId, '/analytics/202405/shop_products/performance', { query: { start_date_ge: startDate, end_date_lt: endDate, page_size: n, sort_field: 'gmv', sort_order: 'DESC', currency: 'LOCAL' } });
+    return (d && d.products) || [];
+  }
+  async topVideos(shopId, startDate, endDate, n = 8) {
+    const d = await this.shopRequest(shopId, '/analytics/202409/shop_videos/performance', { query: { start_date_ge: startDate, end_date_lt: endDate, page_size: n, sort_field: 'gmv', sort_order: 'DESC', currency: 'LOCAL' } });
+    return { videos: (d && d.videos) || [], total: (d && d.total_count) || 0 };
+  }
+
+  // Atendimento (chat com compradores).
+  async chatConversations(shopId, pageToken) {
+    const query = { page_size: 20 }; if (pageToken) query.page_token = pageToken;
+    return this.shopRequest(shopId, '/customer_service/202309/conversations', { query });
+  }
+  async chatMessages(shopId, conversationId) {
+    return this.shopRequest(shopId, '/customer_service/202309/conversations/' + encodeURIComponent(conversationId) + '/messages', { query: { page_size: 30 } });
+  }
+  async chatSend(shopId, conversationId, text) {
+    return this.shopRequest(shopId, '/customer_service/202309/conversations/' + encodeURIComponent(conversationId) + '/messages', { body: { type: 'TEXT', content: JSON.stringify({ content: String(text).slice(0, 2000) }) } });
   }
 
   verifyWebhook(rawBody, authorization) {

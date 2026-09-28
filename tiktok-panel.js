@@ -20,6 +20,24 @@
     cache.set(key, promise);
     return promise;
   }
+  async function authGet(path) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) return null;
+    const r = await fetch(BASE + path, { headers: { Authorization: 'Bearer ' + session.access_token } });
+    return r.ok ? r.json() : null;
+  }
+  const insightsCache = new Map();
+  function insights(start, end) {
+    const k = start + ':' + end;
+    if (!insightsCache.has(k)) insightsCache.set(k, authGet('/api/tiktok/insights?' + new URLSearchParams({ start, end })).catch(() => null));
+    return insightsCache.get(k);
+  }
+  async function chatSendReq(conversationId, text) {
+    const { data: { session } } = await sb().auth.getSession();
+    if (!session) return false;
+    const r = await fetch(BASE + '/api/tiktok/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ conversation_id: conversationId, text }) });
+    return r.ok;
+  }
   async function sync() {
     const { data: { session } } = await sb().auth.getSession();
     if (!session) return null;
@@ -52,7 +70,32 @@
     if (root.CacifeShopee && root.CacifeShopee.ensureStyle) root.CacifeShopee.ensureStyle();
     if (document.getElementById('ttk-style')) return;
     // Reaproveita o CSS da Shopee (classes shp-*) e só troca a cor de destaque das abas.
-    const css = `.ttk .shp-tab.on{color:${TT};border-bottom-color:${TT}} .ttk .shp-kpi{--accent:${TT}} .ttk-sync{margin-left:auto;background:${TT};color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8rem} .ttk-sync:disabled{opacity:.5;cursor:wait} .ttk-note{font-size:.78rem;color:var(--muted,#756582);padding:6px 2px}`;
+    const css = `.ttk .shp-tab.on{color:${TT};border-bottom-color:${TT}} .ttk .shp-kpi{--accent:${TT}} .ttk-sync{margin-left:auto;background:${TT};color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8rem} .ttk-sync:disabled{opacity:.5;cursor:wait} .ttk-note{font-size:.78rem;color:var(--muted,#756582);padding:6px 2px}
+    .ttk-src{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .ttk-srcc{border:1px solid var(--line,#e6dff0);border-radius:14px;padding:14px;background:var(--panel,#fff)}
+    .ttk-srcc .h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.9rem}.ttk-srcc .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+    .ttk-srcc .big{font-size:1.45rem;font-weight:800;margin:8px 0 2px}.ttk-srcc .sm{font-size:.76rem;color:var(--muted,#756582)}
+    .ttk-bar{height:8px;border-radius:999px;background:rgba(128,128,128,.18);overflow:hidden;margin-top:10px}.ttk-bar i{display:block;height:100%}
+    .ttk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+    .ttk-card{border:1px solid var(--line,#e6dff0);border-radius:14px;overflow:hidden;background:var(--panel,#fff);display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s}
+    .ttk-card:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(20,10,40,.10)}
+    .ttk-thumb{position:relative;aspect-ratio:1/1;background:linear-gradient(135deg,#fe2c5522,#25f4ee22);overflow:hidden}
+    .ttk-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .ttk-rank{position:absolute;top:8px;left:8px;background:#000c;color:#fff;font-weight:800;font-size:.78rem;border-radius:8px;padding:3px 8px}
+    .ttk-play{position:absolute;inset:auto 8px 8px auto;background:#fe2c55;color:#fff;font-weight:700;font-size:.72rem;border-radius:999px;padding:4px 10px}
+    .ttk-views{position:absolute;left:8px;bottom:8px;background:#000b;color:#fff;font-size:.72rem;font-weight:600;border-radius:999px;padding:3px 9px}
+    .ttk-body{padding:11px 12px;display:flex;flex-direction:column;gap:4px}
+    .ttk-body b{font-size:.84rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.1em}
+    .ttk-body .u{font-size:.74rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ttk-body .g{font-size:1.05rem;font-weight:800;color:#fe2c55}
+    .ttk-chips{display:flex;gap:6px;flex-wrap:wrap}.ttk-chip{font-size:.68rem;font-weight:600;border-radius:999px;padding:2px 8px;background:rgba(128,128,128,.12)}
+    .ttk-crt{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line,#e6dff0)}.ttk-crt:last-child{border-bottom:0}
+    .ttk-av{width:44px;height:44px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:linear-gradient(135deg,#fe2c55,#25f4ee);font-size:.9rem;text-transform:uppercase}
+    .ttk-crt .pi{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:none;background:rgba(128,128,128,.15)}
+    .ttk-crt .nm{flex:1;min-width:0}.ttk-crt .nm a{font-weight:700;font-size:.88rem;color:inherit;text-decoration:none}.ttk-crt .nm .u{font-size:.74rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ttk-crt .vv{text-align:right;font-variant-numeric:tabular-nums}.ttk-crt .vv b{display:block;color:#fe2c55}.ttk-crt .vv span{font-size:.72rem;color:var(--muted,#756582)}
+    .ttk-msgimg{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none;background:rgba(128,128,128,.15)}
+    @media(max-width:760px){.ttk-src{grid-template-columns:1fr}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'ttk-style', textContent: css }));
   }
   function kpi(label, value, sub, accent) {
@@ -255,7 +298,133 @@
     return box;
   }
 
-  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes], ['Financeiro', secFinanceiro], ['Estoque', secEstoque]];
+  const cur = () => [document.getElementById('start')?.value, document.getElementById('end')?.value];
+  function asyncSection(build) {
+    const box = n('div', 'shp-wrap'); const [s, e] = cur();
+    box.append(n('p', 'cap', 'Carregando dados do TikTok Shop…'));
+    insights(s, e).then((d) => { box.replaceChildren(); if (!d) { box.append(n('p', 'cap', 'Não consegui carregar agora. Tente Atualizar.')); return; } build(box, d); });
+    return box;
+  }
+  const imgOr = (url, cls) => { if (url) { const im = n('img', cls); im.src = url; im.loading = 'lazy'; im.alt = ''; im.referrerPolicy = 'no-referrer'; im.onerror = () => im.remove(); return im; } return null; };
+  function secDesempenho() {
+    return asyncSection((box, d) => {
+      const s = d.shop;
+      if (!s) { box.append(n('p', 'cap', 'Analytics indisponível para o período.' + (d.erro ? ' (' + d.erro + ')' : ''))); return; }
+      const kp = n('div', 'shp-kpis');
+      kp.append(
+        kpi('Vendas (Analytics)', brl(s.gmv), num(s.orders) + ' pedidos', TT),
+        kpi('Visitantes no produto', num(s.visitors), 'média por dia nas páginas', BLUE),
+        kpi('Visualizações', num(s.pageViews), num(s.impressions) + ' exibições', '#8b5cf6'),
+        kpi('Conversão', (s.conversao || 0).toLocaleString('pt-BR') + '%', 'pedidos ÷ visualizações', GREEN),
+        kpi('Ticket médio', brl(s.ticket), num(s.units) + ' unidades', '#06b6d4'),
+        kpi('Reembolsado', brl(s.refunds), num(s.cancellations) + ' cancel./devoluções', RED),
+      );
+      box.append(kp);
+      const src = panel('De onde vêm as vendas', 'Quanto cada formato do TikTok gerou no período.');
+      const grid = n('div', 'ttk-src'), tot = Math.max(1, (s.gmvPor.VIDEO || 0) + (s.gmvPor.LIVE || 0) + (s.gmvPor.PRODUCT_CARD || 0));
+      for (const [k, lbl, ic, cor] of [['VIDEO', 'Vídeos', '🎬', TT], ['PRODUCT_CARD', 'Vitrine / cartão do produto', '🛍️', BLUE], ['LIVE', 'LIVE', '🔴', '#8b5cf6']]) {
+        const c = n('div', 'ttk-srcc'); const h = n('div', 'h'); const i = n('span', 'ic', ic); i.style.background = cor + '22'; h.append(i, n('span', '', lbl));
+        const pct = Math.round((s.gmvPor[k] || 0) / tot * 100);
+        const bar = n('div', 'ttk-bar'); const f = n('i'); f.style.width = pct + '%'; f.style.background = cor; bar.append(f);
+        c.append(h, n('div', 'big', brl(s.gmvPor[k])), n('div', 'sm', pct + '% das vendas · ' + num(s.viewsPor[k]) + ' visualizações · ' + num(s.imprPor[k]) + ' exibições'), bar); grid.append(c);
+      }
+      src.append(grid); box.append(src);
+      const ch = panel('Vendas por dia (Analytics)', 'Dados do TikTok disponíveis até ' + (d.disponivelAte ? d.disponivelAte.split('-').reverse().join('/') : '—') + '.'); ch.append(salesChart(d.porDia)); box.append(ch);
+      const pp = panel('Produtos campeões', 'Top 10 por vendas no período, com taxa de clique (CTR).');
+      const g = n('div', 'ttk-grid');
+      d.produtos.forEach((p, i) => {
+        const card = n('div', 'ttk-card'); const th = n('div', 'ttk-thumb'); const im = imgOr(p.img); if (im) th.append(im); th.append(n('span', 'ttk-rank', '#' + (i + 1)));
+        const b = n('div', 'ttk-body'); const tt = n('b', '', p.title); tt.title = p.title;
+        const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(p.units) + ' un'), n('span', 'ttk-chip', num(p.orders) + ' pedidos'), n('span', 'ttk-chip', 'CTR ' + p.ctr.toLocaleString('pt-BR') + '%'));
+        b.append(tt, n('span', 'g', brl(p.gmv)), chips); card.append(th, b); g.append(card);
+      });
+      if (!d.produtos.length) pp.append(n('p', 'cap', 'Sem produtos no período.')); pp.append(g); box.append(pp);
+    });
+  }
+  function secVideos() {
+    return asyncSection((box, d) => {
+      const a = d.afiliados && d.afiliados.total;
+      const kp = n('div', 'shp-kpis');
+      kp.append(
+        kpi('Vendas por vídeos', brl(d.shop && d.shop.gmvPor.VIDEO), num(d.totalVideos) + ' vídeos com venda', TT),
+        kpi('Vendas via criadores', brl(a && a.gmv), num(a && a.pedidos) + ' pedidos de afiliados', '#8b5cf6'),
+        kpi('Comissão de afiliados', brl(a && a.comissao), a && a.gmv ? (a.comissao / a.gmv * 100).toFixed(1) + '% das vendas deles' : '—', AMBER),
+        kpi('Criadores que venderam', num(a && a.criadores), 'no período', BLUE),
+      );
+      box.append(kp);
+      const vp = panel('Vídeos que mais vendem', 'Top 8 por vendas. Clique para ver o vídeo no TikTok.');
+      const g = n('div', 'ttk-grid');
+      d.videos.forEach((v, i) => {
+        const card = n('a', 'ttk-card'); card.href = v.url; card.target = '_blank'; card.rel = 'noopener noreferrer';
+        const th = n('div', 'ttk-thumb'); const im = imgOr(v.img); if (im) th.append(im);
+        th.append(n('span', 'ttk-rank', '#' + (i + 1)), n('span', 'ttk-views', '▶ ' + num(v.views) + ' views'), n('span', 'ttk-play', 'Ver vídeo'));
+        const b = n('div', 'ttk-body'); const tt = n('b', '', v.title || v.produto || 'Vídeo'); tt.title = v.title || '';
+        const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(v.units) + ' un'), n('span', 'ttk-chip', 'CTR ' + v.ctr.toLocaleString('pt-BR') + '%'));
+        b.append(tt, n('span', 'u', '@' + v.user), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); g.append(card);
+      });
+      if (!d.videos.length) vp.append(n('p', 'cap', 'Sem vídeos com venda no período.')); vp.append(g); box.append(vp);
+      const cp = panel('Criadores que mais vendem', 'Afiliados por vendas geradas no período, com a comissão paga e o produto que mais vendem.');
+      (d.afiliados.criadores || []).forEach((c, i) => {
+        const row = n('div', 'ttk-crt'); row.append(n('span', 'rk', String(i + 1)), n('span', 'ttk-av', (c.user || '?').slice(0, 2)));
+        const nm = n('div', 'nm'); const a2 = n('a', '', '@' + c.user); a2.href = c.url; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
+        nm.append(a2, n('div', 'u', num(c.pedidos) + ' pedidos · ' + num(c.unidades) + ' un · ' + (c.tipo === 'LIVE' ? 'LIVE' : 'vídeo') + (c.produto ? ' · ' + c.produto : '')));
+        const pi = imgOr(c.img, 'pi'); row.append(nm); if (pi) row.append(pi);
+        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv); cp.append(row);
+      });
+      if (!(d.afiliados.criadores || []).length) cp.append(n('p', 'cap', 'Sem vendas de afiliados no período (a importação pode estar em andamento).'));
+      box.append(cp);
+    });
+  }
+  function msgText(m) { try { const c = JSON.parse(m.content || '{}'); return c.content || c.text || '[' + (m.type || 'mensagem').toLowerCase() + ']'; } catch (e) { return String(m.content || ''); } }
+  function secAtendimento() {
+    const box = n('div', 'shp-wrap');
+    const pnl = panel('Atendimento TikTok Shop', 'Converse com os clientes da loja — leia e responda por aqui.');
+    const chat = n('div', 'shp-chat'), list = n('div', 'shp-chat-list'), thread = n('div', 'shp-chat-thread');
+    thread.append(n('div', 'shp-chat-empty', 'Selecione uma conversa à esquerda.')); chat.append(list, thread); pnl.append(chat); box.append(pnl);
+    list.append(n('div', 'shp-chat-empty', 'Carregando conversas…'));
+    authGet('/api/tiktok/chat/conversations').then((d) => {
+      list.replaceChildren();
+      const convs = (d && d.conversations) || [];
+      if (!convs.length) { list.append(n('div', 'shp-chat-empty', 'Nenhuma conversa.')); return; }
+      for (const c of convs) {
+        const buyer = (c.participants || []).find((p) => p.role !== 'SHOP') || {};
+        const row = n('button', 'shp-conv'); row.type = 'button';
+        const av = imgOr(buyer.avatar, 'ttk-msgimg'); if (av) row.append(av); else row.append(n('span', 'ttk-av', (buyer.nickname || '?').slice(0, 2)));
+        const info = n('div', 'shp-conv-info'), nr = n('div', 'shp-conv-name'); nr.append(n('b', '', buyer.nickname || 'Cliente'));
+        if (c.unread_count > 0) nr.append(n('span', 'shp-unread', String(c.unread_count)));
+        info.append(nr, n('div', 'shp-conv-prev', c.latest_message ? msgText(c.latest_message) : '')); row.append(info);
+        row.onclick = () => { [...list.querySelectorAll('.shp-conv')].forEach((b) => b.classList.remove('on')); row.classList.add('on'); load(c, buyer); };
+        list.append(row);
+      }
+    });
+    function load(c, buyer) {
+      thread.replaceChildren(n('div', 'shp-chat-empty', 'Carregando mensagens…'));
+      authGet('/api/tiktok/chat/messages?conversation_id=' + encodeURIComponent(c.id)).then((d) => {
+        thread.replaceChildren(n('div', 'shp-thread-head', buyer.nickname || 'Cliente'));
+        const msgs = ((d && d.messages) || []).slice().sort((a, b) => (Number(a.create_time) || 0) - (Number(b.create_time) || 0));
+        const scroll = n('div', 'shp-msgs');
+        if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
+        for (const m of msgs) {
+          const mine = m.sender && m.sender.role === 'SHOP';
+          const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them')); bub.style.background = mine ? TT : '';
+          bub.append(n('div', 'shp-msg-body', msgText(m)), n('div', 'shp-msg-time', m.create_time ? new Date(Number(m.create_time) * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''));
+          scroll.append(bub);
+        }
+        thread.append(scroll); scroll.scrollTop = scroll.scrollHeight;
+        if (c.can_send_message === false) { thread.append(n('div', 'shp-chat-empty', 'Esta conversa não aceita resposta.')); return; }
+        const comp = n('div', 'shp-composer'), inp = n('textarea'), btn = n('button', 'shp-send', 'Enviar'), err = n('div', 'shp-send-err');
+        btn.style.background = TT; inp.placeholder = 'Escreva uma resposta…'; inp.rows = 1; btn.type = 'button';
+        const send = async () => { const text = inp.value.trim(); if (!text) return; btn.disabled = true; err.textContent = '';
+          try { if (!(await chatSendReq(c.id, text))) err.textContent = 'Não consegui enviar. Tente de novo.'; else { inp.value = ''; const bub = n('div', 'shp-msg me'); bub.style.background = TT; bub.append(n('div', 'shp-msg-body', text), n('div', 'shp-msg-time', 'agora')); scroll.append(bub); scroll.scrollTop = scroll.scrollHeight; } }
+          catch (e) { err.textContent = 'Não consegui enviar. Tente de novo.'; } btn.disabled = false; };
+        btn.onclick = send; inp.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+        comp.append(inp, btn); thread.append(comp, err);
+      });
+    }
+    return box;
+  }
+
+  const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes], ['Financeiro', secFinanceiro], ['Estoque', secEstoque], ['Desempenho', secDesempenho], ['Vídeos & Criadores', secVideos], ['Atendimento', secAtendimento]];
 
   function render(target, data, state, onSync) {
     ensureStyle();
@@ -271,7 +440,7 @@
     };
     for (const [label] of TABS) { const btn = n('button', 'shp-tab', label); btn.type = 'button'; btn.onclick = () => { active = label; root.__tiktokTab = label; paint(); }; tabsEl.append(btn); }
     const syncBtn = n('button', 'ttk-sync', 'Atualizar'); syncBtn.type = 'button';
-    syncBtn.onclick = async () => { syncBtn.disabled = true; syncBtn.textContent = 'Sincronizando…'; try { await sync(); if (onSync) onSync(); } finally { syncBtn.disabled = false; syncBtn.textContent = 'Atualizar'; } };
+    syncBtn.onclick = async () => { insightsCache.clear(); syncBtn.disabled = true; syncBtn.textContent = 'Sincronizando…'; try { await sync(); if (onSync) onSync(); } finally { syncBtn.disabled = false; syncBtn.textContent = 'Atualizar'; } };
     tabsEl.append(syncBtn);
     wrap.append(tabsEl, content);
     if (data.lastSync) wrap.append(n('div', 'ttk-note', 'Loja: ' + (data.shop || 'TikTok Shop') + ' · última sincronização ' + data.lastSync + ' · pedidos também são atualizados por webhook do TikTok Shop.'));

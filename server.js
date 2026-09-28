@@ -555,6 +555,94 @@ try {
         } catch (e) { console.error('TikTok overview:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // Insights (app 2): desempenho da loja, top produtos, top vídeos e criadores — com imagens. Cache de 10 min por período.
+    const insightsCache = new Map();
+    const productImages = async (ids) => {
+        const uniq = [...new Set(ids.filter(Boolean).map(String))];
+        const out = {};
+        if (!uniq.length) return out;
+        const list = uniq.map((x) => "'" + x.replace(/[^0-9]/g, '') + "'").join(',');
+        const shop = await tiktokShopId();
+        const known = await tiktok.db.query("select product_id, image_url, title from tiktok_products where shop_id='" + shop + "' and product_id in (" + list + ")");
+        for (const r of known) out[r.product_id] = { img: r.image_url, title: r.title };
+        const fromItems = await tiktok.db.query("select product_id, max(image_url) img, max(product_name) title from tiktok_order_items where shop_id='" + shop + "' and product_id in (" + list + ") and image_url is not null group by 1");
+        for (const r of fromItems) if (!out[r.product_id] || !out[r.product_id].img) out[r.product_id] = { img: r.img, title: r.title };
+        const missing = uniq.filter((id) => !out[id] || !out[id].img).slice(0, 15);
+        await Promise.all(missing.map(async (id) => { try { const r = await tiktok.productInfo(shop, id); out[id] = { img: r.image_url, title: r.title }; } catch (e) { /* sem foto */ } }));
+        return out;
+    };
+    app.get('/api/tiktok/insights', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!tiktok2) return res.status(503).json({ error: 'app de Analytics não configurado' });
+        try {
+            const re = /^\d{4}-\d{2}-\d{2}$/; const { start, end } = req.query;
+            if (!re.test(start || '') || !re.test(end || '') || start > end) return res.status(400).json({ error: 'período inválido' });
+            const key = start + ':' + end, hit = insightsCache.get(key);
+            if (hit && Date.now() - hit.at < 600000) return res.json(hit.data);
+            const shop = await tiktokShopId();
+            const endEx = new Date(new Date(end + 'T12:00:00Z').getTime() + 86400000).toISOString().slice(0, 10);
+            const [perf, daily, prods, vids] = await Promise.all([
+                tiktok2.shopPerformance(shop, start, endEx, 'ALL').catch((e) => ({ erro: e.message })),
+                tiktok2.shopPerformance(shop, start, endEx, '1D').catch(() => null),
+                tiktok2.topProducts(shop, start, endEx, 10).catch(() => []),
+                tiktok2.topVideos(shop, start, endEx, 8).catch(() => ({ videos: [], total: 0 })),
+            ]);
+            const lo = "'" + start + " 00:00:00-03'", hi = "('" + end + " 00:00:00-03'::timestamptz + interval '1 day')";
+            const aff = await tiktok.db.query("select creator, count(distinct order_id) pedidos, sum(qty) unidades, round(sum(price*qty)*100) gmv, round(coalesce(sum(commission),0)*100) comissao, max(content_type) tipo " +
+                "from tiktok_affiliate_orders where shop_id='" + shop + "' and create_time >= " + lo + " and create_time < " + hi + " and creator is not null group by 1 order by gmv desc nulls last limit 12");
+            const affTot = await tiktok.db.query("select count(distinct order_id) pedidos, round(sum(price*qty)*100) gmv, round(coalesce(sum(commission),0)*100) comissao, count(distinct creator) criadores " +
+                "from tiktok_affiliate_orders where shop_id='" + shop + "' and create_time >= " + lo + " and create_time < " + hi);
+            const affProd = await tiktok.db.query("select creator, product_id, count(*) n from tiktok_affiliate_orders where shop_id='" + shop + "' and create_time >= " + lo + " and create_time < " + hi + " and creator is not null group by 1,2");
+            const topProdOfCreator = {}; for (const r of affProd) { const c = topProdOfCreator[r.creator]; if (!c || Number(r.n) > c.n) topProdOfCreator[r.creator] = { id: r.product_id, n: Number(r.n) }; }
+            const imgs = await productImages([...prods.map((p) => p.id), ...vids.videos.flatMap((v) => (v.products || []).map((p) => p.id)), ...Object.values(topProdOfCreator).map((x) => x.id)]);
+            const cents = (m) => Math.round((Number(m && m.amount) || 0) * 100);
+            const iv = perf && perf.performance && perf.performance.intervals && perf.performance.intervals[0];
+            const brk = (arr) => Object.fromEntries((arr || []).map((x) => [x.type, x.currency ? Math.round(Number(x.amount) * 100) : Number(x.amount)]));
+            const N = (v) => Math.round(Number(v) || 0);
+            const data = {
+                shop: iv ? {
+                    gmv: cents(iv.gmv), orders: N(iv.orders), units: N(iv.units_sold), visitors: N(iv.avg_product_page_visitors), pageViews: N(iv.product_page_views), impressions: N(iv.product_impressions),
+                    ticket: cents(iv.avg_order_value), refunds: cents(iv.refunds), cancellations: N(iv.cancellations_and_returns),
+                    conversao: iv.product_page_views ? Math.round(N(iv.orders) / N(iv.product_page_views) * 10000) / 100 : 0,
+                    gmvPor: brk(iv.gmv_breakdowns), viewsPor: brk(iv.product_page_view_breakdowns), imprPor: brk(iv.product_impression_breakdowns),
+                } : null,
+                disponivelAte: perf && perf.latest_available_date || null,
+                porDia: ((daily && daily.performance && daily.performance.intervals) || []).reduce((o, x) => { o[x.start_date] = cents(x.gmv); return o; }, {}),
+                produtos: prods.map((p) => ({ id: String(p.id), title: (imgs[String(p.id)] || {}).title || 'Produto', img: (imgs[String(p.id)] || {}).img || null, gmv: cents(p.gmv), orders: N(p.orders), units: N(p.units_sold), ctr: Math.round(Number(p.click_through_rate || 0) * 10000) / 100 })),
+                videos: vids.videos.map((v) => { const pid = v.products && v.products[0] && String(v.products[0].id); return { id: String(v.id), title: v.title || '', user: v.username || '', views: N(v.views), gmv: cents(v.gmv), units: N(v.units_sold), ctr: Math.round(Number(v.click_through_rate || 0) * 10000) / 100, postado: v.video_post_time || null, produto: pid ? ((imgs[pid] || {}).title || (v.products[0].name || '')) : '', img: pid ? (imgs[pid] || {}).img || null : null, url: 'https://www.tiktok.com/@' + encodeURIComponent(v.username || '') + '/video/' + v.id }; }),
+                totalVideos: vids.total,
+                afiliados: { total: affTot[0] ? { pedidos: N(affTot[0].pedidos), gmv: N(affTot[0].gmv), comissao: N(affTot[0].comissao), criadores: N(affTot[0].criadores) } : null,
+                    criadores: aff.map((c) => { const tp = topProdOfCreator[c.creator]; return { user: c.creator, pedidos: N(c.pedidos), unidades: N(c.unidades), gmv: N(c.gmv), comissao: N(c.comissao), tipo: c.tipo, img: tp ? (imgs[tp.id] || {}).img || null : null, produto: tp ? (imgs[tp.id] || {}).title || '' : '', url: 'https://www.tiktok.com/@' + encodeURIComponent(c.creator) }; }) },
+                erro: perf && perf.erro ? String(perf.erro).slice(0, 120) : null,
+            };
+            insightsCache.set(key, { at: Date.now(), data });
+            res.json(data);
+        } catch (e) { console.error('TikTok insights:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    // Atendimento (chat do TikTok Shop) via app 2.
+    app.get('/api/tiktok/chat/conversations', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!tiktok2) return res.status(503).json({ error: 'indisponível' });
+        try { res.json(await tiktok2.chatConversations(await tiktokShopId(), typeof req.query.page_token === 'string' ? req.query.page_token : '')); }
+        catch (e) { console.error('TikTok chat conv:', e.message); res.status(500).json({ error: 'não consegui carregar as conversas' }); }
+    });
+    app.get('/api/tiktok/chat/messages', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!tiktok2) return res.status(503).json({ error: 'indisponível' });
+        const id = String(req.query.conversation_id || ''); if (!/^\d{5,30}$/.test(id)) return res.status(400).json({ error: 'conversa inválida' });
+        try { res.json(await tiktok2.chatMessages(await tiktokShopId(), id)); }
+        catch (e) { console.error('TikTok chat msgs:', e.message); res.status(500).json({ error: 'não consegui carregar as mensagens' }); }
+    });
+    app.post('/api/tiktok/chat/send', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!tiktok2) return res.status(503).json({ error: 'indisponível' });
+        const id = String((req.body && req.body.conversation_id) || ''), text = String((req.body && req.body.text) || '').trim();
+        if (!/^\d{5,30}$/.test(id) || !text || text.length > 2000) return res.status(400).json({ error: 'mensagem inválida' });
+        try { res.json(await tiktok2.chatSend(await tiktokShopId(), id, text)); }
+        catch (e) { console.error('TikTok chat send:', e.message); res.status(500).json({ error: 'não consegui enviar' }); }
+    });
+
     // Webhook do TikTok Shop (ORDER_STATUS_CHANGE etc.): assinatura HMAC no header Authorization; responde 200 rápido.
     app.post('/tiktok/webhook', async (req, res) => {
         if (!tiktok) return res.sendStatus(503);
@@ -572,6 +660,7 @@ try {
                 const shop = await tiktokShopId(); if (!shop) return;
                 const to = Math.floor(Date.now() / 1000);
                 console.log('🎵 sync TikTok:', JSON.stringify(await tiktok.sync(shop, to - 7 * 86400, to, 'update_time')));
+                if (tiktok2) { try { console.log('🎵 sync afiliados:', JSON.stringify(await tiktok2.syncAffiliate(shop, to - 7 * 86400, to))); } catch (e) { console.error('sync afiliados falhou:', e.message); } }
             } catch (e) { console.error('sync TikTok falhou:', e.message); }
         };
         setTimeout(runTikTokSync, 120000);
