@@ -17,7 +17,7 @@ function sign(appSecret, path, queries, body) {
 }
 
 // Persistência (Supabase via PostgREST, service_role).
-function tiktokDb({ url, serviceKey, fetchImpl = fetch }) {
+function tiktokDb({ url, serviceKey, fetchImpl = fetch, tokensTable = 'tiktok_tokens' }) {
   const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
   async function rest(pathAndQuery, init = {}) {
     const res = await fetchImpl(`${url}/rest/v1/${pathAndQuery}`, { ...init, headers: { ...headers, ...(init.headers || {}) } });
@@ -26,10 +26,10 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch }) {
     return text ? JSON.parse(text) : null;
   }
   return {
-    async saveToken(row) { await rest('tiktok_tokens?on_conflict=shop_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) }); },
-    async listTokens() { return (await rest('tiktok_tokens?select=shop_id,cipher,shop_name,region,expires_at,refresh_expires_at,updated_at&order=updated_at.desc')) || []; },
-    async getToken(shopId) { const r = await rest(`tiktok_tokens?shop_id=eq.${encodeURIComponent(shopId)}&select=*`); return r && r[0] ? r[0] : null; },
-    async firstToken() { const r = await rest('tiktok_tokens?select=*&order=updated_at.desc&limit=1'); return r && r[0] ? r[0] : null; },
+    async saveToken(row) { await rest(tokensTable + '?on_conflict=shop_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) }); },
+    async listTokens() { return (await rest(tokensTable + '?select=shop_id,cipher,shop_name,region,expires_at,refresh_expires_at,updated_at&order=updated_at.desc')) || []; },
+    async getToken(shopId) { const r = await rest(`${tokensTable}?shop_id=eq.${encodeURIComponent(shopId)}&select=*`); return r && r[0] ? r[0] : null; },
+    async firstToken() { const r = await rest(tokensTable + '?select=*&order=updated_at.desc&limit=1'); return r && r[0] ? r[0] : null; },
     async upsertOrders(rows) { if (rows.length) await rest('tiktok_orders?on_conflict=shop_id,id_pedido', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertItems(rows) { if (rows.length) await rest('tiktok_order_items?on_conflict=shop_id,id_pedido,line_item_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertReturns(rows) { if (rows.length) await rest('tiktok_returns?on_conflict=shop_id,return_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },

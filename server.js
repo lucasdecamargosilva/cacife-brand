@@ -374,10 +374,15 @@ try {
     const TIKTOK_APP_KEY = process.env.TIKTOK_APP_KEY || '';
     const TIKTOK_APP_SECRET = process.env.TIKTOK_APP_SECRET || '';
     const TIKTOK_SERVICE_ID = process.env.TIKTOK_SERVICE_ID || '';
-    let tiktok = null;
+    let tiktok = null, tiktok2 = null;
     if (TIKTOK_APP_KEY && TIKTOK_APP_SECRET) {
         try {
             tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }) });
+            // 2º app (categoria TikTok Shop Seller): Analytics + Afiliados. Tokens em tabela própria.
+            if (process.env.TIKTOK2_APP_KEY && process.env.TIKTOK2_APP_SECRET) {
+                tiktok2 = new TikTokProd({ appKey: process.env.TIKTOK2_APP_KEY, appSecret: process.env.TIKTOK2_APP_SECRET, serviceId: process.env.TIKTOK2_SERVICE_ID || '', fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_analytics' }) });
+                console.log('🎵 TikTok app 2 (Analytics/Afiliados) ligado (service ' + (process.env.TIKTOK2_SERVICE_ID || '?') + ')');
+            }
             console.log('🎵 TikTok Shop ligado (service ' + TIKTOK_SERVICE_ID + ')');
         } catch (e) { console.error('TikTok init falhou:', e.message); }
     } else { console.log('🎵 TikTok Shop: aguardando TIKTOK_APP_KEY / TIKTOK_APP_SECRET no ambiente.'); }
@@ -418,7 +423,8 @@ try {
             // Sem state = veio pelo link de autorização do próprio TikTok; a trava passa a ser a allowlist de lojas (TIKTOK_ALLOWED_SHOP_IDS).
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
-            const r = await tiktok.exchange(code); tkLog({ step: 'ok', lojas: r.shops });
+            const inst = (tiktok2 && req.query.app_key === process.env.TIKTOK2_APP_KEY) ? tiktok2 : tiktok;
+            const r = await inst.exchange(code); tkLog({ step: 'ok', app: inst === tiktok2 ? 'analytics' : 'principal', lojas: r.shops });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) });
             if (/Token salvo/.test(e.message)) return res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">🟡</div><h2>Autorização recebida!</h2><p>A chave da loja foi salva. Falta só liberar as permissões de API do app no Partner Center.<br>Pode fechar esta página.</p></div></body>');
@@ -553,7 +559,7 @@ try {
     app.post('/tiktok/webhook', async (req, res) => {
         if (!tiktok) return res.sendStatus(503);
         const raw = req.rawBody || '';
-        if (!raw || !tiktok.verifyWebhook(raw, req.headers['authorization'])) { tkLog({ step: 'webhook-assinatura-invalida' }); return res.sendStatus(401); }
+        if (!raw || !(tiktok.verifyWebhook(raw, req.headers['authorization']) || (tiktok2 && tiktok2.verifyWebhook(raw, req.headers['authorization'])))) { tkLog({ step: 'webhook-assinatura-invalida' }); return res.sendStatus(401); }
         res.sendStatus(200);
         try { const r = await tiktok.handleWebhook(req.body); tkLog({ step: 'webhook', type: req.body && req.body.type, ...r }); }
         catch (e) { console.error('TikTok webhook:', e.message); tkLog({ step: 'webhook-erro', erro: String(e.message).slice(0, 200) }); }
