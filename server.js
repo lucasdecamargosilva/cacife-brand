@@ -593,6 +593,7 @@ try {
             const affTot = await tiktok.db.query("select count(distinct a.order_id) pedidos, round(sum(a.price*a.qty)*100) gmv, round(coalesce(sum(a.commission),0)*100) comissao, count(distinct a.creator) criadores " +
                 "from tiktok_affiliate_orders a join tiktok_orders o on o.shop_id=a.shop_id and o.id_pedido=a.order_id and o.payment_status='paid' where a.shop_id='" + shop + "' and a.create_time >= " + lo + " and a.create_time < " + hi);
             const affProd = await tiktok.db.query("select creator, product_id, count(*) n from tiktok_affiliate_orders where shop_id='" + shop + "' and create_time >= " + lo + " and create_time < " + hi + " and creator is not null group by 1,2");
+            const perfis = {}; for (const r of await tiktok.db.query("select username, nickname, avatar_url, followers from tiktok_creators where shop_id='" + shop + "'")) perfis[r.username] = r;
             const topProdOfCreator = {}; for (const r of affProd) { const c = topProdOfCreator[r.creator]; if (!c || Number(r.n) > c.n) topProdOfCreator[r.creator] = { id: r.product_id, n: Number(r.n) }; }
             const imgs = await productImages([...prods.map((p) => p.id), ...vids.videos.flatMap((v) => (v.products || []).map((p) => p.id)), ...Object.values(topProdOfCreator).map((x) => x.id)]);
             const cents = (m) => Math.round((Number(m && m.amount) || 0) * 100);
@@ -612,7 +613,7 @@ try {
                 videos: vids.videos.map((v) => { const pid = v.products && v.products[0] && String(v.products[0].id); return { id: String(v.id), title: v.title || '', user: v.username || '', views: N(v.views), gmv: cents(v.gmv), units: N(v.units_sold), ctr: Math.round(Number(v.click_through_rate || 0) * 10000) / 100, postado: v.video_post_time || null, produto: pid ? ((imgs[pid] || {}).title || (v.products[0].name || '')) : '', img: pid ? (imgs[pid] || {}).img || null : null, url: 'https://www.tiktok.com/@' + encodeURIComponent(v.username || '') + '/video/' + v.id }; }),
                 totalVideos: vids.total,
                 afiliados: { total: affTot[0] ? { pedidos: N(affTot[0].pedidos), gmv: N(affTot[0].gmv), comissao: N(affTot[0].comissao), criadores: N(affTot[0].criadores) } : null,
-                    criadores: aff.map((c) => { const tp = topProdOfCreator[c.creator]; return { user: c.creator, pedidos: N(c.pedidos), unidades: N(c.unidades), gmv: N(c.gmv), comissao: N(c.comissao), tipo: c.tipo, img: tp ? (imgs[tp.id] || {}).img || null : null, produto: tp ? (imgs[tp.id] || {}).title || '' : '', url: 'https://www.tiktok.com/@' + encodeURIComponent(c.creator) }; }) },
+                    criadores: aff.map((c) => { const tp = topProdOfCreator[c.creator]; const pf = perfis[c.creator] || {}; return { user: c.creator, nome: pf.nickname || '', avatar: pf.avatar_url || null, seguidores: pf.followers != null ? N(pf.followers) : null, pedidos: N(c.pedidos), unidades: N(c.unidades), gmv: N(c.gmv), comissao: N(c.comissao), tipo: c.tipo, img: tp ? (imgs[tp.id] || {}).img || null : null, produto: tp ? (imgs[tp.id] || {}).title || '' : '', url: 'https://www.tiktok.com/@' + encodeURIComponent(c.creator) }; }) },
                 erro: perf && perf.erro ? String(perf.erro).slice(0, 120) : null,
             };
             insightsCache.set(key, { at: Date.now(), data });
@@ -689,6 +690,15 @@ try {
                 const shop = await tiktokShopId(); if (!shop) return;
                 const to = Math.floor(Date.now() / 1000);
                 console.log('🎵 sync TikTok:', JSON.stringify(await tiktok.sync(shop, to - 7 * 86400, to, 'update_time')));
+                if (tiktok2) {
+                    try {
+                        const velhos = await tiktok.db.query("select a.creator from tiktok_affiliate_orders a left join tiktok_creators c on c.shop_id=a.shop_id and c.username=a.creator " +
+                            "where a.shop_id='" + shop + "' and a.creator is not null and a.create_time > now() - interval '90 days' group by a.creator " +
+                            "having max(c.updated_at) is null or max(c.updated_at) < now() - interval '20 hours' order by sum(a.price*a.qty) desc limit 400");
+                        const users = velhos.map((r) => r.creator).filter((u) => /^[A-Za-z0-9._]{1,40}$/.test(u));
+                        if (users.length) tiktok2.syncCreatorProfiles(shop, users).then((r) => { console.log('🎵 perfis criadores:', JSON.stringify(r)); insightsCache.clear(); }).catch((e) => console.error('perfis criadores falhou:', e.message));
+                    } catch (e) { console.error('perfis criadores falhou:', e.message); }
+                }
                 if (tiktok2) { try { console.log('🎵 sync afiliados:', JSON.stringify(await tiktok2.syncAffiliate(shop, to - 7 * 86400, to))); } catch (e) { console.error('sync afiliados falhou:', e.message); } }
             } catch (e) { console.error('sync TikTok falhou:', e.message); }
         };

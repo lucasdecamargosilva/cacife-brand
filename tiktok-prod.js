@@ -38,6 +38,7 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch, tokensTable = 'tiktok_to
     async upsertStatements(rows) { if (rows.length) await rest('tiktok_statements?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertPayments(rows) { if (rows.length) await rest('tiktok_payments?on_conflict=shop_id,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertSkus(rows) { if (rows.length) await rest('tiktok_skus?on_conflict=shop_id,sku_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
+    async upsertCreators(rows) { if (rows.length) await rest('tiktok_creators?on_conflict=shop_id,username', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertAffiliate(rows) { if (rows.length) await rest('tiktok_affiliate_orders?on_conflict=shop_id,order_id,sku_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async upsertProducts(rows) { if (rows.length) await rest('tiktok_products?on_conflict=shop_id,product_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(rows) }); },
     async pendingSettlement(shopId, limit = 40) { return (await rest('tiktok_orders?shop_id=eq.' + encodeURIComponent(shopId) + '&payment_status=eq.paid&settlement_synced=eq.false&created_at=lt.' + encodeURIComponent(new Date(Date.now() - 5 * 86400000).toISOString()) + '&select=id_pedido&order=created_at.asc&limit=' + limit)) || []; },
@@ -360,6 +361,29 @@ class TikTokProd {
       pageToken = d && d.next_page_token; if (!pageToken || seen.has(pageToken)) break; seen.add(pageToken);
     }
     return { affiliate: saved };
+  }
+
+  // Perfil público dos criadores (foto, nome, seguidores) via busca do marketplace de afiliados.
+  // A URL da foto é assinada e vence em ~2 dias, por isso é renovada todo dia.
+  async syncCreatorProfiles(shopId, usernames, { pauseMs = 1500 } = {}) {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    let ok = 0, miss = 0, fail = 0;
+    for (const user of usernames) {
+      let d = null;
+      for (let tent = 0; tent < 3 && !d; tent++) {
+        try { d = await this.shopRequest(shopId, '/affiliate_seller/202505/marketplace_creators/search', { query: { page_size: 12 }, body: { keyword: user } }); }
+        catch (e) { if (/too many|rate limit/i.test(e.message)) { await wait(15000 * (tent + 1)); continue; } fail++; break; }
+      }
+      if (d) {
+        const c = ((d && d.creators) || []).find((x) => String(x.username || '').toLowerCase() === user.toLowerCase());
+        const av = c && c.avatar && c.avatar.url;
+        await this.db.upsertCreators([{ shop_id: String(shopId), username: user, nickname: c ? c.nickname || null : null, avatar_url: av && /^https:\/\//.test(av) ? av : null,
+          followers: c && c.follower_count != null ? Number(c.follower_count) : null, found: !!c, updated_at: new Date().toISOString() }]);
+        if (c) ok++; else miss++;
+      }
+      await wait(pauseMs);
+    }
+    return { perfis: ok, sem_perfil: miss, erros: fail };
   }
 
   // Foto principal de um produto (API de produto) -> tiktok_products.

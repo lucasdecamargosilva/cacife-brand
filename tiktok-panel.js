@@ -111,7 +111,7 @@
     .ttk-hd{margin-bottom:14px}.ttk-hd small{display:block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#756582);font-weight:700}
     .shp-panel .ttk-hd h3{margin:4px 0 6px;font-size:1.45rem;font-weight:800}.ttk-hd p{margin:0;color:var(--muted,#756582);font-size:.86rem;max-width:560px}
     .ttk-tbl{border:1px solid var(--line,#e6dff0);border-radius:16px;overflow:hidden;background:var(--panel,#fff)}
-    .ttk-tr{display:grid;grid-template-columns:52px minmax(0,1fr) 90px 110px 130px 24px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line,#e6dff0);font-variant-numeric:tabular-nums}
+    .ttk-tr{display:grid;grid-template-columns:52px minmax(0,1fr) 92px 80px 110px 130px 24px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line,#e6dff0);font-variant-numeric:tabular-nums}
     .ttk-tr:last-child{border-bottom:0}.ttk-tr.th{font-size:.74rem;font-weight:700;color:var(--muted,#756582);padding-top:14px;padding-bottom:14px}
     .ttk-tr.rw{cursor:pointer;transition:background .15s}.ttk-tr.rw:hover{background:color-mix(in srgb,var(--brand,#7c3aed) 6%,transparent)}
     .ttk-tr.sel{background:color-mix(in srgb,var(--brand,#7c3aed) 14%,transparent);box-shadow:inset 3px 0 0 var(--brand,#7c3aed)}
@@ -119,10 +119,11 @@
     .ttk-tr .who{display:flex;align-items:center;gap:10px;min-width:0}.ttk-tr .who b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .ttk-tr .who div span{font-size:.74rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
     .ttk-tr .num{text-align:right;font-size:.86rem}.ttk-tr .money{text-align:right;font-weight:800;color:var(--success,#137d58)}.ttk-tr .go{color:var(--muted,#756582);text-align:right}
+    img.ttk-av2{object-fit:cover;padding:0;background:rgba(128,128,128,.15)}.ttk-det .pf .avw{position:relative;flex:none}.ttk-det .pf .avw img.ttk-av2{width:76px;height:76px}
     .ttk-av2{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.82rem;text-transform:uppercase;background:linear-gradient(135deg,var(--brand,#7c3aed),#c084fc)}
     .ttk-det{border:1px solid var(--line,#e6dff0);border-radius:16px;background:var(--panel,#fff);padding:18px;position:sticky;top:12px}
     .ttk-det .back{background:none;border:0;color:var(--muted,#756582);font:inherit;font-size:.8rem;cursor:pointer;padding:0;margin-bottom:12px;display:none}
-    .ttk-det .pf{display:flex;align-items:center;gap:16px;margin-bottom:16px}.ttk-det .pf .ttk-av2{width:76px;height:76px;font-size:1.5rem;position:relative}
+    .ttk-det .pf{display:flex;align-items:center;gap:16px;margin-bottom:16px}.ttk-det .pf .ttk-av2{width:76px;height:76px;font-size:1.5rem}
     .ttk-det .pf .crown{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:#f5c542;display:flex;align-items:center;justify-content:center;font-size:.8rem;border:2px solid var(--panel,#fff)}
     .ttk-det .pf h4{margin:0;font-size:1.2rem}.ttk-det .pf a{font-size:.8rem;color:var(--brand,#7c3aed);text-decoration:none}
     .ttk-det .st{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line,#e6dff0);border-bottom:1px solid var(--line,#e6dff0);margin-bottom:16px}
@@ -137,8 +138,9 @@
     .ttk-vr .tx b{display:block;font-size:.84rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ttk-vr .tx span{font-size:.74rem;color:var(--muted,#756582)}
     .ttk-vr .bx{border:1px solid var(--line,#e6dff0);border-radius:10px;padding:6px 10px;font-size:.78rem;font-variant-numeric:tabular-nums;min-width:118px}
     .ttk-vr .bx div{display:flex;gap:6px;align-items:center;justify-content:space-between}.ttk-vr .bx .g{color:var(--success,#137d58);font-weight:800}
+    @media(max-width:1180px) and (min-width:981px){.ttk-tr{grid-template-columns:44px minmax(0,1fr) 84px 72px 118px 18px}.ttk-tr .hide-lg{display:none}}
     @media(max-width:980px){.ttk-rk2{grid-template-columns:1fr}.ttk-det{position:static}.ttk-det .back{display:inline-block}}
-    @media(max-width:620px){.ttk-tr{grid-template-columns:40px minmax(0,1fr) 110px 20px}.ttk-tr .hide-sm{display:none}}
+    @media(max-width:620px){.ttk-tr{grid-template-columns:40px minmax(0,1fr) 110px 20px}.ttk-tr .hide-md{display:none}.ttk-tr .hide-sm{display:none}}
     @media(max-width:760px){.ttk-src{grid-template-columns:1fr}.ttk-podium{grid-template-columns:1fr}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'ttk-style', textContent: css }));
   }
@@ -408,10 +410,16 @@
       tools.append(busca, ord, n('span', 'cap', num(todos.length) + ' criadores')); cp.append(tools);
       const grid = n('div', 'ttk-rk2'); const esq = n('div'); const det = n('aside', 'ttk-det'); grid.append(esq, det); cp.append(grid);
       const tbl = n('div', 'ttk-tbl'); const listaEl = n('div'); esq.append(tbl);
-      const th = n('div', 'ttk-tr th'); th.append(n('span', '', '#'), n('span', '', 'Criador'), n('span', 'num hide-sm', 'Pedidos'), n('span', 'num hide-sm', 'Comissão'), n('span', 'num', 'Dinheiro gerado'), n('span'));
+      const th = n('div', 'ttk-tr th'); th.append(n('span', '', '#'), n('span', '', 'Criador'), n('span', 'num hide-sm', 'Seguidores'), n('span', 'num hide-sm', 'Pedidos'), n('span', 'num hide-sm hide-lg', 'Comissão'), n('span', 'num', 'Dinheiro gerado'), n('span'));
       tbl.append(th, listaEl);
       const rankPos = new Map(todos.map((c, i) => [c.user, i + 1]));
       const cacheV = {};
+      const avatar = (c) => {
+        const ini = n('span', 'ttk-av2', (c.user || '?').slice(0, 2));
+        if (!c.avatar) return ini;
+        const im = n('img', 'ttk-av2'); im.src = c.avatar; im.alt = ''; im.loading = 'lazy'; im.referrerPolicy = 'no-referrer'; im.onerror = () => im.replaceWith(ini); return im;
+      };
+      const segs = (v) => v == null ? '—' : (v >= 1e6 ? (v / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M' : v >= 1e3 ? (v / 1e3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'K' : num(v));
       let limite = 20, atual = null;
       const pintar = () => {
         const q = busca.value.trim().toLowerCase().replace(/^@/, '');
@@ -425,9 +433,9 @@
       function criadorRow(c, i) {
         const row = n('div', 'ttk-tr rw' + (atual === c.user ? ' sel' : '')); row.dataset.user = c.user; row.title = 'Ver os vídeos que mais venderam de @' + c.user;
         const p = i + 1; const pos = n('span', 'pos' + (p <= 3 ? ' top' : '')); pos.textContent = (p <= 3 ? '👑 ' : '') + p;
-        const who = n('div', 'who'); const tx = n('div'); tx.style.minWidth = '0'; tx.append(n('b', '', c.user), n('span', '', '@' + c.user));
-        who.append(n('span', 'ttk-av2', (c.user || '?').slice(0, 2)), tx);
-        row.append(pos, who, n('span', 'num hide-sm', num(c.pedidos)), n('span', 'num hide-sm', brl(c.comissao)), n('span', 'money', brl(c.gmv)), n('span', 'go', '›'));
+        const who = n('div', 'who'); const tx = n('div'); tx.style.minWidth = '0'; tx.append(n('b', '', c.nome || c.user), n('span', '', '@' + c.user));
+        who.append(avatar(c), tx);
+        row.append(pos, who, n('span', 'num hide-sm', segs(c.seguidores)), n('span', 'num hide-sm', num(c.pedidos)), n('span', 'num hide-sm hide-lg', brl(c.comissao)), n('span', 'money', brl(c.gmv)), n('span', 'go', '›'));
         row.onclick = () => { abrir(c); if (window.innerWidth <= 980) det.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
         return row;
       }
@@ -436,10 +444,10 @@
         listaEl.querySelectorAll('.ttk-tr.rw').forEach((r) => r.classList.toggle('sel', r.dataset.user === c.user));
         det.replaceChildren();
         const back = n('button', 'back', '← Voltar para o ranking'); back.type = 'button'; back.onclick = () => tbl.scrollIntoView({ behavior: 'smooth', block: 'start' }); det.append(back);
-        const pf = n('div', 'pf'); const av = n('span', 'ttk-av2', (c.user || '?').slice(0, 2)); const rp = rankPos.get(c.user) || 0;
+        const pf = n('div', 'pf'); const av = n('span', 'avw'); av.append(avatar(c)); if (!c.avatar) av.firstChild.style.cssText = 'width:76px;height:76px;font-size:1.5rem'; const rp = rankPos.get(c.user) || 0;
         if (rp && rp <= 3) av.append(n('span', 'crown', '👑'));
         const nm = n('div'); const lk = n('a', '', '@' + c.user + ' ↗'); lk.href = 'https://www.tiktok.com/@' + encodeURIComponent(c.user); lk.target = '_blank'; lk.rel = 'noopener noreferrer';
-        nm.append(n('h4', '', c.user), lk, n('div', 'cap', rp ? rp + 'º no ranking' : '')); pf.append(av, nm); det.append(pf);
+        nm.append(n('h4', '', c.nome || c.user), lk, n('div', 'cap', [rp ? rp + 'º no ranking' : '', c.seguidores != null ? segs(c.seguidores) + ' seguidores' : ''].filter(Boolean).join(' · '))); pf.append(av, nm); det.append(pf);
         const st = n('div', 'st'); const cel = (v, l, cls) => { const d2 = n('div', cls || ''); d2.append(n('b', '', v), n('span', '', l)); return d2; };
         st.append(cel(num(c.pedidos), 'Pedidos'), cel(brl(c.comissao), 'Comissão'), cel(brl(c.gmv), 'Dinheiro gerado', 'gv')); det.append(st);
         const vh = n('div', 'vh'); const cnt = n('span', '', ''); vh.append(n('h5', '', 'Vídeos do criador'), cnt); det.append(vh);
