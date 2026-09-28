@@ -620,6 +620,35 @@ try {
         } catch (e) { console.error('TikTok insights:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // Vídeos (e LIVEs) de um criador que mais venderam no período — a partir das vendas de afiliado (só pedidos pagos).
+    app.get('/api/tiktok/creator-videos', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!tiktok) return res.status(503).json({ error: 'indisponível' });
+        try {
+            const re = /^\d{4}-\d{2}-\d{2}$/; const { start, end } = req.query; const creator = String(req.query.creator || '');
+            if (!re.test(start || '') || !re.test(end || '') || start > end || !/^[A-Za-z0-9._]{1,40}$/.test(creator)) return res.status(400).json({ error: 'parâmetros inválidos' });
+            const shop = await tiktokShopId();
+            const lo = "'" + start + " 00:00:00-03'", hi = "('" + end + " 00:00:00-03'::timestamptz + interval '1 day')";
+            const rows = await tiktok.db.query("select a.content_id, max(a.content_type) tipo, count(distinct a.order_id) pedidos, sum(a.qty) unidades, round(sum(a.price*a.qty)*100) gmv, round(coalesce(sum(a.commission),0)*100) comissao, " +
+                "(array_agg(a.product_id order by a.price desc))[1] produto, min(a.create_time) primeira, max(a.create_time) ultima " +
+                "from tiktok_affiliate_orders a join tiktok_orders o on o.shop_id=a.shop_id and o.id_pedido=a.order_id and o.payment_status='paid' " +
+                "where a.shop_id='" + shop + "' and a.creator='" + creator + "' and a.create_time >= " + lo + " and a.create_time < " + hi + " group by 1 order by gmv desc nulls last limit 60");
+            const imgs = await productImages(rows.map((r) => r.produto));
+            const N = (v) => Math.round(Number(v) || 0);
+            const fmt = (t) => t ? new Date(t).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }) : '';
+            res.json({
+                creator,
+                perfil: 'https://www.tiktok.com/@' + encodeURIComponent(creator),
+                videos: rows.map((r) => {
+                    const live = r.tipo === 'LIVE', ok = /^\d{5,30}$/.test(String(r.content_id || ''));
+                    return { id: r.content_id, tipo: live ? 'LIVE' : (r.tipo === 'VIDEO' ? 'VIDEO' : (r.tipo || 'OUTRO')), pedidos: N(r.pedidos), unidades: N(r.unidades), gmv: N(r.gmv), comissao: N(r.comissao),
+                        produto: (imgs[r.produto] || {}).title || '', img: (imgs[r.produto] || {}).img || null, periodo: fmt(r.primeira) + (fmt(r.primeira) !== fmt(r.ultima) ? ' – ' + fmt(r.ultima) : ''),
+                        url: !live && ok ? 'https://www.tiktok.com/@' + encodeURIComponent(creator) + '/video/' + r.content_id : 'https://www.tiktok.com/@' + encodeURIComponent(creator) };
+                }),
+            });
+        } catch (e) { console.error('TikTok creator-videos:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // Atendimento (chat do TikTok Shop) via app 2.
     app.get('/api/tiktok/chat/conversations', async (req, res) => {
         if (!(await requireViewer(req, res))) return;

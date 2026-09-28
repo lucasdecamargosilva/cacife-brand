@@ -95,7 +95,19 @@
     .ttk-crt .nm{flex:1;min-width:0}.ttk-crt .nm a{font-weight:700;font-size:.88rem;color:inherit;text-decoration:none}.ttk-crt .nm .u{font-size:.74rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .ttk-crt .vv{text-align:right;font-variant-numeric:tabular-nums}.ttk-crt .vv b{display:block;color:#fe2c55}.ttk-crt .vv span{font-size:.72rem;color:var(--muted,#756582)}
     .ttk-msgimg{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none;background:rgba(128,128,128,.15)}
-    @media(max-width:760px){.ttk-src{grid-template-columns:1fr}}`;
+    .ttk-podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;gap:12px;align-items:end;margin:6px 0 16px}
+    .ttk-pod{border:1px solid var(--line,#e6dff0);border-radius:16px;padding:16px 12px;text-align:center;cursor:pointer;background:var(--panel,#fff);transition:transform .15s,box-shadow .15s;position:relative}
+    .ttk-pod:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(20,10,40,.12)}
+    .ttk-pod .md{font-size:1.9rem;line-height:1}.ttk-pod .ttk-av{width:62px;height:62px;font-size:1.2rem;margin:8px auto}
+    .ttk-pod .us{font-weight:800;font-size:.95rem;word-break:break-all}.ttk-pod .gv{font-size:1.3rem;font-weight:800;color:#fe2c55;margin-top:6px}
+    .ttk-pod .sm{font-size:.74rem;color:var(--muted,#756582)}.ttk-pod.p1{background:linear-gradient(180deg,#fff7d6,#fff);border-color:#f5d36b;padding-top:22px}
+    .ttk-pod.p2{background:linear-gradient(180deg,#f1f3f7,#fff)}.ttk-pod.p3{background:linear-gradient(180deg,#fbe9dd,#fff)}
+    .ttk-crt.clk{cursor:pointer;border-radius:10px;padding-left:6px;padding-right:6px}.ttk-crt.clk:hover{background:rgba(254,44,85,.05)}
+    .ttk-crt .chev{color:var(--muted,#756582);font-size:.8rem;margin-left:4px;transition:transform .15s}.ttk-crt.open .chev{transform:rotate(90deg)}
+    .ttk-drawer{background:rgba(254,44,85,.04);border:1px solid rgba(254,44,85,.18);border-radius:14px;padding:14px;margin:4px 0 10px}
+    .ttk-drawer h4{margin:0 0 10px;font-size:.92rem;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.ttk-drawer h4 a{color:#fe2c55;font-size:.8rem;text-decoration:none}
+    .ttk-tag{position:absolute;top:8px;right:8px;font-size:.66rem;font-weight:800;border-radius:6px;padding:2px 7px;color:#fff}
+    @media(max-width:760px){.ttk-src{grid-template-columns:1fr}.ttk-podium{grid-template-columns:1fr}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'ttk-style', textContent: css }));
   }
   function kpi(label, value, sub, accent) {
@@ -374,7 +386,17 @@
       }
       box.append(vp);
       const todos = d.afiliados.criadores || [];
-      const cp = panel('Criadores que venderam (' + num(todos.length) + ')', 'Todos os afiliados com venda paga no período, ordenados por vendas — com comissão e o produto que mais vendem.');
+      const cp = panel('🏆 Ranking de criadores (' + num(todos.length) + ')', 'Afiliados com venda paga no período. Clique num criador para ver os vídeos dele que mais venderam.');
+      if (todos.length >= 3) {
+        const pod = n('div', 'ttk-podium');
+        for (const [idx, cls, md] of [[1, 'p2', '🥈'], [0, 'p1', '🥇'], [2, 'p3', '🥉']]) {
+          const c = todos[idx]; const card = n('div', 'ttk-pod ' + cls);
+          card.append(n('div', 'md', md), n('div', 'ttk-av', (c.user || '?').slice(0, 2)), n('div', 'us', '@' + c.user), n('div', 'gv', brl(c.gmv)), n('div', 'sm', num(c.pedidos) + ' pedidos · comissão ' + brl(c.comissao)), n('div', 'sm', 'clique para ver os vídeos'));
+          card.onclick = () => { busca.value = c.user; limite = 20; pintar(); const r = listaEl.querySelector('.ttk-crt'); if (r) { r.click(); r.scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
+          pod.append(card);
+        }
+        cp.append(pod);
+      }
       const tools = n('div'); tools.style.cssText = 'display:flex;gap:8px;margin:4px 0 8px;flex-wrap:wrap';
       const busca = n('input'); busca.type = 'search'; busca.placeholder = 'Buscar criador (@usuario)…'; busca.style.cssText = 'flex:1;min-width:200px;border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 12px;font:inherit;background:transparent;color:inherit';
       const ord = n('select'); ord.style.cssText = 'border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 10px;font:inherit;background:transparent;color:inherit';
@@ -396,7 +418,34 @@
         const nm = n('div', 'nm'); const a2 = n('a', '', '@' + c.user); a2.href = c.url; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
         nm.append(a2, n('div', 'u', num(c.pedidos) + ' pedidos · ' + num(c.unidades) + ' un · ' + (c.tipo === 'LIVE' ? 'LIVE' : 'vídeo') + (c.produto ? ' · ' + c.produto : '')));
         const pi = imgOr(c.img, 'pi'); row.append(nm); if (pi) row.append(pi);
-        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv); return row;
+        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv, n('span', 'chev', '▶'));
+        a2.onclick = (e) => e.stopPropagation();
+        row.classList.add('clk'); row.title = 'Ver os vídeos que mais venderam deste criador';
+        let drawer = null;
+        row.onclick = () => {
+          if (drawer) { drawer.remove(); drawer = null; row.classList.remove('open'); return; }
+          row.classList.add('open'); drawer = n('div', 'ttk-drawer'); drawer.append(n('p', 'cap', 'Carregando vídeos de @' + c.user + '…')); row.after(drawer);
+          const [s1, e1] = cur(); const dr = drawer;
+          authGet('/api/tiktok/creator-videos?' + new URLSearchParams({ creator: c.user, start: s1, end: e1 })).then((r) => {
+            dr.replaceChildren();
+            const h = n('h4'); const pf = n('a', '', 'abrir perfil no TikTok ↗'); pf.href = 'https://www.tiktok.com/@' + encodeURIComponent(c.user); pf.target = '_blank'; pf.rel = 'noopener noreferrer';
+            h.append(n('span', '', '🎬 Vídeos de @' + c.user + ' que mais venderam'), pf); dr.append(h);
+            const vids = (r && r.videos) || [];
+            if (!vids.length) { dr.append(n('p', 'cap', 'Nenhuma venda paga deste criador no período.')); return; }
+            const g2 = n('div', 'ttk-grid');
+            vids.forEach((v, k) => {
+              const card = n('a', 'ttk-card'); card.href = v.url; card.target = '_blank'; card.rel = 'noopener noreferrer';
+              const th = n('div', 'ttk-thumb'); const im = imgOr(v.img); if (im) th.append(im);
+              const tag = n('span', 'ttk-tag', v.tipo === 'LIVE' ? 'LIVE' : 'VÍDEO'); tag.style.background = v.tipo === 'LIVE' ? '#8b5cf6' : '#fe2c55';
+              th.append(n('span', 'ttk-rank', '#' + (k + 1)), tag, n('span', 'ttk-play', v.tipo === 'LIVE' ? 'Ver perfil' : 'Ver vídeo'));
+              const b = n('div', 'ttk-body'); const tt = n('b', '', v.produto || 'Produto'); tt.title = v.produto || '';
+              const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(v.pedidos) + ' pedidos'), n('span', 'ttk-chip', num(v.unidades) + ' un'), n('span', 'ttk-chip', 'comissão ' + brl(v.comissao)));
+              b.append(tt, n('span', 'u', v.periodo ? 'vendas em ' + v.periodo : ''), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); g2.append(card);
+            });
+            dr.append(g2);
+          });
+        };
+        return row;
       }
       pintar();
       if (!todos.length) cp.append(n('p', 'cap', 'Sem vendas de afiliados no período.'));
