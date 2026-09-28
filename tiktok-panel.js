@@ -396,27 +396,6 @@
         kpi('Criadores que venderam', num(a && a.criadores), 'no período', BLUE),
       );
       box.append(kp);
-      const vp = panel('Vídeos que mais vendem', 'Os ' + d.videos.length + ' vídeos que mais venderam no período (de ' + num(d.totalVideos) + ' com venda). Clique para abrir no TikTok.');
-      const g = n('div', 'ttk-grid');
-      d.videos.forEach((v, i) => {
-        if (i >= 12) return;
-        g.append(videoCard(v, i));
-      });
-      function videoCard(v, i) {
-        const card = n('a', 'ttk-card'); card.href = v.url; card.target = '_blank'; card.rel = 'noopener noreferrer';
-        const th = n('div', 'ttk-thumb'); const im = imgOr(v.img); if (im) th.append(im);
-        th.append(n('span', 'ttk-rank', '#' + (i + 1)), n('span', 'ttk-views', '▶ ' + num(v.views) + ' views'), n('span', 'ttk-play', 'Ver vídeo'));
-        const b = n('div', 'ttk-body'); const tt = n('b', '', v.title || v.produto || 'Vídeo'); tt.title = v.title || '';
-        const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(v.units) + ' un'), n('span', 'ttk-chip', 'CTR ' + v.ctr.toLocaleString('pt-BR') + '%'));
-        b.append(tt, n('span', 'u', '@' + v.user), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); return card;
-      }
-      if (!d.videos.length) vp.append(n('p', 'cap', 'Sem vídeos com venda no período.')); vp.append(g);
-      if (d.videos.length > 12) {
-        const more = n('button', 'ttk-sync', 'Ver todos os ' + d.videos.length + ' vídeos'); more.type = 'button'; more.style.margin = '12px auto 0'; more.style.display = 'block';
-        more.onclick = () => { more.remove(); d.videos.slice(12).forEach((v, k) => g.append(videoCard(v, 12 + k))); };
-        vp.append(more);
-      }
-      box.append(vp);
       const todos = d.afiliados.criadores || [];
       const cp = n('section', 'shp-panel');
       const hd = n('div', 'ttk-hd'); hd.append(n('small', '', 'Painel de criadores'), n('h3', '', 'Ranking de Criadores de Conteúdo'), n('p', '', 'Veja quem mais trouxe venda para a loja, quanto cada criador gerou e os vídeos que mais venderam de cada um.'));
