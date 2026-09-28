@@ -107,6 +107,38 @@
     .ttk-drawer{background:rgba(254,44,85,.04);border:1px solid rgba(254,44,85,.18);border-radius:14px;padding:14px;margin:4px 0 10px}
     .ttk-drawer h4{margin:0 0 10px;font-size:.92rem;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.ttk-drawer h4 a{color:#fe2c55;font-size:.8rem;text-decoration:none}
     .ttk-tag{position:absolute;top:8px;right:8px;font-size:.66rem;font-weight:800;border-radius:6px;padding:2px 7px;color:#fff}
+    .ttk-rk2{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:18px;align-items:start}
+    .ttk-hd{margin-bottom:14px}.ttk-hd small{display:block;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#756582);font-weight:700}
+    .shp-panel .ttk-hd h3{margin:4px 0 6px;font-size:1.45rem;font-weight:800}.ttk-hd p{margin:0;color:var(--muted,#756582);font-size:.86rem;max-width:560px}
+    .ttk-tbl{border:1px solid var(--line,#e6dff0);border-radius:16px;overflow:hidden;background:var(--panel,#fff)}
+    .ttk-tr{display:grid;grid-template-columns:52px minmax(0,1fr) 90px 110px 130px 24px;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line,#e6dff0);font-variant-numeric:tabular-nums}
+    .ttk-tr:last-child{border-bottom:0}.ttk-tr.th{font-size:.74rem;font-weight:700;color:var(--muted,#756582);padding-top:14px;padding-bottom:14px}
+    .ttk-tr.rw{cursor:pointer;transition:background .15s}.ttk-tr.rw:hover{background:color-mix(in srgb,var(--brand,#7c3aed) 6%,transparent)}
+    .ttk-tr.sel{background:color-mix(in srgb,var(--brand,#7c3aed) 14%,transparent);box-shadow:inset 3px 0 0 var(--brand,#7c3aed)}
+    .ttk-tr .pos{font-weight:800;display:flex;align-items:center;gap:4px}.ttk-tr .pos.top{color:#d99a0b}
+    .ttk-tr .who{display:flex;align-items:center;gap:10px;min-width:0}.ttk-tr .who b{display:block;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ttk-tr .who div span{font-size:.74rem;color:var(--muted,#756582);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .ttk-tr .num{text-align:right;font-size:.86rem}.ttk-tr .money{text-align:right;font-weight:800;color:var(--success,#137d58)}.ttk-tr .go{color:var(--muted,#756582);text-align:right}
+    .ttk-av2{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.82rem;text-transform:uppercase;background:linear-gradient(135deg,var(--brand,#7c3aed),#c084fc)}
+    .ttk-det{border:1px solid var(--line,#e6dff0);border-radius:16px;background:var(--panel,#fff);padding:18px;position:sticky;top:12px}
+    .ttk-det .back{background:none;border:0;color:var(--muted,#756582);font:inherit;font-size:.8rem;cursor:pointer;padding:0;margin-bottom:12px;display:none}
+    .ttk-det .pf{display:flex;align-items:center;gap:16px;margin-bottom:16px}.ttk-det .pf .ttk-av2{width:76px;height:76px;font-size:1.5rem;position:relative}
+    .ttk-det .pf .crown{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:#f5c542;display:flex;align-items:center;justify-content:center;font-size:.8rem;border:2px solid var(--panel,#fff)}
+    .ttk-det .pf h4{margin:0;font-size:1.2rem}.ttk-det .pf a{font-size:.8rem;color:var(--brand,#7c3aed);text-decoration:none}
+    .ttk-det .st{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line,#e6dff0);border-bottom:1px solid var(--line,#e6dff0);margin-bottom:16px}
+    .ttk-det .st div{padding:12px 10px}.ttk-det .st div+div{border-left:1px solid var(--line,#e6dff0)}.ttk-det .st b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}.ttk-det .st span{font-size:.72rem;color:var(--muted,#756582)}
+    .ttk-det .st .gv b{color:var(--success,#137d58)}
+    .ttk-det .vh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}.ttk-det .vh h5{margin:0;font-size:1rem}.ttk-det .vh span{font-size:.76rem;color:var(--muted,#756582)}
+    .ttk-vl{display:flex;flex-direction:column;gap:8px;max-height:640px;overflow:auto;padding-right:4px}
+    .ttk-vr{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:12px;align-items:center;text-decoration:none;color:inherit;padding:6px;border-radius:12px;transition:background .15s}
+    .ttk-vr:hover{background:color-mix(in srgb,var(--brand,#7c3aed) 6%,transparent)}
+    .ttk-vr .th{width:58px;height:58px;border-radius:10px;overflow:hidden;background:color-mix(in srgb,var(--brand,#7c3aed) 12%,transparent);position:relative}
+    .ttk-vr .th img{width:100%;height:100%;object-fit:cover}.ttk-vr .th i{position:absolute;left:3px;top:3px;font-style:normal;font-size:.6rem;font-weight:800;color:#fff;border-radius:5px;padding:1px 5px}
+    .ttk-vr .tx b{display:block;font-size:.84rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ttk-vr .tx span{font-size:.74rem;color:var(--muted,#756582)}
+    .ttk-vr .bx{border:1px solid var(--line,#e6dff0);border-radius:10px;padding:6px 10px;font-size:.78rem;font-variant-numeric:tabular-nums;min-width:118px}
+    .ttk-vr .bx div{display:flex;gap:6px;align-items:center;justify-content:space-between}.ttk-vr .bx .g{color:var(--success,#137d58);font-weight:800}
+    @media(max-width:980px){.ttk-rk2{grid-template-columns:1fr}.ttk-det{position:static}.ttk-det .back{display:inline-block}}
+    @media(max-width:620px){.ttk-tr{grid-template-columns:40px minmax(0,1fr) 110px 20px}.ttk-tr .hide-sm{display:none}}
     @media(max-width:760px){.ttk-src{grid-template-columns:1fr}.ttk-podium{grid-template-columns:1fr}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'ttk-style', textContent: css }));
   }
@@ -386,69 +418,73 @@
       }
       box.append(vp);
       const todos = d.afiliados.criadores || [];
-      const cp = panel('🏆 Ranking de criadores (' + num(todos.length) + ')', 'Afiliados com venda paga no período. Clique num criador para ver os vídeos dele que mais venderam.');
-      if (todos.length >= 3) {
-        const pod = n('div', 'ttk-podium');
-        for (const [idx, cls, md] of [[1, 'p2', '🥈'], [0, 'p1', '🥇'], [2, 'p3', '🥉']]) {
-          const c = todos[idx]; const card = n('div', 'ttk-pod ' + cls);
-          card.append(n('div', 'md', md), n('div', 'ttk-av', (c.user || '?').slice(0, 2)), n('div', 'us', '@' + c.user), n('div', 'gv', brl(c.gmv)), n('div', 'sm', num(c.pedidos) + ' pedidos · comissão ' + brl(c.comissao)), n('div', 'sm', 'clique para ver os vídeos'));
-          card.onclick = () => { busca.value = c.user; limite = 20; pintar(); const r = listaEl.querySelector('.ttk-crt'); if (r) { r.click(); r.scrollIntoView({ behavior: 'smooth', block: 'center' }); } };
-          pod.append(card);
-        }
-        cp.append(pod);
-      }
-      const tools = n('div'); tools.style.cssText = 'display:flex;gap:8px;margin:4px 0 8px;flex-wrap:wrap';
+      const cp = n('section', 'shp-panel');
+      const hd = n('div', 'ttk-hd'); hd.append(n('small', '', 'Painel de criadores'), n('h3', '', 'Ranking de Criadores de Conteúdo'), n('p', '', 'Veja quem mais trouxe venda para a loja, quanto cada criador gerou e os vídeos que mais venderam de cada um.'));
+      cp.append(hd);
+      if (!todos.length) { cp.append(n('p', 'cap', 'Sem vendas de afiliados no período.')); box.append(cp); return; }
+      const tools = n('div'); tools.style.cssText = 'display:flex;gap:8px;margin:0 0 12px;flex-wrap:wrap';
       const busca = n('input'); busca.type = 'search'; busca.placeholder = 'Buscar criador (@usuario)…'; busca.style.cssText = 'flex:1;min-width:200px;border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 12px;font:inherit;background:transparent;color:inherit';
-      const ord = n('select'); ord.style.cssText = 'border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 10px;font:inherit;background:transparent;color:inherit';
-      for (const [v2, l] of [['gmv', 'Mais vendas (R$)'], ['pedidos', 'Mais pedidos'], ['comissao', 'Maior comissão']]) { const o = n('option', '', l); o.value = v2; ord.append(o); }
-      tools.append(busca, ord); cp.append(tools);
-      const listaEl = n('div'); cp.append(listaEl);
-      let limite = 20;
+      const ord = n('select'); ord.style.cssText = 'border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 10px;font:inherit;background:var(--panel,#fff);color:inherit';
+      for (const [v2, l] of [['gmv', 'Mais dinheiro gerado'], ['pedidos', 'Mais pedidos'], ['comissao', 'Maior comissão']]) { const o = n('option', '', l); o.value = v2; ord.append(o); }
+      tools.append(busca, ord, n('span', 'cap', num(todos.length) + ' criadores')); cp.append(tools);
+      const grid = n('div', 'ttk-rk2'); const esq = n('div'); const det = n('aside', 'ttk-det'); grid.append(esq, det); cp.append(grid);
+      const tbl = n('div', 'ttk-tbl'); const listaEl = n('div'); esq.append(tbl);
+      const th = n('div', 'ttk-tr th'); th.append(n('span', '', '#'), n('span', '', 'Criador'), n('span', 'num hide-sm', 'Pedidos'), n('span', 'num hide-sm', 'Comissão'), n('span', 'num', 'Dinheiro gerado'), n('span'));
+      tbl.append(th, listaEl);
+      const rankPos = new Map(todos.map((c, i) => [c.user, i + 1]));
+      const cacheV = {};
+      let limite = 20, atual = null;
       const pintar = () => {
         const q = busca.value.trim().toLowerCase().replace(/^@/, '');
-        const arr = todos.filter((c) => !q || String(c.user).toLowerCase().includes(q)).sort((a, b) => b[ord.value] - a[ord.value]);
+        const arr = todos.filter((c) => !q || String(c.user).toLowerCase().includes(q)).sort((x, y) => y[ord.value] - x[ord.value]);
         listaEl.replaceChildren();
         arr.slice(0, limite).forEach((c, i) => listaEl.append(criadorRow(c, i)));
         if (!arr.length) listaEl.append(n('p', 'cap', 'Nenhum criador encontrado.'));
-        if (arr.length > limite) { const b = n('button', 'ttk-sync', 'Ver mais (' + (arr.length - limite) + ')'); b.type = 'button'; b.style.cssText += ';margin:12px auto 0;display:block'; b.onclick = () => { limite += 40; pintar(); }; listaEl.append(b); }
+        if (arr.length > limite) { const bt = n('button', 'ttk-sync', 'Ver mais (' + (arr.length - limite) + ')'); bt.type = 'button'; bt.style.cssText += ';margin:12px auto;display:block'; bt.onclick = () => { limite += 40; pintar(); }; listaEl.append(bt); }
       };
       busca.oninput = () => { limite = 20; pintar(); }; ord.onchange = () => { limite = 20; pintar(); };
       function criadorRow(c, i) {
-        const row = n('div', 'ttk-crt'); row.append(n('span', 'rk', String(i + 1)), n('span', 'ttk-av', (c.user || '?').slice(0, 2)));
-        const nm = n('div', 'nm'); const a2 = n('a', '', '@' + c.user); a2.href = c.url; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
-        nm.append(a2, n('div', 'u', num(c.pedidos) + ' pedidos · ' + num(c.unidades) + ' un · ' + (c.tipo === 'LIVE' ? 'LIVE' : 'vídeo') + (c.produto ? ' · ' + c.produto : '')));
-        const pi = imgOr(c.img, 'pi'); row.append(nm); if (pi) row.append(pi);
-        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv, n('span', 'chev', '▶'));
-        a2.onclick = (e) => e.stopPropagation();
-        row.classList.add('clk'); row.title = 'Ver os vídeos que mais venderam deste criador';
-        let drawer = null;
-        row.onclick = () => {
-          if (drawer) { drawer.remove(); drawer = null; row.classList.remove('open'); return; }
-          row.classList.add('open'); drawer = n('div', 'ttk-drawer'); drawer.append(n('p', 'cap', 'Carregando vídeos de @' + c.user + '…')); row.after(drawer);
-          const [s1, e1] = cur(); const dr = drawer;
-          authGet('/api/tiktok/creator-videos?' + new URLSearchParams({ creator: c.user, start: s1, end: e1 })).then((r) => {
-            dr.replaceChildren();
-            const h = n('h4'); const pf = n('a', '', 'abrir perfil no TikTok ↗'); pf.href = 'https://www.tiktok.com/@' + encodeURIComponent(c.user); pf.target = '_blank'; pf.rel = 'noopener noreferrer';
-            h.append(n('span', '', '🎬 Vídeos de @' + c.user + ' que mais venderam'), pf); dr.append(h);
-            const vids = (r && r.videos) || [];
-            if (!vids.length) { dr.append(n('p', 'cap', 'Nenhuma venda paga deste criador no período.')); return; }
-            const g2 = n('div', 'ttk-grid');
-            vids.forEach((v, k) => {
-              const card = n('a', 'ttk-card'); card.href = v.url; card.target = '_blank'; card.rel = 'noopener noreferrer';
-              const th = n('div', 'ttk-thumb'); const im = imgOr(v.img); if (im) th.append(im);
-              const tag = n('span', 'ttk-tag', v.tipo === 'LIVE' ? 'LIVE' : 'VÍDEO'); tag.style.background = v.tipo === 'LIVE' ? '#8b5cf6' : '#fe2c55';
-              th.append(n('span', 'ttk-rank', '#' + (k + 1)), tag, n('span', 'ttk-play', v.tipo === 'LIVE' ? 'Ver perfil' : 'Ver vídeo'));
-              const b = n('div', 'ttk-body'); const tt = n('b', '', v.produto || 'Produto'); tt.title = v.produto || '';
-              const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(v.pedidos) + ' pedidos'), n('span', 'ttk-chip', num(v.unidades) + ' un'), n('span', 'ttk-chip', 'comissão ' + brl(v.comissao)));
-              b.append(tt, n('span', 'u', v.periodo ? 'vendas em ' + v.periodo : ''), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); g2.append(card);
-            });
-            dr.append(g2);
-          });
-        };
+        const row = n('div', 'ttk-tr rw' + (atual === c.user ? ' sel' : '')); row.dataset.user = c.user; row.title = 'Ver os vídeos que mais venderam de @' + c.user;
+        const p = i + 1; const pos = n('span', 'pos' + (p <= 3 ? ' top' : '')); pos.textContent = (p <= 3 ? '👑 ' : '') + p;
+        const who = n('div', 'who'); const tx = n('div'); tx.style.minWidth = '0'; tx.append(n('b', '', c.user), n('span', '', '@' + c.user));
+        who.append(n('span', 'ttk-av2', (c.user || '?').slice(0, 2)), tx);
+        row.append(pos, who, n('span', 'num hide-sm', num(c.pedidos)), n('span', 'num hide-sm', brl(c.comissao)), n('span', 'money', brl(c.gmv)), n('span', 'go', '›'));
+        row.onclick = () => { abrir(c); if (window.innerWidth <= 980) det.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
         return row;
       }
+      function abrir(c) {
+        atual = c.user;
+        listaEl.querySelectorAll('.ttk-tr.rw').forEach((r) => r.classList.toggle('sel', r.dataset.user === c.user));
+        det.replaceChildren();
+        const back = n('button', 'back', '← Voltar para o ranking'); back.type = 'button'; back.onclick = () => tbl.scrollIntoView({ behavior: 'smooth', block: 'start' }); det.append(back);
+        const pf = n('div', 'pf'); const av = n('span', 'ttk-av2', (c.user || '?').slice(0, 2)); const rp = rankPos.get(c.user) || 0;
+        if (rp && rp <= 3) av.append(n('span', 'crown', '👑'));
+        const nm = n('div'); const lk = n('a', '', '@' + c.user + ' ↗'); lk.href = 'https://www.tiktok.com/@' + encodeURIComponent(c.user); lk.target = '_blank'; lk.rel = 'noopener noreferrer';
+        nm.append(n('h4', '', c.user), lk, n('div', 'cap', rp ? rp + 'º no ranking' : '')); pf.append(av, nm); det.append(pf);
+        const st = n('div', 'st'); const cel = (v, l, cls) => { const d2 = n('div', cls || ''); d2.append(n('b', '', v), n('span', '', l)); return d2; };
+        st.append(cel(num(c.pedidos), 'Pedidos'), cel(brl(c.comissao), 'Comissão'), cel(brl(c.gmv), 'Dinheiro gerado', 'gv')); det.append(st);
+        const vh = n('div', 'vh'); const cnt = n('span', '', ''); vh.append(n('h5', '', 'Vídeos do criador'), cnt); det.append(vh);
+        const vl = n('div', 'ttk-vl'); vl.append(n('p', 'cap', 'Carregando vídeos…')); det.append(vl);
+        const [s1, e1] = cur(); const key = c.user + '|' + s1 + '|' + e1;
+        const pr = cacheV[key] || (cacheV[key] = authGet('/api/tiktok/creator-videos?' + new URLSearchParams({ creator: c.user, start: s1, end: e1 })));
+        pr.then((r) => {
+          if (atual !== c.user) return;
+          vl.replaceChildren();
+          const vids = (r && r.videos) || [];
+          cnt.textContent = num(vids.length) + (vids.length === 1 ? ' vídeo' : ' vídeos');
+          if (!vids.length) { vl.append(n('p', 'cap', r ? 'Nenhuma venda paga deste criador no período.' : 'Não consegui carregar os vídeos. Tente de novo.')); if (!r) delete cacheV[key]; return; }
+          vids.forEach((v) => {
+            const it = n('a', 'ttk-vr'); it.href = v.url; it.target = '_blank'; it.rel = 'noopener noreferrer';
+            const tb = n('div', 'th'); const im = imgOr(v.img); if (im) tb.append(im);
+            const tag = n('i', '', v.tipo === 'LIVE' ? 'LIVE' : 'VÍDEO'); tag.style.background = v.tipo === 'LIVE' ? '#8b5cf6' : 'var(--brand,#7c3aed)'; tb.append(tag);
+            const tx = n('div', 'tx'); const tt = n('b', '', v.produto || 'Produto'); tt.title = v.produto || ''; tx.append(tt, n('span', '', v.periodo ? 'vendas em ' + v.periodo : ''));
+            const bx = n('div', 'bx'); const l1 = n('div'); l1.append(n('span', '', '🛒'), n('span', '', num(v.pedidos) + ' pedidos')); const l2 = n('div'); l2.append(n('span', '', '💲'), n('span', 'g', brl(v.gmv)));
+            bx.append(l1, l2); it.append(tb, tx, bx); vl.append(it);
+          });
+        });
+      }
       pintar();
-      if (!todos.length) cp.append(n('p', 'cap', 'Sem vendas de afiliados no período.'));
+      abrir(todos[0]);
       box.append(cp);
     });
   }
