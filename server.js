@@ -567,7 +567,7 @@ try {
         for (const r of known) out[r.product_id] = { img: r.image_url, title: r.title };
         const fromItems = await tiktok.db.query("select product_id, max(image_url) img, max(product_name) title from tiktok_order_items where shop_id='" + shop + "' and product_id in (" + list + ") and image_url is not null group by 1");
         for (const r of fromItems) if (!out[r.product_id] || !out[r.product_id].img) out[r.product_id] = { img: r.img, title: r.title };
-        const missing = uniq.filter((id) => !out[id] || !out[id].img).slice(0, 15);
+        const missing = uniq.filter((id) => !out[id] || !out[id].img).slice(0, 40);
         await Promise.all(missing.map(async (id) => { try { const r = await tiktok.productInfo(shop, id); out[id] = { img: r.image_url, title: r.title }; } catch (e) { /* sem foto */ } }));
         return out;
     };
@@ -585,11 +585,11 @@ try {
                 tiktok2.shopPerformance(shop, start, endEx, 'ALL').catch((e) => ({ erro: e.message })),
                 tiktok2.shopPerformance(shop, start, endEx, '1D').catch(() => null),
                 tiktok2.topProducts(shop, start, endEx, 10).catch(() => []),
-                tiktok2.topVideos(shop, start, endEx, 8).catch(() => ({ videos: [], total: 0 })),
+                tiktok2.topVideos(shop, start, endEx, 50).catch(() => ({ videos: [], total: 0 })),
             ]);
             const lo = "'" + start + " 00:00:00-03'", hi = "('" + end + " 00:00:00-03'::timestamptz + interval '1 day')";
             const aff = await tiktok.db.query("select a.creator, count(distinct a.order_id) pedidos, sum(a.qty) unidades, round(sum(a.price*a.qty)*100) gmv, round(coalesce(sum(a.commission),0)*100) comissao, max(a.content_type) tipo " +
-                "from tiktok_affiliate_orders a join tiktok_orders o on o.shop_id=a.shop_id and o.id_pedido=a.order_id and o.payment_status='paid' where a.shop_id='" + shop + "' and a.create_time >= " + lo + " and a.create_time < " + hi + " and a.creator is not null group by 1 order by gmv desc nulls last limit 12");
+                "from tiktok_affiliate_orders a join tiktok_orders o on o.shop_id=a.shop_id and o.id_pedido=a.order_id and o.payment_status='paid' where a.shop_id='" + shop + "' and a.create_time >= " + lo + " and a.create_time < " + hi + " and a.creator is not null group by 1 order by gmv desc nulls last limit 1000");
             const affTot = await tiktok.db.query("select count(distinct a.order_id) pedidos, round(sum(a.price*a.qty)*100) gmv, round(coalesce(sum(a.commission),0)*100) comissao, count(distinct a.creator) criadores " +
                 "from tiktok_affiliate_orders a join tiktok_orders o on o.shop_id=a.shop_id and o.id_pedido=a.order_id and o.payment_status='paid' where a.shop_id='" + shop + "' and a.create_time >= " + lo + " and a.create_time < " + hi);
             const affProd = await tiktok.db.query("select creator, product_id, count(*) n from tiktok_affiliate_orders where shop_id='" + shop + "' and create_time >= " + lo + " and create_time < " + hi + " and creator is not null group by 1,2");

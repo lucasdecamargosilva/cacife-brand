@@ -352,26 +352,54 @@
         kpi('Criadores que venderam', num(a && a.criadores), 'no período', BLUE),
       );
       box.append(kp);
-      const vp = panel('Vídeos que mais vendem', 'Top 8 por vendas. Clique para ver o vídeo no TikTok.');
+      const vp = panel('Vídeos que mais vendem', 'Os ' + d.videos.length + ' vídeos que mais venderam no período (de ' + num(d.totalVideos) + ' com venda). Clique para abrir no TikTok.');
       const g = n('div', 'ttk-grid');
       d.videos.forEach((v, i) => {
+        if (i >= 12) return;
+        g.append(videoCard(v, i));
+      });
+      function videoCard(v, i) {
         const card = n('a', 'ttk-card'); card.href = v.url; card.target = '_blank'; card.rel = 'noopener noreferrer';
         const th = n('div', 'ttk-thumb'); const im = imgOr(v.img); if (im) th.append(im);
         th.append(n('span', 'ttk-rank', '#' + (i + 1)), n('span', 'ttk-views', '▶ ' + num(v.views) + ' views'), n('span', 'ttk-play', 'Ver vídeo'));
         const b = n('div', 'ttk-body'); const tt = n('b', '', v.title || v.produto || 'Vídeo'); tt.title = v.title || '';
         const chips = n('div', 'ttk-chips'); chips.append(n('span', 'ttk-chip', num(v.units) + ' un'), n('span', 'ttk-chip', 'CTR ' + v.ctr.toLocaleString('pt-BR') + '%'));
-        b.append(tt, n('span', 'u', '@' + v.user), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); g.append(card);
-      });
-      if (!d.videos.length) vp.append(n('p', 'cap', 'Sem vídeos com venda no período.')); vp.append(g); box.append(vp);
-      const cp = panel('Criadores que mais vendem', 'Afiliados por vendas geradas no período, com a comissão paga e o produto que mais vendem.');
-      (d.afiliados.criadores || []).forEach((c, i) => {
+        b.append(tt, n('span', 'u', '@' + v.user), n('span', 'g', brl(v.gmv)), chips); card.append(th, b); return card;
+      }
+      if (!d.videos.length) vp.append(n('p', 'cap', 'Sem vídeos com venda no período.')); vp.append(g);
+      if (d.videos.length > 12) {
+        const more = n('button', 'ttk-sync', 'Ver todos os ' + d.videos.length + ' vídeos'); more.type = 'button'; more.style.margin = '12px auto 0'; more.style.display = 'block';
+        more.onclick = () => { more.remove(); d.videos.slice(12).forEach((v, k) => g.append(videoCard(v, 12 + k))); };
+        vp.append(more);
+      }
+      box.append(vp);
+      const todos = d.afiliados.criadores || [];
+      const cp = panel('Criadores que venderam (' + num(todos.length) + ')', 'Todos os afiliados com venda paga no período, ordenados por vendas — com comissão e o produto que mais vendem.');
+      const tools = n('div'); tools.style.cssText = 'display:flex;gap:8px;margin:4px 0 8px;flex-wrap:wrap';
+      const busca = n('input'); busca.type = 'search'; busca.placeholder = 'Buscar criador (@usuario)…'; busca.style.cssText = 'flex:1;min-width:200px;border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 12px;font:inherit;background:transparent;color:inherit';
+      const ord = n('select'); ord.style.cssText = 'border:1px solid var(--line,#e6dff0);border-radius:10px;padding:9px 10px;font:inherit;background:transparent;color:inherit';
+      for (const [v2, l] of [['gmv', 'Mais vendas (R$)'], ['pedidos', 'Mais pedidos'], ['comissao', 'Maior comissão']]) { const o = n('option', '', l); o.value = v2; ord.append(o); }
+      tools.append(busca, ord); cp.append(tools);
+      const listaEl = n('div'); cp.append(listaEl);
+      let limite = 20;
+      const pintar = () => {
+        const q = busca.value.trim().toLowerCase().replace(/^@/, '');
+        const arr = todos.filter((c) => !q || String(c.user).toLowerCase().includes(q)).sort((a, b) => b[ord.value] - a[ord.value]);
+        listaEl.replaceChildren();
+        arr.slice(0, limite).forEach((c, i) => listaEl.append(criadorRow(c, i)));
+        if (!arr.length) listaEl.append(n('p', 'cap', 'Nenhum criador encontrado.'));
+        if (arr.length > limite) { const b = n('button', 'ttk-sync', 'Ver mais (' + (arr.length - limite) + ')'); b.type = 'button'; b.style.cssText += ';margin:12px auto 0;display:block'; b.onclick = () => { limite += 40; pintar(); }; listaEl.append(b); }
+      };
+      busca.oninput = () => { limite = 20; pintar(); }; ord.onchange = () => { limite = 20; pintar(); };
+      function criadorRow(c, i) {
         const row = n('div', 'ttk-crt'); row.append(n('span', 'rk', String(i + 1)), n('span', 'ttk-av', (c.user || '?').slice(0, 2)));
         const nm = n('div', 'nm'); const a2 = n('a', '', '@' + c.user); a2.href = c.url; a2.target = '_blank'; a2.rel = 'noopener noreferrer';
         nm.append(a2, n('div', 'u', num(c.pedidos) + ' pedidos · ' + num(c.unidades) + ' un · ' + (c.tipo === 'LIVE' ? 'LIVE' : 'vídeo') + (c.produto ? ' · ' + c.produto : '')));
         const pi = imgOr(c.img, 'pi'); row.append(nm); if (pi) row.append(pi);
-        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv); cp.append(row);
-      });
-      if (!(d.afiliados.criadores || []).length) cp.append(n('p', 'cap', 'Sem vendas de afiliados no período (a importação pode estar em andamento).'));
+        const vv = n('div', 'vv'); vv.append(n('b', '', brl(c.gmv)), n('span', '', 'comissão ' + brl(c.comissao))); row.append(vv); return row;
+      }
+      pintar();
+      if (!todos.length) cp.append(n('p', 'cap', 'Sem vendas de afiliados no período.'));
       box.append(cp);
     });
   }
