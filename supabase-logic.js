@@ -254,7 +254,7 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.style.cssText = `
         background: ${type === 'error' ? '#262626' : type === 'success' ? '#ffffff' : '#404040'};
-        color: ${type === 'success' ? '#000000' : '#ffffff'}; padding: 12px 24px; border-radius: 8px; font-family: 'Outfit', sans-serif;
+        color: ${type === 'success' ? '#000000' : '#ffffff'}; padding: 12px 24px; border-radius: 8px; font-family: 'Inter', sans-serif;
         box-shadow: 0 4px 15px rgba(0,0,0,0.5); font-size: 14px; animation: slideIn 0.3s ease; min-width: 250px;
     `;
     const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';

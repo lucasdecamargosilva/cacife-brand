@@ -49,7 +49,7 @@
 }
 
 body {
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-white);
     line-height: 1.6;
@@ -588,7 +588,7 @@ body {
     padding: 8px 12px;
     border-radius: 8px;
     font-size: 13px;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     outline: none;
 }
 
@@ -623,7 +623,7 @@ body {
     padding: 8px 12px;
     border-radius: 8px;
     font-size: 13px;
-    font-family: 'Outfit', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 500;
     cursor: pointer;
     outline: none;
@@ -1055,3 +1055,4 @@ body {
 .card.card-gold .value {
     color: var(--accent-white);
 }
+body{font-feature-settings:"tnum" 1,"cv11" 1;letter-spacing:-.006em}

@@ -128,7 +128,7 @@
     let tip = document.getElementById('shp-tip');
     if (!tip) {
       tip = n('div'); tip.id = 'shp-tip';
-      tip.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:#0e1116;color:#fff;border:1px solid #2a2e37;border-radius:8px;padding:7px 10px;font:600 12px Outfit,sans-serif;box-shadow:0 8px 24px #0006;display:none;white-space:nowrap';
+      tip.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:#0e1116;color:#fff;border:1px solid #2a2e37;border-radius:8px;padding:7px 10px;font:600 12px Inter,sans-serif;box-shadow:0 8px 24px #0006;display:none;white-space:nowrap';
       document.body.append(tip);
     }
     return tip;
