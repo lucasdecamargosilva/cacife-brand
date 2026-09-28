@@ -375,7 +375,15 @@
       box.append(cp);
     });
   }
-  function msgText(m) { try { const c = JSON.parse(m.content || '{}'); return c.content || c.text || '[' + (m.type || 'mensagem').toLowerCase() + ']'; } catch (e) { return String(m.content || ''); } }
+  function msgParse(m) { try { return JSON.parse(m.content || '{}') || {}; } catch (e) { return { content: String(m.content || '') }; } }
+  const TYPE_LABEL = { PRODUCT_CARD: '🛍️ Produto enviado', ORDER_CARD: '🧾 Pedido enviado', VIDEO: '🎬 Vídeo', EMOTICONS: '😊 Figurinha', COUPON_CARD: '🎟️ Cupom', LOGISTICS_CARD: '🚚 Rastreio', RETURN_REFUND_CARD: '↩️ Devolução/Reembolso', ALLOCATED_SERVICE: 'Atendimento transferido', NOTIFICATION: 'Aviso' };
+  function msgText(m) { const c = msgParse(m); if (m.type === 'TEXT' || c.content) return c.content || c.text || ''; if (m.type === 'IMAGE') return '📷 Foto'; return TYPE_LABEL[m.type] || ''; }
+  // Monta o conteúdo da bolha: texto, foto (IMAGE) ou cartão com ícone.
+  function msgNode(m) {
+    const c = msgParse(m);
+    if (m.type === 'IMAGE' && (c.url || c.image_url)) { const im = n('img'); im.src = c.url || c.image_url; im.alt = 'foto'; im.loading = 'lazy'; im.referrerPolicy = 'no-referrer'; im.style.cssText = 'max-width:220px;max-height:260px;border-radius:10px;display:block'; return im; }
+    const txt = msgText(m); return txt ? n('div', 'shp-msg-body', txt) : null;
+  }
   function secAtendimento() {
     const box = n('div', 'shp-wrap');
     const pnl = panel('Atendimento TikTok Shop', 'Converse com os clientes da loja — leia e responda por aqui.');
@@ -404,12 +412,20 @@
         const msgs = ((d && d.messages) || []).slice().sort((a, b) => (Number(a.create_time) || 0) - (Number(b.create_time) || 0));
         const scroll = n('div', 'shp-msgs');
         if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
+        const when = (t) => t ? new Date(Number(t) * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        let shown = 0;
         for (const m of msgs) {
-          const mine = m.sender && m.sender.role === 'SHOP';
-          const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them')); bub.style.background = mine ? TT : '';
-          bub.append(n('div', 'shp-msg-body', msgText(m)), n('div', 'shp-msg-time', m.create_time ? new Date(Number(m.create_time) * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''));
-          scroll.append(bub);
+          const role = (m.sender && m.sender.role) || '';
+          const body = msgNode(m);
+          if (role === 'SYSTEM') { if (body) { const note = n('div', 'shp-chat-empty', (body.textContent || '') + ' · ' + when(m.create_time)); note.style.cssText = 'text-align:center;font-size:.72rem;padding:4px'; scroll.append(note); shown++; } continue; }
+          if (!body) continue; // cartões internos sem conteúdo
+          const mine = role === 'SHOP' || role === 'ROBOT' || role === 'CUSTOMER_SERVICE';
+          const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them'));
+          if (mine) bub.style.background = role === 'ROBOT' ? '#94a3b8' : TT;
+          bub.append(body, n('div', 'shp-msg-time', (role === 'ROBOT' ? '🤖 resposta automática · ' : '') + when(m.create_time)));
+          scroll.append(bub); shown++;
         }
+        if (!shown && msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Só há avisos automáticos do TikTok nesta conversa. Abra no Seller Center para ver cartões especiais.'));
         thread.append(scroll); scroll.scrollTop = scroll.scrollHeight;
         if (c.can_send_message === false) { thread.append(n('div', 'shp-chat-empty', 'Esta conversa não aceita resposta.')); return; }
         const comp = n('div', 'shp-composer'), inp = n('textarea'), btn = n('button', 'shp-send', 'Enviar'), err = n('div', 'shp-send-err');
