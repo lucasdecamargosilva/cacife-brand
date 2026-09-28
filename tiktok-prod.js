@@ -118,6 +118,7 @@ class TikTokProd {
     Object.assign(this, { appKey, appSecret, serviceId, db, fetchImpl, now });
     this.fallbackShopId = arguments[0].fallbackShopId || null;
     this.allowedShopIds = arguments[0].allowedShopIds || [];
+    this.trustedSellerName = arguments[0].trustedSellerName || null; // app sem scope de autorização: confia no seller_name devolvido pelo próprio TikTok
     this.refreshes = new Map();
   }
 
@@ -144,7 +145,18 @@ class TikTokProd {
     catch (e) {
       // Sem scope de Authorization o TikTok nega /shops. Só guarda o token de fallback se não houver allowlist
       // (com allowlist, a loja não pode ser verificada -> não persiste nada).
-      if (this.allowedShopIds && this.allowedShopIds.length) throw new Error('Loja não verificável (sem scope de autorização) — token não salvo: ' + e.message);
+      if (this.allowedShopIds && this.allowedShopIds.length) {
+        // seller_name vem do endpoint de token (chamado com o nosso app_secret), não do navegador — só aceita a loja esperada.
+        if (this.trustedSellerName && d.seller_name === this.trustedSellerName && this.fallbackShopId && this.allowedShopIds.includes(String(this.fallbackShopId))) {
+          await this.db.saveToken({ shop_id: String(this.fallbackShopId), cipher: null, shop_name: d.seller_name, region: d.seller_base_region || null,
+            access_token: d.access_token, refresh_token: d.refresh_token || null,
+            expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
+            refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+            updated_at: new Date(now * 1000).toISOString() });
+          return { shops: [{ id: this.fallbackShopId, name: d.seller_name, hasCipher: false }], granted: d.granted_scopes || [] };
+        }
+        throw new Error('Loja não verificável (sem scope de autorização; seller=' + (d.seller_name || '?') + ') — token não salvo: ' + e.message);
+      }
       const fallback = (d.seller_name ? 'pending:' + String(d.seller_name).replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40) : (this.fallbackShopId || 'pending'));
       await this.db.saveToken({ shop_id: String(fallback), cipher: null, shop_name: '(scopes pendentes)', region: null,
         access_token: d.access_token, refresh_token: d.refresh_token || null,
