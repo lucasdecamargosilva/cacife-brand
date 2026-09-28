@@ -48,6 +48,8 @@ function tiktokDb({ url, serviceKey, fetchImpl = fetch, tokensTable = 'tiktok_to
 const money = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(n * 100) / 100 : null; };
 const tsIso = (sec) => (Number(sec) > 0 ? new Date(Number(sec) * 1000).toISOString() : null);
 const DAY = 86400;
+// Números inteiros com 16+ dígitos (IDs do TikTok) viram string, senão o JSON.parse arredonda.
+const safeBigInts = (txt) => String(txt).replace(/([:\[,]\s*)(-?\d{16,})(?=\s*[,}\]])/g, '$1"$2"');
 // Estados do pedido no TikTok Shop: UNPAID, ON_HOLD, AWAITING_SHIPMENT, AWAITING_COLLECTION, PARTIALLY_SHIPPING, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED
 function normalizeOrder(o, shopId) {
   if (!o || !o.id) throw new Error('Pedido sem identificador.');
@@ -225,7 +227,7 @@ class TikTokProd {
     const headers = { 'Content-Type': 'application/json' };
     if (accessToken) headers['x-tts-access-token'] = accessToken;
     let j;
-    try { const r = await this.fetchImpl(u, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) }); j = await r.json(); }
+    try { const r = await this.fetchImpl(u, { method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) }); j = r.text ? JSON.parse(safeBigInts(await r.text())) : await r.json(); }
     catch { throw new Error('Não foi possível consultar o TikTok Shop.'); }
     if (j.code !== 0) throw new Error('TikTok API (' + (j.message || j.code) + ').');
     return j.data;
