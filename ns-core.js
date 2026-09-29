@@ -11,6 +11,6 @@
   }result.ticket=result.paid?Math.round(result.revenue/result.paid):0;result.ranking=[...ranking.values()].sort((a,b)=>b.value-a.value);return result;
  }
  // Linhas de itens de pedidos pagos no período (mesmo critério do summarize), para a aba Produtos.
- function itemRows(rows,start,end){const out=[];for(const o of rows||[]){if(!within(o.paidAt,start,end)||o.status==='cancelled'||o.payment!=='paid'||o.currency!=='BRL')continue;for(const item of o.items||[]){if(!Number.isFinite(item.quantity)||!Number.isSafeInteger(item.price))continue;out.push({id:item.id,title:item.title,image:item.image||null,qty:item.quantity,value:Math.round(item.quantity*item.price),date:o.paidAt,variation:item.variant||'',orderId:o.id});}}return out;}
+ function itemRows(rows,start,end){const out=[];for(const o of rows||[]){if(!within(o.paidAt,start,end)||o.status==='cancelled'||o.payment!=='paid'||o.currency!=='BRL')continue;for(const item of o.items||[]){if(!Number.isFinite(item.quantity)||!Number.isSafeInteger(item.price))continue;out.push({id:item.id,variantId:item.variantId||'',title:item.title,image:item.image||null,qty:item.quantity,value:Math.round(item.quantity*item.price),date:o.paidAt,variation:item.variant||'',orderId:o.id});}}return out;}
  const api={within,summarize,itemRows};if(typeof module!=='undefined')module.exports=api;else root.NSCore=api;
 })(typeof window==='undefined'?globalThis:window);

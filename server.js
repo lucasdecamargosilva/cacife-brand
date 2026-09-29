@@ -350,6 +350,43 @@ try {
         } catch (e) { console.error('Shopee overview:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // Pedidos do período, paginados e filtrados por grupo de status (aba Pedidos). Centavos.
+    const SHOPEE_GRUPOS = {
+        aguardando: ['READY_TO_SHIP', 'PROCESSED', 'RETRY_SHIP'], transito: ['SHIPPED', 'TO_CONFIRM_RECEIVE'], concluido: ['COMPLETED'],
+        cancelado: ['CANCELLED', 'IN_CANCEL'], naopago: ['UNPAID'], devolucao: ['TO_RETURN'],
+    };
+    app.get('/api/shopee/orders-page', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const re = /^\d{4}-\d{2}-\d{2}$/;
+            const { start, end } = req.query;
+            if (!re.test(start || '') || !re.test(end || '') || start > end) return res.status(400).json({ error: 'período inválido' });
+            const grupo = Object.hasOwn(SHOPEE_GRUPOS, String(req.query.grupo || '')) ? String(req.query.grupo) : '';
+            const page = Math.min(500, Math.max(1, parseInt(req.query.page, 10) || 1)), per = 10;
+            // busca: só letras, números, espaço e hífen (vai dentro do SQL)
+            const q = String(req.query.q || '').normalize('NFC').replace(/[^\p{L}\p{N} -]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+            const perO = `o.created_at >= '${start} 00:00:00-03' and o.created_at < ('${end} 00:00:00-03'::timestamptz + interval '1 day')`;
+            const busca = q ? ` and (o.id_pedido ilike '%${q}%' or exists (select 1 from shopee_order_items b where b.shop_id=o.shop_id and b.id_pedido=o.id_pedido and b.item_name ilike '%${q}%'))` : '';
+            const inList = (arr) => arr.map(s => `'${s}'`).join(',');
+            const filtro = grupo ? ` and o.status in (${inList(SHOPEE_GRUPOS[grupo])})` : '';
+            const cases = Object.entries(SHOPEE_GRUPOS).map(([k, arr]) => `count(*) filter (where o.status in (${inList(arr)})) ${k}`).join(', ');
+            const qCount = `select count(*) todos, ${cases} from shopee_orders o where ${perO}${busca}`;
+            const qList = `select o.id_pedido, to_char(o.created_at at time zone 'America/Sao_Paulo','DD/MM HH24:MI') dt, coalesce(o.status,'?') status, coalesce(o.payment_status,'?') pay_status,
+                coalesce(o.payment_method,'-') pay, round(coalesce(o.total*100,0)) total, coalesce(o.shipping_carrier,'') envio, o.region uf,
+                it.item_name produto, it.image_url img, it.model_sku variacao, (select coalesce(sum(c.qty),0) from shopee_order_items c where c.shop_id=o.shop_id and c.id_pedido=o.id_pedido) itens
+                from shopee_orders o left join lateral (select i.item_name, i.image_url, i.model_sku from shopee_order_items i where i.shop_id=o.shop_id and i.id_pedido=o.id_pedido order by i.order_item_id limit 1) it on true
+                where ${perO}${busca}${filtro} order by o.created_at desc limit ${per} offset ${(page - 1) * per}`;
+            const [cnt, list] = await Promise.all([shopee.db.query(qCount), shopee.db.query(qList)]);
+            const N = (v) => Math.round(Number(v) || 0), c = cnt[0] || {};
+            const contagem = { todos: N(c.todos) }; for (const k of Object.keys(SHOPEE_GRUPOS)) contagem[k] = N(c[k]);
+            res.json({
+                page, total: grupo ? contagem[grupo] : contagem.todos, contagem,
+                pedidos: list.map(r => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total), envio: r.envio || null, uf: r.uf || null, produto: r.produto || null, img: r.img || null, variacao: r.variacao || null, itens: N(r.itens) })),
+            });
+        } catch (e) { console.error('Shopee orders-page:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
     // Vendas por produto no período (aba Produtos): unidades, pedidos, valor, vendas por dia e variação mais vendida. Centavos.
     app.get('/api/shopee/products', async (req, res) => {
         if (!(await requireViewer(req, res))) return;

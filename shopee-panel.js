@@ -334,19 +334,35 @@
     cols2.append(ship, top); box.append(cols2);
     return box;
   }
+  // Pedidos no desenho do TikTok Shop: quadros por status (período inteiro), busca e lista paginada no servidor
+  const GRUPO_DE = { READY_TO_SHIP: 'aguardando', PROCESSED: 'aguardando', RETRY_SHIP: 'aguardando', SHIPPED: 'transito', TO_CONFIRM_RECEIVE: 'transito', COMPLETED: 'concluido', CANCELLED: 'cancelado', IN_CANCEL: 'cancelado', UNPAID: 'naopago', TO_RETURN: 'devolucao' };
+  const STATUS_TONE = { COMPLETED: 'g', TO_CONFIRM_RECEIVE: 'cy', SHIPPED: 'cy', PROCESSED: 'am', READY_TO_SHIP: 'am', RETRY_SHIP: 'am', UNPAID: 'gy', IN_CANCEL: 'rd', CANCELLED: 'rd', TO_RETURN: 'am' };
+  const PAY_TONE = { paid: 'g', pending: 'am', cancelled: 'rd' };
+  const shopeeOrderState = {};
   function secPedidos(data) {
     const box = n('div', 'shp-wrap');
-    const st = panel('Status dos pedidos', 'Distribuição dos pedidos do período por situação.');
-    if (data.porStatus?.length) st.append(hbars(byCount(data.porStatus).map(s => ({ label: statusInfo(s.status)[0], value: s.n, color: statusInfo(s.status)[1] })))); else st.append(n('p', 'cap', 'Sem dados.'));
-    box.append(st);
-    const rec = panel('Pedidos recentes', 'Últimos 40 pedidos do período.');
-    const rows = (data.recentes || []).map(o => {
-      const [sl, sc] = statusInfo(o.status); const [pl, pc] = PAYST[o.pay_status] || [o.pay_status, '#94a3b8'];
-      return [o.id, o.dt, { node: badge(sl, sc) }, { node: badge(pl, pc) }, o.pay, { r: true, t: brl(o.total) }];
+    const K = root.ChannelKit;
+    if (!K) { box.append(n('p', 'cap', 'Não consegui carregar os pedidos.')); return box; }
+    const H = K.h, [s, e] = curDates();
+    // contagem inicial = status do período inteiro (vem no overview)
+    const counts0 = { '': data.orders || 0 }; for (const x of data.porStatus || []) { const g = GRUPO_DE[x.status]; if (g) counts0[g] = (counts0[g] || 0) + (x.n || 0); }
+    K.ordersView(box, {
+      ...KIT, state: shopeeOrderState, counts: counts0,
+      groups: [{ key: '', label: 'Todos', color: SHOPEE }, { key: 'aguardando', label: 'A enviar', color: '#d97706' }, { key: 'transito', label: 'Em trânsito', color: '#26aa99' }, { key: 'concluido', label: 'Concluídos', color: GREEN }, { key: 'cancelado', label: 'Cancelados', color: '#dc2626', red: true }, { key: 'naopago', label: 'Não pagos', color: '#9ca3af' }],
+      title: 'Pedidos', caption: 'Todos os pedidos do período · mais recentes primeiro', search: 'Buscar pedido ou produto',
+      fetch: ({ group, q, page }) => chatFetch('/api/shopee/orders-page?' + new URLSearchParams({ start: s, end: e, page, ...(group ? { grupo: group } : {}), ...(q ? { q } : {}) })).then(d => {
+        if (!d) return null; const c = d.contagem || {}; const counts = { '': c.todos || 0 }; for (const k of Object.keys(c)) if (k !== 'todos') counts[k] = c[k];
+        return { rows: d.pedidos || [], total: d.total || 0, counts };
+      }),
+      columns: [
+        { h: 'Pedido', cls: 'nw', cell: o => `<b style="font-size:12.5px">${H.esc(o.id)}</b>` },
+        { h: 'Data', cls: 'nw', cell: o => H.esc(o.dt || '—') },
+        { h: 'Produto', cell: o => `<span class="ck-pn">${H.foto(o.img)}${H.pname(o.produto || 'Produto', 260, H.esc(o.variacao || '') + (o.itens > 1 ? ` · <b style="display:inline;color:var(--p3)">${H.esc(num(o.itens))} itens</b>` : ''))}</span>` },
+        { h: 'Valor', cls: 'r', cell: o => `<b>${H.esc(brl(o.total))}</b>` },
+        { h: 'Status', cls: 'nw', cell: o => `${H.pill(statusInfo(o.status)[0], STATUS_TONE[o.status] || 'gy')}${o.envio ? `<small style="margin-top:4px">${H.esc(o.envio)}</small>` : ''}` },
+        { h: 'Pagamento', cls: 'nw', cell: o => `${H.pill((PAYST[o.pay_status] || [o.pay_status])[0], PAY_TONE[o.pay_status] || 'gy')}<small style="margin-top:4px">${H.esc(o.pay || '')}</small>` },
+      ],
     });
-    rec.append(table([{ t: 'Pedido' }, { t: 'Data' }, { t: 'Status' }, { t: 'Pagamento' }, { t: 'Método' }, { t: 'Valor', r: true }], rows));
-    if (!rows.length) rec.append(n('p', 'cap', 'Nenhum pedido no período.'));
-    box.append(rec);
     return box;
   }
   // Produtos e Devoluções: mesmo desenho do TikTok Shop (window.ChannelKit), nas cores da Shopee
@@ -423,65 +439,40 @@
     if (c.latest_message_type === 'text' && c.latest_message_content) return c.latest_message_content.text || '';
     return TYPE_LABEL[c.latest_message_type] || '';
   }
+  // Chat no desenho do Atendimento do TikTok Shop (lista | conversa). A Shopee não expõe dados do cliente, então não há painel lateral.
+  let chatUnread = false, convCache = null;
   function secChat() {
     const box = n('div', 'shp-wrap');
-    const pnl = panel('Conversas da Shopee', 'Converse com os clientes da sua loja Shopee — leia e responda.');
-    const chat = n('div', 'shp-chat'), list = n('div', 'shp-chat-list'), thread = n('div', 'shp-chat-thread');
-    thread.append(n('div', 'shp-chat-empty', 'Selecione uma conversa à esquerda.'));
-    chat.append(list, thread); pnl.append(chat); box.append(pnl);
-    list.append(n('div', 'shp-chat-empty', 'Carregando conversas…'));
-    chatFetch('/api/shopee/chat/conversations?page_size=25').then(d => {
-      list.replaceChildren();
-      const convs = (d && d.conversations) || [];
-      if (!convs.length) { list.append(n('div', 'shp-chat-empty', 'Nenhuma conversa.')); return; }
-      for (const c of convs) {
-        const row = n('button', 'shp-conv'); row.type = 'button';
-        if (c.to_avatar) { const av = n('img'); av.src = c.to_avatar; av.alt = ''; av.onerror = () => av.remove(); row.append(av); }
-        const info = n('div', 'shp-conv-info'), nameRow = n('div', 'shp-conv-name'); nameRow.append(n('b', '', c.to_name || 'Cliente'));
-        if (c.unread_count > 0) nameRow.append(n('span', 'shp-unread', String(c.unread_count)));
-        info.append(nameRow, n('div', 'shp-conv-prev', convPreview(c))); row.append(info);
-        row.onclick = () => { [...list.querySelectorAll('.shp-conv')].forEach(b => b.classList.remove('on')); row.classList.add('on'); loadThread(c); };
-        list.append(row);
-      }
-    }).catch(() => list.replaceChildren(n('div', 'shp-chat-empty', 'Não consegui carregar as conversas.')));
-    function loadThread(c) {
-      thread.replaceChildren(n('div', 'shp-chat-empty', 'Carregando mensagens…'));
-      chatFetch('/api/shopee/chat/messages?conversation_id=' + encodeURIComponent(c.conversation_id) + '&page_size=40').then(d => {
-        thread.replaceChildren(n('div', 'shp-thread-head', c.to_name || 'Cliente'));
-        const msgs = (d && d.messages) || [];
-        // ordena por data (mais antiga em cima); timestamps são enormes, então compara como número por tamanho+texto
-        const tkey = m => String(m.created_timestamp || '0');
-        msgs.sort((a, b) => { const x = tkey(a), y = tkey(b); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); });
-        const scroll = n('div', 'shp-msgs');
-        if (!msgs.length) scroll.append(n('div', 'shp-chat-empty', 'Sem mensagens.'));
-        for (const m of msgs) {
+    const K = root.ChannelKit;
+    if (!K) { box.append(n('p', 'cap', 'Não consegui carregar as conversas.')); return box; }
+    const H = K.h;
+    const conversations = (force) => { if (force || !convCache || Date.now() - convCache.t > 60000) convCache = { t: Date.now(), p: chatFetch('/api/shopee/chat/conversations?page_size=25').catch(() => null) }; return convCache.p; };
+    K.chatView(box, {
+      ...KIT, search: 'Buscar cliente', chip: chatUnread ? '1' : '0', emptyText: 'Nenhuma conversa.',
+      chips: [{ key: '0', label: 'Todas' }, { key: '1', label: 'Não lidas' }],
+      onChip: (k, api) => { chatUnread = k === '1'; api.reload(); },
+      load: async () => {
+        const d = await conversations(); if (!d) return null;
+        const convs = d.conversations || [];
+        const api = box.querySelector('.ck')?.ckChat; if (api) api.chipLabel('1', 'Não lidas · ' + num(convs.filter(c => c.unread_count > 0).length));
+        return convs.filter(c => !chatUnread || c.unread_count > 0).map(c => ({ id: String(c.conversation_id), c, name: c.to_name || 'Cliente', avatar: c.to_avatar, time: fmtTime(c.last_message_timestamp || c.latest_message_timestamp || c.last_read_message_timestamp || 0).slice(0, 5), preview: convPreview(c), unread: c.unread_count || 0 }));
+      },
+      open: (it, ui) => {
+        const c = it.c;
+        ui.head(c.to_name || 'Cliente', c.to_avatar, c.unread_count > 0 ? H.pill(num(c.unread_count) + ' não lidas', 'pk') : '');
+        chatFetch('/api/shopee/chat/messages?conversation_id=' + encodeURIComponent(c.conversation_id) + '&page_size=40').then(d => {
+          if (!ui.current()) return;
+          if (!d) { ui.wait('Não consegui carregar as mensagens.'); return; }
+          const tkey = m => String(m.created_timestamp || '0');
+          const msgs = (d.messages || []).slice().sort((a, b) => { const x = tkey(a), y = tkey(b); return x.length - y.length || (x < y ? -1 : x > y ? 1 : 0); });
           // "minha" (loja) = mensagem que NÃO veio do comprador (c.to_id)
-          const mine = String(m.from_id) !== String(c.to_id);
-          const bub = n('div', 'shp-msg ' + (mine ? 'me' : 'them'));
-          bub.append(n('div', 'shp-msg-body', msgText(m)), n('div', 'shp-msg-time', fmtTime(m.created_timestamp)));
-          scroll.append(bub);
-        }
-        thread.append(scroll); scroll.scrollTop = scroll.scrollHeight;
-        // compositor (responder o cliente)
-        const composer = n('div', 'shp-composer'), inp = n('textarea'), btn = n('button', 'shp-send', 'Enviar'), err = n('div', 'shp-send-err');
-        inp.placeholder = 'Escreva uma resposta…'; inp.rows = 1; btn.type = 'button';
-        const send = async () => {
-          const text = inp.value.trim(); if (!text) return; btn.disabled = true; err.textContent = '';
-          try {
-            const ok = await chatSendReq(c.to_id, text);
-            if (!ok) { err.textContent = 'Não consegui enviar. Tente de novo.'; }
-            else { inp.value = ''; const bub = n('div', 'shp-msg me'); bub.append(n('div', 'shp-msg-body', text), n('div', 'shp-msg-time', 'agora')); scroll.append(bub); scroll.scrollTop = scroll.scrollHeight; }
-          } catch { err.textContent = 'Não consegui enviar. Tente de novo.'; }
-          btn.disabled = false;
-        };
-        btn.onclick = send;
-        inp.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
-        composer.append(inp, btn); thread.append(composer, err);
-      }).catch(() => thread.replaceChildren(n('div', 'shp-chat-empty', 'Não consegui carregar as mensagens.')));
-    }
+          ui.messages(msgs.map(m => ({ side: String(m.from_id) !== String(c.to_id) ? 's' : 'c', text: msgText(m), time: fmtTime(m.created_timestamp) })));
+          ui.composer({ send: text => chatSendReq(c.to_id, text) });
+        }).catch(() => ui.wait('Não consegui carregar as mensagens.'));
+      },
+    });
     return box;
   }
-
   const TABS = [['Resumo', secVisao], ['Pedidos', secPedidos], ['Produtos', secProdutos], ['Devoluções', secDevolucoes], ['Chat', secChat]];
 
   function render(target, data, state) {

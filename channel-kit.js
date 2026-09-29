@@ -127,8 +127,69 @@
     .ck svg text{font-family:"DM Sans",system-ui,sans-serif;fill:#9ca3af;font-size:11px}
     .ck .hv{cursor:crosshair}.ck .hv .dot{opacity:0}.ck .hv:hover .dot{opacity:1}
     .ck .ck-wait{padding:30px;text-align:center;color:var(--mut);font-size:13px}
-    @media(max-width:1100px){.ck .ck-cols{grid-template-columns:minmax(0,1fr)!important}.ck .ck-k4{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ck label.ck-search{min-width:0;flex:1}}
-    @media(max-width:620px){.ck .ck-k4,.ck .ck-k3{grid-template-columns:minmax(0,1fr)!important}.ck .ck-pgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.ck .ck-foto.big{height:130px}.ck .ck-donut{flex-direction:column!important;align-items:stretch!important}.ck .ck-donut>svg{align-self:center}}`;
+    .ck .ck-empty{padding:26px;color:var(--mut);font-size:13px;text-align:center}
+    .ck .ck-red{color:#dc2626!important}
+    .ck .ck-stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+    .ck .ck-link,.ck .ck-link:hover:not(:disabled){background:none;border:0;padding:0;color:var(--p3);font:600 13px "DM Sans",system-ui,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none}
+    .ck .ck-link:hover:not(:disabled){text-decoration:underline}
+    .ck .ck-tbl tr.ck-click{cursor:pointer}.ck .ck-tbl tr.ck-click:hover td{background:#fafafa}
+    .ck .ck-tbl td small,.ck .ck-sm{display:block;font-size:12px;color:var(--mut);white-space:nowrap}
+    .ck .ck-stt,.ck .ck-stt:hover:not(:disabled){border:1px solid var(--ln);background:#fff;border-radius:12px;padding:12px 14px;min-width:0;cursor:pointer;text-align:left;font:inherit;color:inherit}
+    .ck .ck-stt .ck-lbl{display:flex;align-items:center;gap:6px}.ck .ck-stt .ck-lbl i{width:8px;height:8px;border-radius:3px;flex:none}
+    .ck .ck-stt b{display:block;font-size:21px;margin-top:6px}
+    .ck .ck-stt:hover:not(:disabled){border-color:#d1d5db}
+    .ck .ck-stt.on,.ck .ck-stt.on:hover:not(:disabled){background:#111827;border-color:#111827}.ck .ck-stt.on .ck-lbl{color:#cbd5e1}.ck .ck-stt.on b{color:#fff!important}
+    .ck .ck-pag{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;font-size:12.5px;color:var(--mut);flex-wrap:wrap}
+    .ck .ck-pg{display:flex;gap:4px;flex-wrap:wrap}.ck .ck-pg button,.ck .ck-pg button:hover:not(:disabled){min-width:30px;height:30px;border:1px solid var(--ln);border-radius:8px;display:grid;place-items:center;font:600 12.5px "DM Sans",system-ui,sans-serif;color:#374151;background:#fff;padding:0 6px;cursor:pointer}.ck .ck-pg button.on,.ck .ck-pg button.on:hover:not(:disabled){background:#111827;color:#fff;border-color:#111827}.ck .ck-pg button:disabled{opacity:.45;cursor:default}.ck .ck-pg span{min-width:20px;height:30px;display:grid;place-items:center}
+    .ck .ck-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .ck .ck-prog{height:8px;background:#f3f4f6;border-radius:9px;overflow:hidden;display:block}.ck .ck-prog i{display:block;height:100%;border-radius:9px}
+    .ck .ck-stackbar{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:4px 0 10px;gap:2px}.ck .ck-stackbar i{display:block;cursor:crosshair}
+    .ck .ck-dark{background:#111827;color:#fff;border-radius:14px;padding:18px 22px;display:flex;flex-direction:column;justify-content:center;gap:10px;min-width:0;position:relative;overflow:hidden}
+    .ck .ck-dark .ck-acc{position:absolute;top:0;left:22px;width:46px;height:4px;border-radius:0 0 6px 6px;background:linear-gradient(90deg,var(--c),var(--b1))}
+    .ck .ck-dark-h{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+    .ck .ck-logo{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fff;display:grid;place-items:center;overflow:hidden}.ck .ck-logo img{width:22px;height:22px;object-fit:contain}
+    .ck .ck-dark-v{font-size:clamp(24px,2.3vw,32px);font-weight:700;letter-spacing:-.03em;white-space:nowrap;color:#4ade80;overflow:hidden;text-overflow:ellipsis}
+    .ck .ck-dark .ck-up{color:#4ade80}.ck .ck-dark .ck-down{color:#fca5a5}.ck .ck-dark .ck-mut{color:#ffffffa6}
+    .ck .ck-fin{display:grid;gap:16px;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr))}
+    .ck .ck-svg{width:100%;height:auto;display:block}
+    .ck .hv .gl{opacity:0}.ck .hv:hover .gl{opacity:1}.ck .hv:hover .bb{opacity:1!important}
+    .ck .ck-legend{display:flex;gap:14px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap}.ck .ck-legend span{display:flex;gap:6px;align-items:center}
+    .ck .ck-rcard{border:1px solid var(--ln);border-radius:12px;padding:12px;min-width:0;display:flex;flex-direction:column}
+    /* atendimento: lista | conversa | painel */
+    .ck .ck-chat{display:grid;grid-template-columns:290px minmax(0,1fr) 300px;height:680px;padding:0;overflow:hidden}
+    .ck .ck-chat.two{grid-template-columns:290px minmax(0,1fr)}
+    .ck .ck-clist{border-right:1px solid var(--ln);display:flex;flex-direction:column;min-width:0;min-height:0}
+    .ck .ck-clist .hd{padding:14px;border-bottom:1px solid var(--ln)}
+    .ck .ck-clist .items{overflow-y:auto;flex:1;min-height:0}
+    .ck .ck-clist .ft{border-top:1px solid var(--ln);padding:8px 14px}
+    .ck .ck-ci,.ck .ck-ci:hover:not(:disabled){display:flex;gap:10px;padding:12px 14px;border:0;border-bottom:1px solid #f5f5f5;cursor:pointer;min-width:0;width:100%;background:transparent;text-align:left;font:inherit;color:inherit;border-radius:0}
+    .ck .ck-ci:hover:not(:disabled){background:#fafafa}.ck .ck-ci.on,.ck .ck-ci.on:hover:not(:disabled){background:var(--p2)}
+    .ck .ck-ci .tx{flex:1;min-width:0}.ck .ck-ci .top{display:flex;justify-content:space-between;gap:8px}.ck .ck-ci .top b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px}.ck .ck-ci .top small{color:var(--mut);white-space:nowrap;font-size:11.5px}
+    .ck .ck-ci .pv{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:3px}.ck .ck-ci .pv span{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ck .ck-badge{background:var(--p);color:var(--pt,#fff);font-size:11px;font-weight:700;border-radius:999px;min-width:19px;height:19px;padding:0 6px;display:grid;place-items:center;flex:none}
+    .ck .ck-av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;flex:0 0 38px;color:#fff;background:linear-gradient(135deg,var(--p),var(--c));object-fit:cover;text-transform:uppercase}
+    .ck .ck-thread{display:flex;flex-direction:column;min-width:0;min-height:0}
+    .ck .ck-thread .hd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--ln);min-height:59px}
+    .ck .ck-msgs{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px;background:#fafafa;min-height:0}
+    .ck .ck-bub{max-width:66%;padding:9px 13px;font-size:13.5px;line-height:1.4;word-break:break-word;white-space:pre-wrap}
+    .ck .ck-bub.c{background:#eef0f3;color:#111827;align-self:flex-start;border-radius:14px 14px 14px 4px}
+    .ck .ck-bub.s{background:var(--p);color:var(--pt,#fff);align-self:flex-end;border-radius:14px 14px 4px 14px}
+    .ck .ck-bub.bot{background:#e5e7eb;color:#374151;align-self:flex-end;border-radius:14px 14px 4px 14px}
+    .ck .ck-bub em{display:block;font-style:normal;font-size:11px;font-weight:700;opacity:.75;margin-bottom:2px;white-space:normal}
+    .ck .ck-bub small{display:block;font-size:10.5px;opacity:.65;margin-top:3px;text-align:right;white-space:normal}
+    .ck .ck-sysn{align-self:center;font-size:11.5px;color:var(--mut);background:#fff;border:1px solid var(--ln);border-radius:999px;padding:3px 12px;text-align:center;max-width:90%}
+    .ck .ck-comp{display:flex;gap:10px;align-items:flex-end;padding:12px 16px;border-top:1px solid var(--ln);background:#fff}
+    .ck .ck-comp textarea{flex:1;border:1px solid var(--ln);border-radius:10px;padding:10px 12px;min-width:0;resize:none;font:inherit;font-size:13.5px;color:var(--ink);max-height:110px;min-height:0;background:#fff}
+    .ck .ck-senderr{color:#dc2626;font-size:12px;padding:0 16px 8px;background:#fff}
+    .ck .ck-btn:disabled{opacity:.55;cursor:not-allowed}
+    .ck .ck-cpanel{border-left:1px solid var(--ln);overflow-y:auto;padding:16px;min-width:0}
+    .ck .ck-cpanel .ck-kv{font-size:13px;padding:8px 0}
+    .ck .ck-cpanel h4{margin:16px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+    .ck .ck-cpanel a{color:var(--p3);font-weight:600;font-size:13px;text-decoration:none}
+    @media(max-width:1100px){.ck .ck-cols{grid-template-columns:minmax(0,1fr)!important}.ck .ck-k4{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ck label.ck-search{min-width:0;flex:1}
+      .ck .ck-fin{grid-template-columns:repeat(3,minmax(0,1fr))}.ck .ck-fin>.ck-dark{grid-column:1/-1}.ck .ck-tiles{grid-template-columns:repeat(3,minmax(0,1fr))!important}.ck .ck-r5{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+      .ck .ck-chat,.ck .ck-chat.two{grid-template-columns:minmax(0,1fr);height:auto}.ck .ck-clist{border-right:0;border-bottom:1px solid var(--ln);max-height:340px}.ck .ck-thread{height:520px}.ck .ck-cpanel{border-left:0;border-top:1px solid var(--ln)}}
+    @media(max-width:620px){.ck .ck-fin,.ck .ck-k4,.ck .ck-k3{grid-template-columns:minmax(0,1fr)!important}.ck .ck-tiles,.ck .ck-r5{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ck .ck-bub{max-width:85%}.ck .ck-pgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}.ck .ck-foto.big{height:130px}.ck .ck-donut{flex-direction:column!important;align-items:stretch!important}.ck .ck-donut>svg{align-self:center}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'ck-style', textContent: css }));
     // tooltip único ([data-tip] = "título|linha|linha")
     const tip = document.createElement('div'); tip.id = 'ck-tip';
@@ -288,5 +349,253 @@
   // mensagem simples (carregando / erro) no mesmo visual
   function message(target, text, o = {}) { const el = rootEl(o); el.innerHTML = `<div class="ck-card"><div class="ck-wait">${esc(text)}</div></div>`; if (target) target.append(el); return el; }
 
-  root.ChannelKit = { productsView, returnsView, message, aggregate, shortName, esc, safeUrl };
+  // ---------- peças reutilizáveis (Pedidos, Financeiro, Estoque, Atendimento) ----------
+  const dtBr = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const dateBr = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const when = v => { if (!v) return '—'; const d = new Date(v); return Number.isFinite(d.getTime()) ? dtBr.format(d).replace(',', '') : '—'; };
+  const whenDate = v => { if (!v) return '—'; const d = new Date(v); return Number.isFinite(d.getTime()) ? dateBr.format(d) : '—'; };
+  const compactBrl = c => 'R$ ' + new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 }).format((Number(c) || 0) / 100);
+  const compactNum = v => new Intl.NumberFormat('pt-BR', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(v) || 0);
+  const openBtn = (text, i) => `<button type="button" class="ck-link ck-open" data-i="${Number(i) || 0}">${esc(text)}</button>`;
+  // kpis: [[rótulo, ícone, valor (html já seguro), sub (html já seguro), {alt, money}]]
+  const kpis = (items, cols) => `<div class="ck-grid ${(cols || items.length) >= 4 ? 'ck-k4' : 'ck-k3'}" style="grid-template-columns:repeat(${cols || items.length},minmax(0,1fr))">${items.map(([l, ic, v, s, op], i) => kc(l, ic, v, s, { alt: i % 2 === 1, ...(op || {}) })).join('')}</div>`;
+  const donutBlock = (entries, unit) => { const es = (entries || []).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]); return es.length ? `<div class="ck-fill ck-donut" style="flex-direction:row;align-items:center;gap:18px;justify-content:flex-start">${donut(es, unit || 'pedidos', 140)}<div style="flex:1;min-width:0">${legend(es)}</div></div>` : '<p class="ck-cap">Nenhum registro para este gráfico.</p>'; };
+  function stackBar(items) { const tot = items.reduce((s, x) => s + x[1], 0) || 1; return `<div class="ck-stackbar">${items.filter(x => x[1] > 0).map(([l, v, c]) => `<i data-tip="${esc(l)}|${num(v)} · ${pct(v / tot * 100)}" style="flex:${v};background:${esc(c)}"></i>`).join('')}</div>`; }
+  function csv(name, rows) {
+    const text = rows.map(r => r.map(v => { let s = String(v == null ? '' : v); if (/^[=+@-]/.test(s) && !/^-?\d+([.,]\d+)?$/.test(s)) s = "'" + s; return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(';')).join('\r\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' })); a.download = name;
+    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+  const csvMoney = c => ((Number(c) || 0) / 100).toFixed(2).replace('.', ',');
+  const fmtAx = (v, kind) => kind === 'brl' ? compactBrl(v) : compactNum(Math.round(v));
+  const fmtV = (v, kind) => kind === 'brl' ? brl(v) : num(v);
+  function axis(w, h, l, r, t, b, max, X, dates, kind) {
+    let g = '';
+    for (let i = 0; i <= 4; i++) { const y = t + (h - t - b) * i / 4; g += `<line x1="${l}" x2="${w - r}" y1="${y}" y2="${y}" stroke="#f0f1f4"/><text x="${l - 8}" y="${y + 4}" text-anchor="end">${fmtAx(max * (1 - i / 4), kind)}</text>`; }
+    const L = dates.length, idx = L <= 1 ? [0] : [...new Set([0, 1, 2, 3, 4].map(k => Math.round(k * (L - 1) / 4)))];
+    idx.forEach(i => { if (dates[i]) g += `<text x="${X(i)}" y="${h - 7}" text-anchor="${i === 0 && L > 1 ? 'start' : i === L - 1 && L > 1 ? 'end' : 'middle'}">${ddmm(dates[i])}</text>`; });
+    return g;
+  }
+  const svgWrap = (w, h, g) => `<svg class="ck-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+  function barChart(dates, vals, { w = 1300, h = 240, kind = 'brl', name = 'Valor', empty = 'Sem valor' } = {}) {
+    if (!dates.length) return '<p class="ck-cap">Sem dados no período.</p>';
+    const l = 64, r = 14, t = 10, b = 26, max = Math.max(1, ...vals) * 1.12, st = (w - l - r) / dates.length, X = i => l + (i + .5) * st, Y = v => h - b - v / max * (h - t - b), bw = st * .6;
+    let g = axis(w, h, l, r, t, b, max, X, dates, kind);
+    vals.forEach((v, i) => { g += `<g class="hv" data-tip="${ddmm(dates[i])}|${v ? esc(name) + ': ' + fmtV(v, kind) : esc(empty)}"><rect x="${X(i) - st / 2}" y="${t}" width="${st}" height="${h - t - b}" fill="transparent"/><rect class="bb" x="${X(i) - bw / 2}" y="${Y(v)}" width="${bw}" height="${Math.max(0, h - b - Y(v))}" rx="3" fill="var(--c)" opacity=".85"/></g>`; });
+    return svgWrap(w, h, g);
+  }
+  // cascata: steps = [[nome, centavos, total?]] (total = barra cheia; senão é variação)
+  function waterfall(steps, { w = 900, h = 380 } = {}) {
+    const l = 64, r = 14, t = 24, b = 30, max = Math.max(1, ...steps.map(s => Math.abs(s[1]))) * 1.08, st = (w - l - r) / steps.length, bw = st * .56, Y = v => h - b - v / max * (h - t - b);
+    let g = ''; for (let i = 0; i <= 4; i++) { const y = t + (h - t - b) * i / 4; g += `<line x1="${l}" x2="${w - r}" y1="${y}" y2="${y}" stroke="#f0f1f4"/><text x="${l - 8}" y="${y + 4}" text-anchor="end">${fmtAx(max * (1 - i / 4), 'brl')}</text>`; }
+    let run = 0;
+    steps.forEach(([nm, v, tp], i) => {
+      const x = l + i * st + (st - bw) / 2; let y0, y1, c;
+      if (tp) { y0 = 0; y1 = v; run = v; c = i ? GREEN : '#111827'; } else { y0 = run + v; y1 = run; run += v; c = v < 0 ? 'var(--p)' : GREEN; }
+      const top = Y(Math.max(y0, y1)), hh = Math.max(2, Math.abs(Y(y0) - Y(y1)));
+      const lab = tp ? fmtAx(v, 'brl') : (v < 0 ? '−' : '+') + fmtAx(Math.abs(v), 'brl').replace('R$ ', '');
+      g += `<g class="hv" data-tip="${esc(nm)}|${tp ? '' : v < 0 ? '− ' : '+ '}${brl(Math.abs(v))}"><rect x="${l + i * st}" y="${t}" width="${st}" height="${h - t - b}" fill="transparent"/><rect class="bb" x="${x}" y="${top}" width="${bw}" height="${hh}" rx="4" fill="${c}" opacity=".92"/><text x="${x + bw / 2}" y="${top - 6}" text-anchor="middle" style="font-size:10.5px;fill:#374151;font-weight:600">${lab}</text><text x="${x + bw / 2}" y="${h - 10}" text-anchor="middle">${esc(nm)}</text></g>`;
+      if (i < steps.length - 1) g += `<line x1="${x + bw}" x2="${x + st}" y1="${Y(run)}" y2="${Y(run)}" stroke="#cbd5e1" stroke-dasharray="3 3"/>`;
+    });
+    return svgWrap(w, h, g);
+  }
+
+  // Lista no desenho de Pedidos do TikTok: quadros de status (tiles) ou chips, busca, filtros, tabela e paginação.
+  // o: { groups: [{key, label, color}] (1º = todos, key ''), groupOf(row), tiles (true = quadros acima; false = chips no card),
+  //      counts (opcional, contagens fixas), title, caption, search (placeholder | null), selects: [{label, options:[[v,t]], test(row, v)}],
+  //      columns: [{h, cls, cell(row, i) -> html seguro}], rows | fetch({group, q, page}) -> Promise<{rows, total, counts}>,
+  //      pageSize, state {group, q, page, sel}, onOpen(row), afterPaint(rows, trs), onFilter(rows), csv: {name, rows(filtered) -> [[...]]},
+  //      above(node) (monta gráficos entre os quadros e a tabela), emptyText, rowClick }
+  function mountList(el, o) {
+    const st = o.state || {}; st.group = st.group || ''; st.q = st.q || ''; st.page = st.page || 1; st.sel = st.sel || {};
+    const per = o.pageSize || 10, groups = o.groups || [], remote = typeof o.fetch === 'function';
+    const tiles = document.createElement('div');
+    if (groups.length && o.tiles !== false) { tiles.className = 'ck-grid ck-tiles'; tiles.style.cssText = `grid-template-columns:repeat(${Math.min(6, groups.length)},minmax(0,1fr));gap:10px;margin-bottom:16px`; el.append(tiles); }
+    if (typeof o.above === 'function') { const a = document.createElement('div'); el.append(a); o.above(a); }
+    const card = document.createElement('div'); card.className = 'ck-card';
+    const selHtml = (o.selects || []).map((s, i) => `<select class="ck-select" data-s="${i}" aria-label="${esc(s.label)}">${s.options.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select>`).join('');
+    const right = `${o.search !== null ? `<label class="ck-search"><i class="ph ph-magnifying-glass"></i><input type="search" placeholder="${esc(o.search || 'Buscar')}" aria-label="${esc(o.search || 'Buscar')}"></label>` : ''}${selHtml}${o.csv ? '<button type="button" class="ck-btn ghost sm ck-csv"><i class="ph ph-download-simple"></i>Exportar CSV</button>' : ''}`;
+    card.innerHTML = `<div class="ck-chead" style="align-items:center;flex-wrap:wrap;margin-bottom:12px"><div class="ck-min0"><h3>${esc(o.title || '')}</h3>${o.caption ? `<p class="ck-cap" style="margin:0">${esc(o.caption)}</p>` : ''}</div><div class="ck-filters">${right}</div></div>${groups.length && o.tiles === false ? '<div class="ck-chips" style="margin-bottom:12px"></div>' : ''}<div class="ck-scroll ck-ltbl"></div><div class="ck-pag"></div>`;
+    el.append(card);
+    const tbl = card.querySelector('.ck-ltbl'), pag = card.querySelector('.ck-pag'), inp = card.querySelector('input[type=search]'), chipsEl = card.querySelector('.ck-chips');
+    if (inp) inp.value = st.q;
+    card.querySelectorAll('select[data-s]').forEach(s => { s.value = st.sel[s.dataset.s] || ''; s.onchange = () => { st.sel[s.dataset.s] = s.value; st.page = 1; load(); }; });
+    let token = 0, last = null;
+    const paintGroups = (counts) => {
+      const html = groups.map((g, i) => { const v = counts[g.key] || 0; return o.tiles === false
+        ? `<button type="button" class="ck-chip${st.group === g.key ? ' on' : ''}" data-g="${esc(g.key)}">${esc(g.label)} · ${num(v)}</button>`
+        : `<button type="button" class="ck-stt${st.group === g.key ? ' on' : ''}" data-g="${esc(g.key)}"><div class="ck-lbl"><i style="background:${esc(g.color || 'var(--p)')}"></i><span class="ck-one">${esc(g.label)}</span></div><b${g.red ? ' class="ck-red"' : ''}>${num(v)}</b></button>`; }).join('');
+      const host = o.tiles === false ? chipsEl : tiles; if (!host) return;
+      host.innerHTML = html;
+      host.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { st.group = b.dataset.g; st.page = 1; load(); });
+    };
+    function paintPag(total, page) {
+      const pages = Math.max(1, Math.ceil(total / per)), a = total ? (page - 1) * per + 1 : 0, b = Math.min(total, page * per);
+      const nums = [...new Set([1, page - 1, page, page + 1, pages])].filter(x => x >= 1 && x <= pages).sort((x, y) => x - y);
+      let h = `<button type="button" data-p="${page - 1}" ${page <= 1 ? 'disabled' : ''} aria-label="Anterior"><i class="ph ph-caret-left"></i></button>`, lastN = 0;
+      for (const x of nums) { if (x - lastN > 1) h += '<span>…</span>'; h += `<button type="button" data-p="${x}" class="${x === page ? 'on' : ''}">${num(x)}</button>`; lastN = x; }
+      h += `<button type="button" data-p="${page + 1}" ${page >= pages ? 'disabled' : ''} aria-label="Próxima"><i class="ph ph-caret-right"></i></button>`;
+      pag.innerHTML = total > 0 ? `<span>Mostrando ${num(a)}–${num(b)} de ${num(total)}</span><div class="ck-pg">${h}</div>` : '';
+      pag.querySelectorAll('button[data-p]').forEach(bt => bt.onclick = () => { const p = +bt.dataset.p; if (p >= 1 && p <= pages && p !== st.page) { st.page = p; load(); } });
+    }
+    function paintRows(list, total) {
+      const pageRows = list;
+      tbl.innerHTML = pageRows.length ? `<table class="ck-tbl"><thead><tr>${o.columns.map(c => `<th class="${esc(c.cls || '')}">${esc(c.h)}</th>`).join('')}</tr></thead><tbody>${pageRows.map((r, i) => `<tr data-i="${i}"${o.rowClick && o.onOpen ? ' class="ck-click"' : ''}>${o.columns.map(c => `<td class="${esc(c.cls || '')}">${c.cell(r, i)}</td>`).join('')}</tr>`).join('')}</tbody></table>` : `<div class="ck-wait">${esc(st.q ? 'Nada encontrado para essa busca.' : (o.emptyText || 'Nenhum registro neste filtro.'))}</div>`;
+      fixImgs(tbl); paintPag(total, st.page);
+      if (o.onOpen) {
+        tbl.querySelectorAll('.ck-open').forEach(b => b.onclick = (e) => { e.stopPropagation(); const r = pageRows[+b.dataset.i]; if (r) o.onOpen(r); });
+        if (o.rowClick) tbl.querySelectorAll('tr[data-i]').forEach(tr => tr.onclick = (e) => { if (e.target.closest('a,button')) return; const r = pageRows[+tr.dataset.i]; if (r) o.onOpen(r); });
+      }
+      if (o.afterPaint) o.afterPaint(pageRows, [...tbl.querySelectorAll('tbody tr')]);
+    }
+    let filteredNow = [];
+    function load() {
+      const my = ++token;
+      if (remote) {
+        tbl.style.opacity = '.55'; if (!last) { tbl.innerHTML = '<div class="ck-wait">Carregando…</div>'; paintGroups(o.counts || {}); }
+        Promise.resolve(o.fetch({ group: st.group, q: st.q, page: st.page })).catch(() => null).then(d => {
+          if (my !== token) return; tbl.style.opacity = '';
+          if (!d) { tbl.innerHTML = '<div class="ck-wait">Não consegui carregar agora. Tente Atualizar.</div>'; pag.innerHTML = ''; return; }
+          last = d; paintGroups(d.counts || o.counts || {}); filteredNow = d.rows || []; paintRows(d.rows || [], Number(d.total) || 0);
+        });
+        return;
+      }
+      const q = st.q.toLowerCase();
+      const base = (o.rows || []).filter(r => (!q || String(o.text ? o.text(r) : '').toLowerCase().includes(q)) && (o.selects || []).every((s, i) => !st.sel[i] || s.test(r, st.sel[i])));
+      const counts = o.counts || {}; if (!o.counts) { counts[''] = base.length; for (const r of base) { const k = o.groupOf ? o.groupOf(r) : ''; if (k) counts[k] = (counts[k] || 0) + 1; } }
+      paintGroups(counts);
+      const arr = st.group ? base.filter(r => o.groupOf && o.groupOf(r) === st.group) : base;
+      filteredNow = arr;
+      const pages = Math.max(1, Math.ceil(arr.length / per)); if (st.page > pages) st.page = pages;
+      if (o.onFilter) o.onFilter(arr);
+      paintRows(arr.slice((st.page - 1) * per, st.page * per), arr.length);
+    }
+    let t; if (inp) inp.oninput = () => { clearTimeout(t); t = setTimeout(() => { const q = inp.value.trim(); if (q === st.q) return; st.q = q; st.page = 1; load(); }, remote ? 400 : 150); };
+    const cb = card.querySelector('.ck-csv'); if (cb) cb.onclick = () => csv(o.csv.name, o.csv.rows(filteredNow));
+    load();
+    return { reload: load };
+  }
+  function ordersView(target, o = {}) {
+    const el = rootEl(o);
+    if (o.before) el.insertAdjacentHTML('beforeend', o.before);
+    const api = mountList(el, o);
+    fixImgs(el); if (target) target.append(el); el.ckList = api; return el;
+  }
+
+  // Financeiro: destaque escuro + KPIs, cascata do bruto ao líquido, quebra por grupo, barras por dia e lista.
+  // o: { logo, hero: {title, value, sub (html seguro), foot (html seguro)}, kpis: [...como kpis()], waterfall: {title, caption, steps},
+  //      side: {title, caption, rows: [{label, sub, value, n, color}], total: {label, value}, note}, bars: {title, caption, dates, vals, name, kind},
+  //      list: {...opções de mountList} }
+  function financeView(target, o = {}) {
+    const el = rootEl(o);
+    const h = o.hero || {};
+    const logo = safeUrl(o.logo) || (/^[\w.-]+\.(png|ico|svg)$/i.test(String(o.logo || '')) ? o.logo : '');
+    const hero = `<div class="ck-dark"><i class="ck-acc"></i><div class="ck-dark-h">${logo ? `<span class="ck-logo"><img src="${esc(logo)}" alt=""></span>` : ''}${esc(h.title || '')}</div><div class="ck-dark-v" title="${esc(brl(h.value))}">${brl(h.value)}</div>${h.sub ? `<div style="font-size:12.5px">${h.sub}</div>` : ''}${h.foot ? `<div style="font-size:12px;color:#9ca3af">${h.foot}</div>` : ''}</div>`;
+    let html = `<div class="ck-fin">${hero}${(o.kpis || []).map(([l, ic, v, s, op], i) => kc(l, ic, v, s, { alt: i % 2 === 0, ...(op || {}) })).join('')}</div>`;
+    const blocks = [];
+    if (o.waterfall) blocks.push(`<div class="ck-card">${chead(esc(o.waterfall.title), esc(o.waterfall.caption || ''))}<div class="ck-push">${o.waterfall.steps && o.waterfall.steps[0] && o.waterfall.steps[0][1] ? waterfall(o.waterfall.steps.filter(x => x[2] || x[1])) : '<p class="ck-cap">Sem valores no período.</p>'}</div></div>`);
+    if (o.side) {
+      const s = o.side, tot = s.rows.reduce((a, r) => a + (Number(r.value) || 0), 0);
+      blocks.push(`<div class="ck-card">${chead(esc(s.title), esc(s.caption || ''))}<div class="ck-fill">${s.rows.length ? s.rows.map(r => `<div style="padding:12px 0;border-bottom:1px solid #f3f4f6"><div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="display:flex;gap:8px;align-items:center;min-width:0">${legendDot(r.color || 'var(--p)')}<b class="ck-one">${esc(r.label)}</b></span><b class="${r.red ? 'ck-red' : 'ck-money'}">${brl(r.value)}</b></div><div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--mut);margin:3px 0 6px 18px"><span class="ck-one">${esc(r.sub || '')}</span><span style="white-space:nowrap">${esc(r.n || '')}</span></div><span class="ck-prog" style="height:6px;margin-left:18px"><i style="width:${tot > 0 ? Math.max(0, (Number(r.value) || 0) / tot * 100) : 0}%;background:${esc(r.color || 'var(--p)')}"></i></span></div>`).join('') : '<p class="ck-cap">Sem valores no período.</p>'}
+        ${s.total ? `<div class="ck-kv" style="font-size:14.5px"><span><b>${esc(s.total.label)}</b></span><b class="ck-money">${brl(s.total.value)}</b></div>` : ''}${s.note ? `<p class="ck-cap" style="margin:4px 0 0">${esc(s.note)}</p>` : ''}</div></div>`);
+    }
+    if (blocks.length) html += `<div class="ck-grid ck-cols ck-mt" style="grid-template-columns:${blocks.length > 1 ? 'minmax(0,1.7fr) minmax(0,1fr)' : 'minmax(0,1fr)'}">${blocks.join('')}</div>`;
+    if (o.bars) html += `<div class="ck-mt"><div class="ck-card">${chead(esc(o.bars.title), esc(o.bars.caption || ''))}<div class="ck-push">${barChart(o.bars.dates || [], o.bars.vals || [], { name: o.bars.name, kind: o.bars.kind || 'brl', empty: o.bars.empty })}</div></div></div>`;
+    el.innerHTML = html;
+    if (o.list) { const w = document.createElement('div'); w.className = 'ck-mt'; el.append(w); mountList(w, o.list); }
+    fixImgs(el); if (target) target.append(el); return el;
+  }
+
+  // Estoque: KPIs, "Repor primeiro" (5 cards) e a tabela do catálogo (via mountList).
+  // o: { kpis: [...], repor: {title, caption, items: [{title, image, sub, pillText, pillTone}], csv: {name, rows()}}, list: {...mountList} }
+  function stockView(target, o = {}) {
+    const el = rootEl(o);
+    let html = o.kpis ? kpis(o.kpis, 4) : '';
+    if (o.repor) {
+      const r = o.repor, it = (r.items || []).slice(0, 5);
+      html += `<div class="ck-card ck-mt"><div class="ck-chead"><div class="ck-min0"><h3>${esc(r.title)}</h3><p class="ck-cap">${esc(r.caption || '')}</p></div>${r.csv ? `<button type="button" class="ck-btn sm ck-rcsv"${it.length ? '' : ' disabled'}><i class="ph ph-download-simple"></i>Exportar lista</button>` : ''}</div>
+        ${it.length ? `<div class="ck-grid ck-r5" style="grid-template-columns:repeat(5,minmax(0,1fr));gap:12px">${it.map((x, i) => `<div class="ck-rcard"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:6px"><b style="color:${i < 3 ? 'var(--p)' : '#9ca3af'};font-size:18px">${i + 1}</b>${pill(x.pillText, x.pillTone || 'am')}</div>${foto(x.image, 'big', x.title).replace('class="ck-foto big"', 'class="ck-foto big" style="height:96px"')}<span style="min-width:0;margin-top:8px"><b class="ck-one" title="${esc(x.title)}" style="font-size:13px">${esc(shortName(x.title))}</b><span class="ck-mut ck-one" style="font-size:12px">${esc(x.sub || '')}</span></span></div>`).join('')}</div>` : `<p class="ck-cap">${esc(r.empty || 'Nenhuma variação precisando de reposição agora.')}</p>`}</div>`;
+    }
+    el.innerHTML = html;
+    const b = el.querySelector('.ck-rcsv'); if (b) b.onclick = () => csv(o.repor.csv.name, o.repor.csv.rows());
+    if (o.list) { const w = document.createElement('div'); w.className = 'ck-mt'; el.append(w); mountList(w, o.list); }
+    fixImgs(el); if (target) target.append(el); return el;
+  }
+
+  // Atendimento: lista de conversas | conversa | painel lateral (opcional).
+  // o: { search, chips: [{key, label}], chip, onChip(key), load() -> Promise<items|null>, open(item, ui), side (bool), footer(node), emptyText }
+  //    item: {id, name, avatar, time, preview, unread}; ui: {head(name, avatar, pillHtml), messages([{side:'c'|'s'|'bot'|'sys', text, time, tag}]),
+  //    composer({send(text) -> Promise<bool>} | {note, disabled}), side(html seguro), wait(text), current() }
+  const avatar = (url, name, size = 38) => { const u = safeUrl(url); const st = size !== 38 ? ` style="width:${size}px;height:${size}px;flex-basis:${size}px"` : ''; return u ? `<img class="ck-av" src="${esc(u)}" alt=""${st}>` : `<span class="ck-av"${st}>${esc(String(name || '?').trim().slice(0, 2) || '?')}</span>`; };
+  function chatView(target, o = {}) {
+    const el = rootEl(o);
+    el.innerHTML = `<div class="ck-card ck-chat${o.side ? '' : ' two'}"><div class="ck-clist"><div class="hd"><label class="ck-search" style="min-width:0"><i class="ph ph-magnifying-glass"></i><input type="search" placeholder="${esc(o.search || 'Buscar')}" aria-label="${esc(o.search || 'Buscar')}"></label>${(o.chips || []).length ? `<div class="ck-chips" style="margin-top:10px">${o.chips.map(c => `<button type="button" class="ck-chip${c.key === o.chip ? ' on' : ''}" data-k="${esc(c.key)}">${esc(c.label)}</button>`).join('')}</div>` : ''}</div><div class="items"><div class="ck-empty">Carregando…</div></div><div class="ft" hidden></div></div>
+      <div class="ck-thread"><div class="ck-empty" style="margin:auto">Selecione uma conversa à esquerda.</div></div>${o.side ? '<div class="ck-cpanel"><div class="ck-empty">Os detalhes aparecem aqui.</div></div>' : ''}</div>`;
+    const items = el.querySelector('.items'), thread = el.querySelector('.ck-thread'), cpanel = el.querySelector('.ck-cpanel'), inp = el.querySelector('input'), ft = el.querySelector('.ft');
+    let list = [], sel = null;
+    const paintList = () => {
+      const q = inp.value.trim().toLowerCase();
+      const arr = list.filter(c => !q || (String(c.name || '') + ' ' + String(c.preview || '') + ' ' + String(c.search || '')).toLowerCase().includes(q));
+      items.innerHTML = arr.length ? arr.map(c => `<button type="button" class="ck-ci${sel === c.id ? ' on' : ''}" data-id="${esc(c.id)}">${c.image !== undefined ? foto(c.image) : avatar(c.avatar, c.name)}<div class="tx"><div class="top"><b>${esc(c.name || 'Cliente')}</b><small>${esc(c.time || '')}</small></div><div class="pv"><span>${esc(String(c.preview || '').replace(/\s+/g, ' '))}</span>${c.unread > 0 ? `<span class="ck-badge">${num(c.unread)}</span>` : ''}</div></div></button>`).join('') : `<div class="ck-empty">${esc(list.length ? 'Nada encontrado.' : (o.emptyText || 'Nenhuma conversa.'))}</div>`;
+      fixImgs(items);
+      items.querySelectorAll('.ck-ci').forEach(bt => bt.onclick = () => { const c = list.find(x => String(x.id) === bt.dataset.id); if (c) open(c); });
+    };
+    inp.oninput = paintList;
+    el.querySelectorAll('.ck-chip[data-k]').forEach(b => b.onclick = () => { el.querySelectorAll('.ck-chip[data-k]').forEach(x => x.classList.toggle('on', x === b)); if (o.onChip) o.onChip(b.dataset.k, api); });
+    const ui = c => ({
+      current: () => sel === c.id,
+      head: (name, av, pillHtml) => { if (sel !== c.id) return; thread.innerHTML = `<div class="hd">${av !== undefined && av !== null && typeof av === 'object' ? foto(av.image) : avatar(av, name, 34)}<b class="ck-one">${esc(name || 'Cliente')}</b><span style="margin-left:auto">${pillHtml || ''}</span></div><div class="ck-msgs"><div class="ck-empty">Carregando mensagens…</div></div>`; fixImgs(thread); },
+      wait: (text) => { if (sel !== c.id) return; const m = thread.querySelector('.ck-msgs'); if (m) m.innerHTML = `<div class="ck-empty">${esc(text)}</div>`; },
+      messages: (msgs) => {
+        if (sel !== c.id) return; const m = thread.querySelector('.ck-msgs'); if (!m) return; m.replaceChildren();
+        for (const x of msgs || []) {
+          if (x.side === 'sys') { const s = document.createElement('span'); s.className = 'ck-sysn'; s.textContent = x.text + (x.time ? ' · ' + x.time : ''); m.append(s); continue; }
+          const b = document.createElement('div'); b.className = 'ck-bub ' + (x.side === 's' ? 's' : x.side === 'bot' ? 'bot' : 'c');
+          if (x.tag) { const em = document.createElement('em'); em.textContent = x.tag; b.append(em); }
+          b.append(document.createTextNode(String(x.text || '')));
+          if (x.time) { const sm = document.createElement('small'); sm.textContent = x.time; b.append(sm); }
+          m.append(b);
+        }
+        if (!m.children.length) m.innerHTML = '<div class="ck-empty">Sem mensagens.</div>';
+        m.scrollTop = m.scrollHeight;
+      },
+      composer: (cfg = {}) => {
+        if (sel !== c.id) return; thread.querySelectorAll('.ck-comp,.ck-senderr').forEach(x => x.remove());
+        const comp = document.createElement('div'); comp.className = 'ck-comp';
+        comp.innerHTML = `<textarea rows="1" placeholder="${esc(cfg.placeholder || 'Escreva uma resposta…')}" aria-label="Mensagem"></textarea><button type="button" class="ck-btn"><i class="ph-fill ph-paper-plane-tilt"></i>${esc(cfg.label || 'Enviar')}</button>`;
+        const err = document.createElement('div'); err.className = 'ck-senderr'; if (cfg.note) err.style.color = 'var(--mut)'; err.textContent = cfg.note || '';
+        const ta = comp.querySelector('textarea'), btn = comp.querySelector('button');
+        if (cfg.draft) { ta.value = cfg.draft.get() || ''; ta.oninput = () => cfg.draft.set(ta.value); }
+        if (cfg.disabled || !cfg.send) btn.disabled = true;
+        const send = async () => {
+          const text = ta.value.trim(); if (!text || !cfg.send || btn.disabled) return; btn.disabled = true; err.style.color = ''; err.textContent = '';
+          try { if (!(await cfg.send(text))) err.textContent = 'Não consegui enviar. Tente de novo.'; else { ta.value = ''; if (cfg.draft) cfg.draft.set(''); const m = thread.querySelector('.ck-msgs'); if (m) { m.querySelector('.ck-empty')?.remove(); const b = document.createElement('div'); b.className = 'ck-bub s'; b.textContent = text; const sm = document.createElement('small'); sm.textContent = 'agora'; b.append(sm); m.append(b); m.scrollTop = m.scrollHeight; } } }
+          catch (e) { err.textContent = 'Não consegui enviar. Tente de novo.'; }
+          btn.disabled = false;
+        };
+        btn.onclick = send; ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+        thread.append(comp, err);
+      },
+      side: (html) => { if (sel !== c.id || !cpanel) return; cpanel.innerHTML = html; fixImgs(cpanel); },
+    });
+    function open(c) {
+      sel = c.id; items.querySelectorAll('.ck-ci').forEach(b => b.classList.toggle('on', b.dataset.id === String(c.id)));
+      thread.innerHTML = '<div class="ck-empty" style="margin:auto">Carregando…</div>';
+      if (o.open) o.open(c, ui(c));
+    }
+    const api = {
+      reload: () => { items.innerHTML = '<div class="ck-empty">Carregando…</div>'; return Promise.resolve(o.load ? o.load() : []).catch(() => null).then(d => {
+        if (!d) { items.innerHTML = '<div class="ck-empty">Não consegui carregar agora.</div>'; return; }
+        list = d; if (!list.some(c => c.id === sel)) sel = null; paintList();
+        if (list.length) open(list.find(c => c.id === sel) || list.find(c => c.id === o.selected) || list[0]); else { thread.innerHTML = `<div class="ck-empty" style="margin:auto">${esc(o.emptyText || 'Nenhuma conversa.')}</div>`; if (cpanel) cpanel.innerHTML = ''; }
+      }); },
+      footer: (node) => { ft.replaceChildren(); if (node) { ft.append(node); ft.hidden = false; } else ft.hidden = true; },
+      chipLabel: (key, text) => { const b = el.querySelector(`.ck-chip[data-k="${CSS.escape(key)}"]`); if (b) b.textContent = text; },
+    };
+    api.reload();
+    if (target) target.append(el); el.ckChat = api; return el;
+  }
+
+  const h = { esc, safeUrl, brl, num, pct, ddmm, when, whenDate, pill, foto, pname, delta, muted, legendDot, openBtn, shortName, chead, csvMoney, stackBar, avatar };
+  root.ChannelKit = { productsView, returnsView, message, ordersView, financeView, stockView, chatView, kpis, donutBlock, csv, aggregate, dayList, toDay, shortName, esc, safeUrl, h };
 })(window);
