@@ -66,3 +66,15 @@ body{background:var(--bg);color:var(--ink)}
 
 /* rodapé "consultado às" oculto */
 #updated{display:none}
+/* Resumo: vendas por dia grande à esquerda; pedidos criados em cima e carrinhos embaixo, à direita */
+@media(min-width:1101px){
+ .ns-row3{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)!important;grid-template-rows:auto auto}
+ .ns-row3>.card:nth-child(1){grid-column:1;grid-row:1/span 2}
+ .ns-row3>.card:nth-child(2){grid-column:2;grid-row:1}
+ .ns-row3>.card:nth-child(3){grid-column:2;grid-row:2}
+}
+.ns-row3>.card:nth-child(2) .ns-operation{padding:9px 0}
+.ns-row3>.card:nth-child(2) .ns-operation strong{font-size:18px}
+.ns-row3>.card:nth-child(3) .chart-summary{font-size:24px}
+.ns-row3>.card:nth-child(1) .chart{height:auto!important}
+.ns-row3>.card:nth-child(1) svg.chart{margin-top:auto}
