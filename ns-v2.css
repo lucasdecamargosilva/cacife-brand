@@ -88,3 +88,5 @@ body{background:var(--bg);color:var(--ink)}
 .ns-row3>.card:nth-child(2)>.caption,.ns-row3>.card:nth-child(3)>.caption{margin-bottom:6px}
 .ns-row3>.card:nth-child(3) .chart-summary{font-size:24px;margin:2px 0}
 .ns-row3>.card .link-button{margin-top:10px}
+@media(max-width:900px){.ml-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:560px){.ml-strip{grid-template-columns:1fr!important}}
