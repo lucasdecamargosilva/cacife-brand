@@ -78,3 +78,13 @@ body{background:var(--bg);color:var(--ink)}
 .ns-row3>.card:nth-child(3) .chart-summary{font-size:24px}
 .ns-row3>.card:nth-child(1) .chart{height:auto!important}
 .ns-row3>.card:nth-child(1) svg.chart{margin-top:auto}
+/* Resumo mais harmonioso: gráfico em tamanho normal; cards da direita compactos */
+.ns-row3>.card:nth-child(1) svg.chart{margin-top:0}
+.ns-row3>.card:nth-child(1)>.interactive-chart{margin-top:auto}
+.ns-row3>.card:nth-child(2){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px;align-content:start}
+.ns-row3>.card:nth-child(2)>.card-head,.ns-row3>.card:nth-child(2)>.caption,.ns-row3>.card:nth-child(2)>.link-button{grid-column:1/-1}
+.ns-row3>.card:nth-child(2) .ns-operation{padding:8px 0}
+.ns-row3>.card:nth-child(2) .ns-operation strong{font-size:17px}
+.ns-row3>.card:nth-child(2)>.caption,.ns-row3>.card:nth-child(3)>.caption{margin-bottom:6px}
+.ns-row3>.card:nth-child(3) .chart-summary{font-size:24px;margin:2px 0}
+.ns-row3>.card .link-button{margin-top:10px}
