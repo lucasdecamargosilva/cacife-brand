@@ -90,3 +90,17 @@ body{background:var(--bg);color:var(--ink)}
 .ns-row3>.card .link-button{margin-top:10px}
 @media(max-width:900px){.ml-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:560px){.ml-strip{grid-template-columns:1fr!important}}
+
+/* ===== Cabeçalho padrão dos canais (mesma medida em ML, Nuvemshop e Shopee): cabeçalho 70px, logo 40px, abas 38px ===== */
+.workspace{display:flex!important;flex-direction:column}
+.workspace>header{order:1;padding:15px 28px 15px!important;min-height:0!important;align-items:center}
+.workspace>.tabs{order:2;margin-bottom:0!important;padding-bottom:14px!important}
+.workspace>.page-meta{order:3;background:none!important;margin:14px 0 12px!important;padding:0!important}
+.workspace>main{order:4}.workspace>footer{order:5}
+.workspace>header h1{margin:0;line-height:0}
+.workspace>header .channel-wordmark.ml-wordmark{height:40px!important;width:auto!important;max-width:none}
+.workspace>header .ns-wordmark-frame{width:190px!important;height:40px!important}
+.workspace>header .ns-wordmark{width:218px!important;left:-14px!important;top:-14px!important}
+.workspace>.tabs a{font-size:14px!important;padding:10px 14px!important;line-height:18px}
+.presets button{padding:8px 11px!important;font-size:12.5px!important;line-height:18px}
+@media(max-width:720px){.workspace>header{padding:12px!important}}

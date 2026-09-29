@@ -244,7 +244,7 @@
     body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-top:0!important}
     @media(min-width:721px){body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-left:28px!important;padding-right:28px!important}}
     @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-left:14px!important;padding-right:14px!important}}
-    body[data-marketplace=shopee][data-metrics-view=channel] .market-header{background:#ee4d2d!important;margin:0 -28px!important;padding:22px 28px 12px!important;min-height:0}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header{background:#ee4d2d!important;margin:0 -28px!important;padding:15px 28px 15px!important;min-height:0;align-items:center}
     @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .market-header{margin:0 -14px!important;padding:16px 14px 10px!important}}
     body[data-marketplace=shopee][data-metrics-view=channel] .market-header h1{color:#fff!important}
     body[data-marketplace=shopee][data-metrics-view=channel] .market-header p{display:none!important}
@@ -254,6 +254,8 @@
     body[data-marketplace=shopee][data-metrics-view=channel] .market-header .period-presets button[aria-pressed=true]{background:#111827!important;border-color:#111827!important;color:#fff!important}
     body[data-marketplace=shopee][data-metrics-view=channel] #metrics-notice:empty{display:none}
     body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band{border-radius:0;margin:0 -28px 18px;padding:0 28px 14px}
+    body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-tab{font-size:14px!important;padding:10px 14px!important;line-height:18px}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header .period-presets button{padding:8px 11px!important;font-size:12.5px!important;line-height:18px}
     @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band{margin:0 -14px 18px;padding:0 14px 12px}}
     body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band-top{display:none}
     @media(max-width:1100px){.shp-v2 .v2-block{grid-template-columns:1fr}.shp-v2 .v2-dark{order:-1}.shp-v2 .v2-row{grid-template-columns:1fr!important}}
