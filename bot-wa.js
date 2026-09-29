@@ -12,7 +12,7 @@ function parseInbound(body) {
   const phone = raw.split('@')[0].replace(/\D/g, '');
   if (!phone) return null;
   const isGroup = m.isGroup === true || /@g\.us/.test(String(m.chatid || ''));
-  return { sender: String(m.sender || m.chatid || raw), phone, isGroup, text };
+  return { sender: String(m.sender || m.chatid || raw), chatid: String(m.chatid || ''), phone, isGroup, text };
 }
 
 async function sendText({ serverUrl, token, fetchImpl = fetch }, number, text) {

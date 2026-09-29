@@ -795,7 +795,7 @@ try {
 
     // --- Robô WhatsApp (consulta de dados da Cacife) ---
     const { resolvePeriod } = require('./bot-period');
-    const { isAllowed } = require('./bot-gate');
+    const { groupQuestion } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
     const { overview, topProducts, productSales } = require('./bot-data');
     const { fmtOverview, toWhatsApp } = require('./bot-format');
@@ -811,6 +811,7 @@ try {
         nsToken: process.env.NUVEMSHOP_TOKEN || '',
         nsStore: process.env.NUVEMSHOP_STORE_ID || '1081093',
         allowed: process.env.BOT_ALLOWED_NUMBER || '11938034714',
+        group: process.env.BOT_GROUP_ID || '120363404981793310@g.us', // grupo "Quantic & Cacife Business"
     };
     const botReady = Boolean(BOT.openrouterKey && BOT.uazapi.token && BOT.webhookSecret);
     if (botReady) console.log('💬 Robô WhatsApp ligado (modelo ' + BOT.model + ')');
@@ -995,14 +996,16 @@ try {
         const inbound = parseInbound(req.body);
         res.sendStatus(200); // responde já ao Uazapi; processa em background
         pushRaw(req.body);
-        const allowed = Boolean(inbound && !inbound.isGroup && isAllowed(inbound.phone, BOT.allowed));
-        if (!(inbound && inbound.isGroup)) pushDebug({ step: 'recebido', eventType: req.body && req.body.EventType, phone: inbound && inbound.phone, isGroup: inbound && inbound.isGroup, text: inbound && inbound.text, parsed: Boolean(inbound), allowed });
-        if (!allowed) return;
+        // Só responde no grupo configurado (BOT_GROUP_ID) e só quando a mensagem chama o robô ("robô"/"robo").
+        // Privado e outros grupos são ignorados (nem o texto é guardado no diagnóstico).
+        const question = groupQuestion(inbound, BOT.group);
+        if (inbound && inbound.isGroup && String(inbound.chatid) === BOT.group) pushDebug({ step: 'recebido-grupo', chamou: Boolean(question), text: question ? question.slice(0, 120) : undefined });
+        if (!question) return;
         try {
-            const reply = toWhatsApp(await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: inbound.text }));
-            botMemory.push({ role: 'user', content: inbound.text }, { role: 'assistant', content: reply });
+            const reply = toWhatsApp(await answer({ chat: botChat, tools: botTools, model: BOT.model, history: botMemory.slice(-6), text: question }));
+            botMemory.push({ role: 'user', content: question }, { role: 'assistant', content: reply });
             if (botMemory.length > 12) botMemory.splice(0, botMemory.length - 12);
-            await sendText(BOT.uazapi, inbound.phone, reply); // responde no telefone real (com DDI)
+            await sendText(BOT.uazapi, BOT.group, reply); // responde no próprio grupo
             pushDebug({ step: 'respondido', reply: reply.slice(0, 120) });
         } catch (e) { console.error('bot whatsapp:', e.message); pushDebug({ step: 'erro', erro: e.message }); }
     });
