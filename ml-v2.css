@@ -79,3 +79,9 @@ body{background:var(--bg);color:var(--ink)}
 /* vendas e visitas: mesma altura, gráfico encostado na base */
 .ml-row2>.card{display:flex;flex-direction:column}
 .ml-row2>.card>.interactive-chart{margin-top:auto}
+/* top 5 produtos no Resumo (ao lado da Saúde da conta) */
+.ml-top-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.ml-top-row:last-child{border-bottom:0}
+.ml-top-rank{width:24px;height:24px;border-radius:7px;background:var(--ml-y);color:#2d3277;font-weight:800;font-size:12px;display:grid;place-items:center}
+.ml-top-row .product{min-width:0}.ml-top-row .product strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ml-top-row>strong{color:var(--green);font-weight:700;white-space:nowrap}
