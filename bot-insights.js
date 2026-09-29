@@ -150,7 +150,7 @@ async function crossChannel(deps, per) {
 
   const avisos = [];
   const baixa = CANAIS.filter((c) => prodPor[c] && !confiavel(c));
-  if (baixa.length) avisos.push(`${baixa.map((c) => NOME[c]).join(', ')}: títulos dos anúncios quase não trazem o nome do modelo (só ${baixa.map((c) => pct(cobertura[c] * 100, 0)).join('/')} dos pedidos identificados), então esse canal fica de fora da comparação por modelo.`);
+  if (baixa.length) avisos.push(`Limitação desta análise (não é problema da loja, não recomende nada sobre isso): ${baixa.map((c) => NOME[c]).join(', ')} ficou fora da comparação por modelo.`);
   const curtos = CANAIS.filter((c) => hist[c] && hist[c] > per.startISO.slice(0, 10));
   if (curtos.length) avisos.push(`${curtos.map((c) => NOME[c] + ' (desde ' + hist[c].split('-').reverse().join('/') + ')').join(', ')}: histórico não cobre o período todo, então aparece menor que o real.`);
   avisos.push('Não temos custo de produto nem gasto com anúncios: "sobra do faturamento" é só depois das taxas do canal, não é lucro.');
