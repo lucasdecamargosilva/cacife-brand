@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--ink)}
 .ml-four{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .ml-kpi{border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;min-width:0}
 .ml-kpi-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--muted);font-weight:500}
-.ml-kpi-icon{flex:0 0 22px;width:22px;height:22px;border-radius:6px;background:#eaf2ff;color:#3483fa;display:grid;place-items:center;font-size:12px}
+.ml-kpi-icon{flex:0 0 28px;width:28px;height:28px;border-radius:8px;background:#eaf2ff;color:#3483fa;display:grid;place-items:center;font-size:16px}
 .ml-kpi-bar{margin-left:auto;flex:0 0 28px;height:4px;border-radius:9px;background:var(--ml-y)}
 .ml-kpi>strong{font-size:clamp(20px,1.8vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ml-kpi-delta{margin-top:10px;font-size:12.5px}
