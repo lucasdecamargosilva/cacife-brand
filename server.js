@@ -798,6 +798,7 @@ try {
     const { groupQuestion } = require('./bot-gate');
     const { parseInbound, sendText } = require('./bot-wa');
     const { overview, topProducts, productSales } = require('./bot-data');
+    const { crossChannel } = require('./bot-insights');
     const { fmtOverview, toWhatsApp } = require('./bot-format');
     const { guardSelect } = require('./bot-sql');
     const { makeChat } = require('./bot-openrouter');
@@ -889,6 +890,14 @@ try {
             }));
             pushDebug({ step: 'tool', tool: 'vendas_produto', period: per.label, ms: Date.now() - t0, produto: String(produto || '').slice(0, 40), canais: canais.join(',') });
             return { periodo: per.label, busca: produto, resultado };
+        },
+        cruzamento_canais: async ({ period }) => {
+            const t0 = Date.now();
+            const per = resolvePeriod(parsePeriodArg(period || '30d'));
+            await botTiktokShop();
+            const out = await crossChannel(botDeps, per);
+            pushDebug({ step: 'tool', tool: 'cruzamento_canais', period: per.label, ms: Date.now() - t0 });
+            return out;
         },
         consulta_banco: async ({ sql }) => {
             const t0 = Date.now();

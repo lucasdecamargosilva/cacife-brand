@@ -60,9 +60,9 @@ function termoClause(col, termo) {
   return palavras.map((w) => `${norm} like '%${sqlLit(w)}%'`).join(' and ');
 }
 
-function productSql(period, channel, { limit = 3, termo = null, shop = null } = {}) {
+function productSql(period, channel, { limit = 3, termo = null, shop = null, max = 20 } = {}) {
   if (!ISO_RE.test(period.startISO) || !ISO_RE.test(period.endExclusiveISO)) throw new Error('período inválido');
-  const lim = Math.min(20, Math.max(1, Number(limit) || 3));
+  const lim = Math.min(Math.min(500, Number(max) || 20), Math.max(1, Number(limit) || 3));
   const win = `created_at >= '${period.startISO}' and created_at < '${period.endExclusiveISO}'`;
   const like = termo ? termoClause(channel === 'shopee' ? 'item_name' : channel === 'tiktokshop' ? 'i.product_name' : 'produto', termo) : null;
   if (channel === 'tiktokshop') {
@@ -167,4 +167,4 @@ async function overview(deps, period, timeoutMs = 20000) {
   return { channels, total, period: { start: period.start, end: period.end, label: period.label } };
 }
 
-module.exports = { shopeeSummary, channelSummary, tiktokSummary, overview, topProducts, productSales, productSql, PAID_CLAUSE };
+module.exports = { shopeeSummary, channelSummary, tiktokSummary, overview, topProducts, productSales, productSql, PAID_CLAUSE, semAcento, ISO_RE, TT_SHOP };
