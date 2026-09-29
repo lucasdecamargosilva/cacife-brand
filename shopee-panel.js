@@ -198,7 +198,83 @@
   }
 
   // ---------- seções ----------
+  // ===== Design "Clássico Shopee" (opção 1) — estilos só dentro de .shp-v2 (o TikTok usa as classes shp-*) =====
+  let prevData = null;
+  const curDates = () => [(document.getElementById('metrics-start') || {}).value, (document.getElementById('metrics-end') || {}).value];
+  function prevRange() { const [a, b] = curDates(); if (!a || !b) return null; const d0 = new Date(a + 'T12:00:00Z'), d1 = new Date(b + 'T12:00:00Z'); const len = Math.round((d1 - d0) / 864e5) + 1; const pe = new Date(d0 - 864e5), ps = new Date(pe - (len - 1) * 864e5); return [ps.toISOString().slice(0, 10), pe.toISOString().slice(0, 10)]; }
+  function compare(cur, old, inverse) { if (old === undefined) return { text: 'Consultando período anterior…', cls: '' }; if (!old) return { text: 'Sem base anterior', cls: '' }; const pct = (cur / old - 1) * 100, up = pct >= 0; return { text: (up ? '▲ ' : '▼ ') + Math.abs(pct).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%', cls: (up !== !!inverse) ? 'up' : 'down' }; }
+  const prevVal = f => prevData === null ? undefined : (prevData ? f(prevData) : 0);
+  function kpiCard(title, icon, value, cmp) { const c = n('div', 'v2-kpi'); const h = n('div', 'v2-kpi-head'), ic = n('span', 'v2-kpi-icon'); ic.append(n('i', 'ph ' + icon)); h.append(ic, n('span', '', title), n('i', 'v2-kpi-bar')); const d = n('div', 'v2-kpi-delta'); d.append(n('span', cmp.cls, cmp.text)); if (cmp.cls) d.append(n('small', '', ' vs. anterior')); c.append(h, n('strong', '', value), d); return c; }
+  const byCount = arr => (arr || []).slice().sort((a, b) => (b.n || 0) - (a.n || 0));
+  function ensureV2Style() {
+    if (document.getElementById('shp-v2-style')) return;
+    const css = `.shp-v2{font-feature-settings:"tnum" 1}
+    .shp-v2 .shp-band{background:#ee4d2d;border-radius:16px;padding:18px 20px 14px;margin-bottom:18px;color:#fff}
+    .shp-v2 .shp-band-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .shp-v2 .shp-band-top .logo{width:38px;height:38px;border-radius:10px;background:#fff;display:grid;place-items:center;flex:none}
+    .shp-v2 .shp-band-top .logo img{width:26px;height:26px;object-fit:contain}
+    .shp-v2 .shp-band-top b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+    .shp-v2 .shp-band-top small{display:block;font-size:12px;opacity:.85;font-weight:500}
+    .shp-v2 .shp-tabs{display:flex;gap:4px;flex-wrap:wrap;background:transparent!important;border:0!important;padding:0!important;margin:0!important;box-shadow:none!important}
+    .shp-v2 .shp-tab{background:transparent!important;border:0!important;color:#ffe3dc!important;border-radius:10px!important;padding:9px 14px!important;font-weight:600!important;box-shadow:none!important}
+    .shp-v2 .shp-tab:hover{background:#ffffff1f!important;color:#fff!important}
+    .shp-v2 .shp-tab.on{background:#fff!important;color:#d0011b!important}
+    .shp-v2 .shp-panel{border-radius:16px;border-color:#eceef2;box-shadow:0 1px 2px #1118270a}
+    .shp-v2 .shp-panel h3{font-size:15px;font-weight:700;color:#111827}
+    .shp-v2 .v2-block{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.15fr);gap:14px;padding:16px;background:#fff;border:1px solid #eceef2;border-radius:16px;margin-bottom:18px}
+    .shp-v2 .v2-four{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .shp-v2 .v2-strip{display:grid;gap:14px;padding:16px;background:#fff;border:1px solid #eceef2;border-radius:16px;margin-bottom:18px}
+    .shp-v2 .v2-kpi{border:1px solid #eceef2;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;min-width:0;background:#fff}
+    .shp-v2 .v2-kpi-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:#6b7280;font-weight:500}
+    .shp-v2 .v2-kpi-icon{flex:0 0 28px;width:28px;height:28px;border-radius:8px;background:#fff1ec;color:#ee4d2d;display:grid;place-items:center;font-size:16px}
+    .shp-v2 .v2-kpi-bar{margin-left:auto;flex:0 0 28px;height:4px;border-radius:9px;background:#ee4d2d}
+    .shp-v2 .v2-kpi>strong{font-size:clamp(20px,1.8vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.15;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .shp-v2 .v2-kpi-delta{margin-top:10px;font-size:12.5px;color:#6b7280}.shp-v2 .v2-kpi-delta .up{color:#16a34a;font-weight:600}.shp-v2 .v2-kpi-delta .down{color:#dc2626;font-weight:600}.shp-v2 .v2-kpi-delta small{font-size:12px}
+    .shp-v2 .v2-dark{background:#111827;color:#fff;border-radius:14px;padding:26px;display:flex;flex-direction:column;justify-content:center;gap:18px;min-width:0}
+    .shp-v2 .v2-dark-head{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}.shp-v2 .v2-dark-head .logo{width:30px;height:30px;border-radius:8px;background:#fff;display:grid;place-items:center}.shp-v2 .v2-dark-head .logo img{width:20px;height:20px}
+    .shp-v2 .v2-dark small{display:block;font-size:13px;color:#ffffffa6}
+    .shp-v2 .v2-dark-main strong{display:block;font-size:clamp(26px,2.6vw,36px);font-weight:700;letter-spacing:-.03em;margin:8px 0;white-space:nowrap}
+    .shp-v2 .v2-dark-delta{font-weight:600;font-size:13px;color:#ffffffa6}.shp-v2 .v2-dark-delta.up{color:#4ade80}.shp-v2 .v2-dark-delta.down{color:#fca5a5}
+    .shp-v2 .v2-dark-foot{border-top:1px solid #ffffff22;padding-top:16px}.shp-v2 .v2-dark-foot strong{font-size:22px;font-weight:700}
+    .shp-v2 .v2-row{display:grid;gap:16px;margin-bottom:16px;align-items:stretch}
+    .shp-v2 .v2-row>.shp-panel{margin:0;display:flex;flex-direction:column}
+    .shp-v2 .v2-row>.shp-panel>svg:last-child,.shp-v2 .v2-row>.shp-panel>.shp-donut{margin-top:auto;margin-bottom:auto}
+    .shp-v2 .shp-prod b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .shp-v2 .v2-link{background:none!important;border:0!important;padding:0;margin-top:10px;color:#d0011b!important;font:inherit;font-weight:600;cursor:pointer;text-align:left}
+    @media(max-width:1100px){.shp-v2 .v2-block{grid-template-columns:1fr}.shp-v2 .v2-dark{order:-1}.shp-v2 .v2-row{grid-template-columns:1fr!important}}
+    @media(max-width:560px){.shp-v2 .v2-four{grid-template-columns:1fr}.shp-v2 .v2-strip{grid-template-columns:1fr!important}}`;
+    document.head.append(Object.assign(document.createElement('style'), { id: 'shp-v2-style', textContent: css }));
+  }
+  const shopeeLogo = () => { const l = n('span', 'logo'); const im = n('img'); im.src = 'shopee-logo.png'; im.alt = ''; l.append(im); return l; };
+
   function secVisao(data) {
+    const box = n('div', 'shp-wrap');
+    const block = n('section', 'v2-block'), four = n('div', 'v2-four');
+    four.append(
+      kpiCard('Faturamento bruto', 'ph-currency-circle-dollar', brl(data.revenue), compare(data.revenue, prevVal(p => p.revenue))),
+      kpiCard('Taxas Shopee', 'ph-percent', brl(data.fees), compare(data.fees, prevVal(p => p.fees), true)),
+      kpiCard('Pedidos pagos', 'ph-bag-simple', num(data.paid), compare(data.paid, prevVal(p => p.paid))),
+      kpiCard('Reembolsado', 'ph-arrow-u-up-left', brl(data.devolucoes?.valor), compare(data.devolucoes?.valor || 0, prevVal(p => p.devolucoes?.valor || 0), true)));
+    const dark = n('div', 'v2-dark'), dh = n('div', 'v2-dark-head'); dh.append(shopeeLogo(), n('span', '', 'Repasse líquido'));
+    const rc = compare(data.liquido, prevVal(p => p.liquido)); const main = n('div', 'v2-dark-main'); main.append(n('small', '', 'O que sobra depois das taxas da Shopee'), n('strong', '', brl(data.liquido)), n('span', 'v2-dark-delta ' + rc.cls, rc.text + (rc.cls ? ' vs. período anterior' : '')));
+    const foot = n('div', 'v2-dark-foot'); foot.append(n('small', '', 'do valor bruto'), n('strong', '', data.revenue > 0 ? (data.liquido / data.revenue * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%' : '—'));
+    dark.append(dh, main, foot); block.append(four, dark); box.append(block);
+    const r1 = n('div', 'v2-row'); r1.style.gridTemplateColumns = 'minmax(0,2fr) minmax(0,1fr)';
+    const chart = panel('Evolução das vendas', 'Vendas confirmadas por dia (R$) · ticket médio ' + brl(data.ticket)); chart.append(salesChart(data.byDay));
+    const pay = panel('Forma de pagamento', 'Pedidos pagos por método.');
+    const pg = byCount(data.pagamento); if (pg.length) pay.append(donut(pg.map((p, i) => ({ label: p.metodo, value: p.n, color: colorFor(p.metodo, PAY_COLORS, i) })))); else pay.append(n('p', 'cap', 'Sem dados.'));
+    r1.append(chart, pay); box.append(r1);
+    const r2 = n('div', 'v2-row'); r2.style.gridTemplateColumns = 'minmax(0,1fr) minmax(0,2fr)';
+    const ship = panel('Envio', 'Pedidos pagos por opção de entrega.');
+    const en = byCount(data.envio); if (en.length) ship.append(hbars(en.map((x, i) => ({ label: x.tipo, value: x.n, color: colorFor(x.tipo, SHIP_COLORS, i) })))); else ship.append(n('p', 'cap', 'Sem dados.'));
+    const top = panel('Top produtos', 'Os 5 mais vendidos no período.');
+    const mx = Math.max(1, ...(data.ranking || []).map(p => p.value));
+    (data.ranking || []).slice(0, 5).forEach((p, i) => { const row = productRow(p, i, mx); row.title = p.title || ''; top.append(row); });
+    if (!(data.ranking || []).length) top.append(n('p', 'cap', 'Nenhum item no período.'));
+    r2.append(ship, top); box.append(r2);
+    return box;
+  }
+  function secVisaoAntigo(data) {
     const box = n('div', 'shp-wrap');
     const taxaPct = data.revenue > 0 ? (data.fees / data.revenue * 100).toFixed(1) : '0';
     const liqPct = data.revenue > 0 ? (data.liquido / data.revenue * 100).toFixed(0) : '0';
@@ -232,7 +308,7 @@
   function secPedidos(data) {
     const box = n('div', 'shp-wrap');
     const st = panel('Status dos pedidos', 'Distribuição dos pedidos do período por situação.');
-    if (data.porStatus?.length) st.append(hbars(data.porStatus.map(s => ({ label: statusInfo(s.status)[0], value: s.n, color: statusInfo(s.status)[1] })))); else st.append(n('p', 'cap', 'Sem dados.'));
+    if (data.porStatus?.length) st.append(hbars(byCount(data.porStatus).map(s => ({ label: statusInfo(s.status)[0], value: s.n, color: statusInfo(s.status)[1] })))); else st.append(n('p', 'cap', 'Sem dados.'));
     box.append(st);
     const rec = panel('Pedidos recentes', 'Últimos 40 pedidos do período.');
     const rows = (data.recentes || []).map(o => {
@@ -254,7 +330,12 @@
   }
   function secDevolucoes(data) {
     const box = n('div', 'shp-wrap');
-    const kp = n('div', 'shp-kpis'); kp.append(kpi('Devoluções', num(data.devolucoes?.n), 'no período', RED), kpi('Reembolsado', brl(data.devolucoes?.valor), 'valor devolvido', RED)); box.append(kp);
+    const kp = n('section', 'v2-strip'); kp.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
+    kp.append(kpiCard('Devoluções', 'ph-arrow-u-up-left', num(data.devolucoes?.n), compare(data.devolucoes?.n || 0, prevVal(p => p.devolucoes?.n || 0), true)), kpiCard('Reembolsado', 'ph-currency-circle-dollar', brl(data.devolucoes?.valor), compare(data.devolucoes?.valor || 0, prevVal(p => p.devolucoes?.valor || 0), true)));
+    box.append(kp);
+    const mot = {}; for (const d of (data.devList || [])) { const k = d.reason || 'Sem motivo'; mot[k] = (mot[k] || 0) + 1; }
+    const motList = Object.entries(mot).sort((a, b) => b[1] - a[1]);
+    if (motList.length) { const mp = panel('Motivos', 'Das últimas devoluções do período.'); mp.append(hbars(motList.map(([k, v], i) => ({ label: k, value: v, color: i === 0 ? SHOPEE : '#f59e7b' })))); box.append(mp); }
     const lst = panel('Devoluções recentes', 'Últimas 30 devoluções do período.');
     const rows = (data.devList || []).map(d => { const [sl, sc] = statusInfo(d.status); return [d.return_sn, d.order_sn, { node: badge(sl, sc) }, d.reason, d.dt, { r: true, t: brl(d.refund) }]; });
     lst.append(table([{ t: 'Devolução' }, { t: 'Pedido' }, { t: 'Status' }, { t: 'Motivo' }, { t: 'Data' }, { t: 'Reembolso', r: true }], rows));
@@ -353,7 +434,8 @@
   function render(target, data, state) {
     ensureStyle();
     target.replaceChildren(); target.hidden = false; document.body.dataset.marketplace = 'shopee';
-    const wrap = n('div', 'shp-wrap');
+    ensureV2Style();
+    const wrap = n('div', 'shp-wrap shp-v2');
     if (!data) { const p = panel('Shopee'); p.append(n('p', 'cap', state || 'Carregando dados da Shopee…')); wrap.append(p); target.append(wrap); return; }
 
     // menu (mesmo estilo das outras abas) no topo
@@ -365,7 +447,11 @@
       content.replaceChildren(sec(data));
     };
     for (const [label] of TABS) { const btn = n('button', 'shp-tab', label); btn.type = 'button'; btn.onclick = () => { active = label; root.__shopeeTab = label; paint(); }; tabsEl.append(btn); }
-    wrap.append(tabsEl, content);
+    const band = n('div', 'shp-band'), bt = n('div', 'shp-band-top'), tt = n('div'); tt.append(n('b', '', 'Shopee'), n('small', '', 'Loja Cacife na Shopee'));
+    bt.append(shopeeLogo(), tt); band.append(bt, tabsEl);
+    wrap.append(band, content);
+    prevData = null; const pr = prevRange();
+    if (pr) overview(pr[0], pr[1]).then(p => { prevData = p || false; if (wrap.isConnected && active !== 'Chat') paint(); }); else prevData = false;
     paint();
     target.append(wrap);
   }
