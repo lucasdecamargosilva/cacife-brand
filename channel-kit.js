@@ -150,7 +150,7 @@
     .ck .ck-logo{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fff;display:grid;place-items:center;overflow:hidden}.ck .ck-logo img{width:22px;height:22px;object-fit:contain}
     .ck .ck-dark-v{font-size:clamp(24px,2.3vw,32px);font-weight:700;letter-spacing:-.03em;white-space:nowrap;color:#4ade80;overflow:hidden;text-overflow:ellipsis}
     .ck .ck-dark .ck-up{color:#4ade80}.ck .ck-dark .ck-down{color:#fca5a5}.ck .ck-dark .ck-mut{color:#ffffffa6}
-    .ck .ck-fin{display:grid;gap:16px;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr))}
+    .ck .ck-fin{display:grid;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.3fr)}
     .ck .ck-svg{width:100%;height:auto;display:block}
     .ck .hv .gl{opacity:0}.ck .hv:hover .gl{opacity:1}.ck .hv:hover .bb{opacity:1!important}
     .ck .ck-legend{display:flex;gap:14px;font-size:12.5px;white-space:nowrap;flex-wrap:wrap}.ck .ck-legend span{display:flex;gap:6px;align-items:center}
@@ -491,7 +491,7 @@
     const h = o.hero || {};
     const logo = safeUrl(o.logo) || (/^[\w.-]+\.(png|ico|svg)$/i.test(String(o.logo || '')) ? o.logo : '');
     const hero = `<div class="ck-dark"><i class="ck-acc"></i><div class="ck-dark-h">${logo ? `<span class="ck-logo"><img src="${esc(logo)}" alt=""></span>` : ''}${esc(h.title || '')}</div><div class="ck-dark-v" title="${esc(brl(h.value))}">${brl(h.value)}</div>${h.sub ? `<div style="font-size:12.5px">${h.sub}</div>` : ''}${h.foot ? `<div style="font-size:12px;color:#9ca3af">${h.foot}</div>` : ''}</div>`;
-    let html = `<div class="ck-fin">${hero}${(o.kpis || []).map(([l, ic, v, s, op], i) => kc(l, ic, v, s, { alt: i % 2 === 0, ...(op || {}) })).join('')}</div>`;
+    let html = `<div class="ck-fin">${(o.kpis || []).map(([l, ic, v, s, op], i) => kc(l, ic, v, s, { alt: i % 2 === 0, ...(op || {}) })).join('')}${hero}</div>`;
     const blocks = [];
     if (o.waterfall) blocks.push(`<div class="ck-card">${chead(esc(o.waterfall.title), esc(o.waterfall.caption || ''))}<div class="ck-push">${o.waterfall.steps && o.waterfall.steps[0] && o.waterfall.steps[0][1] ? waterfall(o.waterfall.steps.filter(x => x[2] || x[1])) : '<p class="ck-cap">Sem valores no período.</p>'}</div></div>`);
     if (o.side) {
