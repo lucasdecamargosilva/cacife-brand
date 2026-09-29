@@ -23,3 +23,5 @@ body[data-metrics-view=channel] #metrics-results,body[data-metrics-view=channel]
 .period-presets{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1}.period-presets button{border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--secondary);padding:8px 10px;font:inherit;font-size:12px;cursor:pointer}.period-presets button:hover,.period-presets button[aria-pressed=true]{background:#f1e9fc;color:var(--blue);border-color:var(--blue)}.period-presets button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.period-hint{grid-column:1/-1;color:var(--secondary);font-size:10px;line-height:1.5}
 
 body{font-feature-settings:"tnum" 1}
+
+

@@ -1,0 +1,72 @@
+/* Mercado Livre — design "Clássico ML" (opção 1): faixa amarela com abas, bloco 2x2 + Repasse líquido escuro,
+   gráficos em azul/amarelo do ML. Carregado por último em mercadolivre.html. */
+:root{--bg:#f6f7f9;--purple:#3483fa;--purple-dark:#1f5fc9;--lavender:#eaf2ff;--line:#eceef2;--ink:#111827;--secondary:#4b5563;--muted:#6b7280;--green:#00a650;--ml-y:#ffe600;--ml-navy:#2d3277}
+body{background:var(--bg);color:var(--ink)}
+
+/* menu lateral neutro */
+.sidebar nav a.active,.sidebar .market-nav a.active{background:#f3f4f6!important;color:#111827!important;box-shadow:none!important;font-weight:700}
+
+/* faixa amarela: cabeçalho + barra de ações + abas */
+@media(min-width:721px){.workspace{padding:0 28px 12px!important}}
+@media(max-width:720px){.workspace{padding:0 12px 12px!important}}
+.workspace>header{background:var(--ml-y);margin:0 -28px;padding:22px 28px 10px;margin-bottom:0!important}
+.workspace>.page-meta{background:var(--ml-y);margin:0 -28px!important;padding:0 28px 6px}
+.workspace>.tabs{background:var(--ml-y)!important;margin:0 -28px 20px!important;padding:0 28px 14px!important;border:0!important;border-radius:0!important;gap:4px!important}
+@media(max-width:720px){.workspace>header,.workspace>.page-meta,.workspace>.tabs{margin-left:-12px!important;margin-right:-12px!important;padding-left:12px!important;padding-right:12px!important}}
+.workspace>.tabs a{color:var(--ml-navy);border-bottom:0!important;border-radius:10px;padding:10px 14px!important;font-weight:600}
+.workspace>.tabs a:hover{background:#ffffff80}
+.workspace>.tabs a[aria-current=page]{background:#fff;color:#1f5fc9;border:0}
+.channel-wordmark.ml-wordmark{filter:none}
+.page-meta .text-button{color:var(--ml-navy);font-weight:600}
+
+/* filtros de período: cardzinhos brancos */
+.presets{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;gap:6px!important}
+.presets button{background:#fff!important;border:1px solid #0000001a!important;border-radius:9px!important;color:#374151!important;box-shadow:none!important}
+.presets button:hover{background:#f3f4f6!important}
+.presets button[aria-pressed=true]{background:#111827!important;border-color:#111827!important;color:#fff!important}
+#date-menu>summary,.date-menu>summary{background:#fff;border:1px solid #0000001a;border-radius:9px;box-shadow:none}
+
+/* cartões */
+.card{border-color:var(--line);border-radius:16px;box-shadow:0 1px 2px #1118270a}
+.card-head h2{font-size:15px;font-weight:700;color:#111827}
+
+/* bloco Resumo: 4 cards 2x2 + Repasse líquido escuro */
+.ml-block{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.15fr);gap:14px;padding:16px!important;margin-bottom:18px}
+.ml-four{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ml-kpi{border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.ml-kpi-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:13px;color:var(--muted);font-weight:500}
+.ml-kpi-icon{flex:0 0 22px;width:22px;height:22px;border-radius:6px;background:#eaf2ff;color:#3483fa;display:grid;place-items:center;font-size:12px}
+.ml-kpi-bar{margin-left:auto;flex:0 0 28px;height:4px;border-radius:9px;background:var(--ml-y)}
+.ml-kpi>strong{font-size:clamp(20px,1.8vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ml-kpi-delta{margin-top:10px;font-size:12.5px}
+.ml-kpi-delta .up{color:var(--green);font-weight:600}.ml-kpi-delta .down{color:#dc2626;font-weight:600}.ml-kpi-delta small{color:var(--muted);font-size:12px}
+.ml-dark{background:#111827;color:#fff;border-radius:14px;padding:26px;display:flex;flex-direction:column;justify-content:center;gap:18px;min-width:0}
+.ml-dark-head{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px}
+.ml-dark-head .platform-icon{width:30px;height:30px;flex:0 0 30px;background:#fff;border-radius:8px}
+.ml-dark-main small{display:block;font-size:13px;color:#ffffffa6}
+.ml-dark-main strong{display:block;font-size:clamp(26px,2.6vw,36px);font-weight:700;letter-spacing:-.03em;margin:8px 0;white-space:nowrap}
+.ml-dark-delta{font-weight:600;font-size:13px;color:#ffffffa6}.ml-dark-delta.up{color:#4ade80}.ml-dark-delta.down{color:#fca5a5}
+.ml-dark-foot{border-top:1px solid #ffffff22;padding-top:16px}.ml-dark-foot small{display:block;font-size:12px;color:#ffffffa6}.ml-dark-foot strong{font-size:22px;font-weight:700}
+@media(max-width:1100px){.ml-block{grid-template-columns:1fr}.ml-dark{order:-1}}
+@media(max-width:560px){.ml-four{grid-template-columns:1fr}}
+
+/* faixa de 3 cards em Pedidos */
+.ml-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px!important;margin-bottom:18px}
+@media(max-width:720px){.ml-strip{grid-template-columns:1fr}}
+
+/* Resumo: vendas + saúde da conta; visitas embaixo */
+.ml-row{grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important}
+@media(max-width:1100px){.ml-row{grid-template-columns:1fr!important}}
+.reputation{background:#e7f7ee;color:#00833f;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700}
+.reputation.warn{background:#fff4d6;color:#8a5a00}
+.ml-thermo{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin:4px 0 12px}
+.ml-thermo i{height:10px;border-radius:4px;opacity:.28}.ml-thermo i.on{opacity:1;outline:2px solid #11182722;outline-offset:2px}
+.ml-kv>div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:13.5px}
+.ml-kv>div:last-child{border-bottom:0}
+.ml-kv strong{font-weight:700}.ml-kv strong.alert{color:#dc2626}
+.ml-kv-right{display:flex;align-items:center;gap:10px}
+.link-button{background:none;border:0;padding:0;color:#3483fa;font:inherit;font-weight:600;cursor:pointer}
+.chart-legend i{background:#3483fa!important}.chart-legend i.previous{background:#9ca3af!important}
+
+/* rodapé "consultado às" oculto, igual à Visão Geral */
+#updated{display:none}

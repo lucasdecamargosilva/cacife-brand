@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  const M=window.CacifeMetrics, el=id=>document.getElementById('metrics-'+id);
  const channels=['shopee','tiktokshop','mercadolivre','nuvemshop'].map(id=>M.channels.find(c=>c.id===id));
  const all={id:'all',name:'Total Geral',available:true};
- const colors={shopee:'#ee4d2d',tiktokshop:'#161616',mercadolivre:'#f2c200',nuvemshop:'#2c83ff'};
+ const colors={shopee:'#ee4d2d',tiktokshop:'#fe2c55',mercadolivre:'#f2c200',nuvemshop:'#2c83ff'};
  const brl=value=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value/100);
  const number=value=>new Intl.NumberFormat('pt-BR').format(value);
  const short=value=>new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1}).format(value);
@@ -28,18 +28,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const d=v?delta(v[key],vp?.[key]):{text:state,style:''};card.append(node('p','card-delta '+d.style,d.text));el('results').append(card);
    }return;
   }
+  const days=[];{const s0=el('start').value,e0=el('end').value;if(s0&&e0&&s0<=e0)for(let d=s0;d<=e0&&days.length<400;d=M.shift(d,1))days.push(d);}
+  const spark=(byDay,color)=>{const vals=days.map(d=>byDay?.[d]||0);if(vals.length<2||!vals.some(Boolean))return null;const max=Math.max(...vals),svg=svgElement('svg',{viewBox:'0 0 120 32',preserveAspectRatio:'none',class:'card-spark','aria-hidden':'true'});svg.append(svgElement('polyline',{points:vals.map((v,i)=>(i/(vals.length-1)*120).toFixed(1)+','+(30-v/max*27).toFixed(1)).join(' '),fill:'none',stroke:color,'stroke-width':'1.8','vector-effect':'non-scaling-stroke','stroke-linejoin':'round'}));return svg;};
+  const pctOf=(part,whole)=>whole>0&&part!=null?(part/whole*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'% do bruto':'';
   for(const c of [...channels,all]){
    const ready=!!summary&&included(c,selected),b=bucket(summary,c),p=bucket(previous,c);
    const card=node('button','channel-card '+c.id+(selected===c.id&&selected!=='all'?' selected':''));card.type='button';card.dataset.channel=c.id;
-   const heading=node('div','channel-card-title');heading.append(icon(c.id),node('span','',c.name));card.append(heading);
-   const stats=node('div','card-stats');
-   for(const [key,label] of [['revenue','Vendas'],['paid','Pedidos pagos']]){
-    const group=node('div');const value=node('strong','',ready?(key==='revenue'?brl(b?.[key]):number(b?.[key])):'—');
-    if(c.id==='all')value.id='metrics-'+key;
-    const d=ready?delta(b?.[key],p?.[key]):{text:'—',style:''};group.append(node('small','',label),value,node('span','card-delta '+d.style,d.text));stats.append(group);
+   const heading=node('div','channel-card-title');heading.append(icon(c.id),node('span','',c.name));
+   if(c.id!=='all'){const bar=node('i','card-bar');bar.style.background=colors[c.id];heading.append(bar);}
+   card.append(heading);
+   const net=b?.net??b?.revenue,d=ready?delta(b?.revenue,p?.revenue):{text:'—',style:''};
+   if(c.id==='all'){
+    const v=node('div','total-block'),vv=node('strong','',ready?brl(b?.revenue):'—');vv.id='metrics-revenue';v.append(node('small','','Vendas confirmadas'),vv,node('span','card-delta '+d.style,d.text+(ready&&previous?' vs. período anterior':'')));
+    const l=node('div','total-block'),lv=node('strong','',ready?brl(net):'—');lv.id='metrics-net';l.append(node('small','','Líquido'),lv,node('span','card-sub',ready?[pctOf(net,b?.revenue),number(b?.paid||0)+' pedidos pagos'].filter(Boolean).join(' · '):'—'));
+    card.append(v,l);
+   }else{
+    const stats=node('div','card-stats');
+    const g1=node('div');g1.append(node('small','','Vendas'),node('strong','',ready?brl(b?.revenue):'—'),node('span','card-delta '+d.style,d.text));
+    const g2=node('div');g2.append(node('small','','Líquido'),node('strong','card-net',ready?brl(net):'—'),node('span','card-sub',ready?pctOf(net,b?.revenue):''));
+    stats.append(g1,g2);card.append(stats);
+    const sp=ready?spark(b?.byDay,colors[c.id]):null;if(sp)card.append(sp);
    }
-   const liq=node('p','card-liquido',ready?'Líquido: '+brl(b?.net??b?.revenue):'Líquido: —');liq.style.cssText='margin-top:8px;font-size:11px;font-weight:700;opacity:.92';
-   card.append(stats,liq,node('p','card-status',!c.available?'Conexão não configurada':!included(c,selected)?'Fora do filtro':summary?'vs. período anterior':state));
+   if(!ready)card.append(node('p','card-status',!c.available?'Conexão não configurada':!included(c,selected)?'Fora do filtro':state||'Aguardando consulta'));
    card.addEventListener('click',()=>selectChannel(c.id));el('results').append(card);
   }
  }
@@ -48,8 +58,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   for(const c of [...channels,all]){
    const ready=summary&&included(c,selected),b=bucket(summary,c),tr=node('tr',c.id==='all'?'total-row':'');
    const name=node('td'),nameWrap=node('span','platform-name');nameWrap.append(icon(c.id),node('span','',c.name));name.append(nameWrap);tr.append(name);
-   for(const value of [ready?brl(b?.revenue):'—',ready?brl(b?.net??b?.revenue):'—',ready?number(b?.paid):'—',ready&&b?.paid?brl(b.revenue/b.paid):'—','—'])tr.append(node('td','',value));
-   tr.lastChild.title='Visitas por canal ainda não conectadas';el('channels').append(tr);
+   for(const value of [ready?brl(b?.revenue):'—',ready?brl(b?.net??b?.revenue):'—',ready?number(b?.paid):'—',ready&&b?.paid?brl(b.revenue/b.paid):'—'])tr.append(node('td','',value));
+   el('channels').append(tr);
   }
  }
  function legends(selected='all'){for(const target of ['legend','evolution-legend']){el(target).replaceChildren();for(const c of channels.filter(c=>selected==='all'||c.id===selected)){const item=node('span','legend-item'),dot=node('span','dot');dot.style.backgroundColor=colors[c.id];item.append(dot,node('span','',c.name));el(target).append(item);}}}
@@ -60,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(!summary||!summary.orders){empty(target,summary?'Nenhum pedido encontrado no período.':'Aguardando dados dos canais');return;}
   const dates=[];for(let d=start;d<=end;d=M.shift(d,1))dates.push(d);
   const datasets=channels.filter(c=>summary.byChannel[c.id]).map(c=>{let total=0;return {c,values:dates.map(d=>{const value=summary.byChannel[c.id].byDay[d]||0;total+=value;return cumulative?total:value;})};});
-  const max=Math.max(100,...datasets.flatMap(s=>s.values)),w=440,h=180,l=48,r=10,t=10,b=26;
+  const wide=target&&target.id==='metrics-chart',max=Math.max(100,...datasets.flatMap(s=>s.values)),w=wide?1000:440,h=wide?250:180,l=wide?56:48,r=10,t=10,b=26;
   const svg=svgElement('svg',{viewBox:`0 0 ${w} ${h}`,role:'img','aria-label':(cumulative?'Vendas acumuladas':'Vendas diárias')+' por canal, total '+brl(summary.revenue)});
   for(let i=0;i<=4;i++){const y=t+(h-t-b)*i/4;svg.append(svgElement('line',{x1:l,y1:y,x2:w-r,y2:y,stroke:'var(--line)','stroke-width':'.5'}),svgElement('text',{x:l-7,y:y+3,'text-anchor':'end'},'R$ '+short(max*(1-i/4)/100)));}
   const x=i=>l+i/Math.max(1,dates.length-1)*(w-l-r),y=v=>h-b-v/max*(h-t-b);
@@ -74,15 +84,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   svg.append(svgElement('circle',{cx:60,cy:60,r:46,fill:'none',stroke:'var(--line)','stroke-width':16}));let offset=0;
   if(summary?.revenue>0)for(const c of channels){const amount=summary.byChannel[c.id]?.revenue||0;if(amount<=0)continue;const fraction=amount/summary.revenue*100;const arc=svgElement('circle',{cx:60,cy:60,r:46,pathLength:100,fill:'none',stroke:colors[c.id],'stroke-width':16,'stroke-dasharray':`${fraction} ${100-fraction}`,'stroke-dashoffset':-offset});detailTip(arc,[c.name,brl(amount),fraction.toLocaleString('pt-BR',{maximumFractionDigits:1})+'% das vendas',number(summary.byChannel[c.id]?.paid||0)+' pedidos pagos']);svg.append(arc);offset+=fraction;}
   const center=node('div','donut-center');center.append(node('small','','Vendas'),node('strong','',summary?brl(summary.revenue):'—'),node('small','','Total'));donut.append(svg,center);target.append(donut);
-  const legend=node('div','share-legend');for(const c of channels){const row=node('div','share-row'),dot=node('span','dot');dot.style.backgroundColor=colors[c.id];const name=node('span','',c.name),ready=summary&&included(c,selected),value=summary?.byChannel[c.id]?.revenue||0;name.append(node('small','',!c.available?'Não configurado':ready?brl(value):'Dados indisponíveis'));row.append(dot,name,node('strong','',ready&&summary.revenue>0?(value/summary.revenue*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':'—'));if(ready)detailTip(row,[c.name,brl(value),'Pedidos pagos: '+number(summary.byChannel[c.id]?.paid||0)]);legend.append(row);}target.append(legend);
+  const legend=node('div','share-legend');for(const c of channels){const row=node('div','share-row'),dot=node('span','dot');dot.style.backgroundColor=colors[c.id];const name=node('span','',c.name),ready=summary&&included(c,selected),value=summary?.byChannel[c.id]?.revenue||0;name.append(node('small','',!c.available?'Não configurado':ready?brl(value):'Dados indisponíveis'));row.append(dot,icon(c.id),name,node('strong','',ready&&summary.revenue>0?(value/summary.revenue*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%':'—'));if(ready)detailTip(row,[c.name,brl(value),'Pedidos pagos: '+number(summary.byChannel[c.id]?.paid||0)]);legend.append(row);}target.append(legend);
  }
  function bars(summary,selected){
   if(!summary){empty(el('bars'),'Pedidos aguardando consulta');return;}
-  const svg=svgElement('svg',{viewBox:'0 0 330 190',role:'img','aria-label':'Pedidos pagos por plataforma'}),max=Math.ceil(Math.max(4,...channels.map(c=>summary.byChannel[c.id]?.paid||0))/4)*4;
-  for(let i=0;i<=4;i++){const y=12+138*i/4;svg.append(svgElement('line',{x1:30,y1:y,x2:325,y2:y,stroke:'var(--line)','stroke-width':'.5'}),svgElement('text',{x:25,y:y+3,'text-anchor':'end'},short(max*(1-i/4))));}
-  channels.forEach((c,i)=>{const ready=included(c,selected),value=summary.byChannel[c.id]?.paid||0,x=43+i*73,height=value/max*138;svg.append(svgElement('rect',{x,y:150-height,width:42,height:Math.max(1,height),rx:4,fill:ready?colors[c.id]:'var(--line)'}),svgElement('text',{x:x+21,y:143-height,'text-anchor':'middle'},ready?number(value):'—'));const label=svgElement('text',{x:x+21,y:166,'text-anchor':'middle'});const words=c.name.split(' ');words.forEach((word,j)=>label.append(svgElement('tspan',{x:x+21,dy:j?11:0},word)));svg.append(label);const hit=svgElement('rect',{x:x-8,y:10,width:58,height:174,fill:'transparent',class:'chart-hover-zone'});detailTip(hit,[c.name,ready?number(value)+' pedidos pagos':'Conexão não configurada',...(ready?['Vendas: '+brl(summary.byChannel[c.id]?.revenue||0)]:[])]);svg.append(hit);});el('bars').replaceChildren(svg);
+  // Barras horizontais: um canal por linha (logo, nome, pedidos pagos e barra na cor do canal).
+  const max=Math.max(1,...channels.map(c=>summary.byChannel[c.id]?.paid||0)),wrap=node('div','hbars');
+  for(const c of [...channels].sort((x,y)=>(summary.byChannel[y.id]?.paid||0)-(summary.byChannel[x.id]?.paid||0))){
+   const ready=included(c,selected),value=summary.byChannel[c.id]?.paid||0,row=node('div','hbar-row'),top=node('div','hbar-top'),name=node('span','hbar-name');
+   name.append(icon(c.id),node('span','',c.name));top.append(name,node('strong','',ready?number(value):'—'));
+   const track=node('div','hbar-track'),fill=node('i');fill.style.width=(ready?value/max*100:0)+'%';fill.style.background=colors[c.id];track.append(fill);
+   row.append(top,track);if(ready)detailTip(row,[c.name,number(value)+' pedidos pagos','Vendas: '+brl(summary.byChannel[c.id]?.revenue||0)]);wrap.append(row);
+  }
+  el('bars').replaceChildren(wrap);
  }
- function products(summary){const target=el('products');target.replaceChildren();if(!summary){target.append(node('p','chart-empty','Aguardando dados dos canais'));return;}const rows=summary.topProducts||M.topProducts(summary.byChannel);if(!rows.length){target.append(node('p','chart-empty','Nenhum produto com venda confirmada no período.'));return;}for(const [i,p]of rows.entries()){const row=node('div','overview-product-row'),name=node('div','overview-product-name');name.append(node('span','product-rank',String(i+1)),node('span','',p.title));const channel=channels.find(c=>c.id===p.channel);name.lastChild.append(node('small','product-channel-badge '+p.channel,channel?.name||p.channel));row.append(name,node('strong','',brl(p.value)),node('span','',number(p.units)));target.append(row);}}
+ function products(summary){const target=el('products');target.replaceChildren();if(!summary){target.append(node('p','chart-empty','Aguardando dados dos canais'));return;}const rows=summary.topProducts||M.topProducts(summary.byChannel);if(!rows.length){target.append(node('p','chart-empty','Nenhum produto com venda confirmada no período.'));return;}for(const [i,p]of rows.entries()){const row=node('div','overview-product-row'),name=node('div','overview-product-name');const thumb=node('span','product-thumb');if(p.image&&/^https:\/\//.test(p.image)){const im=node('img');im.src=p.image;im.alt='';im.loading='lazy';im.referrerPolicy='no-referrer';im.onerror=()=>{im.remove();thumb.append(node('i','ph ph-sunglasses'));};thumb.append(im);}else thumb.append(node('i','ph ph-sunglasses'));name.append(node('span','product-rank',String(i+1)),thumb,node('span','',p.title));const channel=channels.find(c=>c.id===p.channel);name.lastChild.append(node('small','product-channel-badge '+p.channel,channel?.name||p.channel));row.append(name,node('strong','',brl(p.value)),node('span','',number(p.units)));target.append(row);}}
  function insights(summary){
   el('insights').replaceChildren();const top=summary&&Object.entries(summary.byChannel).sort((a,b)=>b[1].revenue-a[1].revenue)[0];
   const items=[top&&summary.revenue>0?['ph-trophy',M.channels.find(c=>c.id===top[0]).name+' lidera em vendas',(top[1].revenue/summary.revenue*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'% das vendas confirmadas no período.']:['ph-trophy','Participação por canal','A liderança aparece após uma consulta com vendas.'],summary?['ph-receipt','Pedidos do período',number(summary.paid)+' pagos · '+number(summary.cancelled)+' cancelados/reembolsados.']:['ph-plugs','Canais conectados','Mercado Livre, Nuvemshop, Shopee e TikTok Shop.'],['ph-chart-line','Conversão e produtos','Aguardando visitas e itens por pedido para apuração.']];
@@ -131,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    for(const [d,v] of Object.entries(s.byDay||{}))summary.byDay[d]=(summary.byDay[d]||0)+v;
    summary.ticket=summary.paid?summary.revenue/summary.paid:0;
    const list=(summary.topProducts?summary.topProducts.slice():[]);
-   for(const it of (s.ranking||[]))list.push({id:it.id,channel:'shopee',title:it.title,units:it.units,value:it.value});
+   for(const it of (s.ranking||[]))list.push({id:it.id,channel:'shopee',title:it.title,image:it.image||null,units:it.units,value:it.value});
    summary.topProducts=list.sort((a,b)=>b.value-a.value||b.units-a.units).slice(0,5);
   }catch(_){/* Shopee é complementar; não quebra a Visão Geral */}
  }
@@ -146,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    for(const [d,v] of Object.entries(s.byDay||{}))summary.byDay[d]=(summary.byDay[d]||0)+v;
    summary.ticket=summary.paid?summary.revenue/summary.paid:0;
    const list=(summary.topProducts?summary.topProducts.slice():[]);
-   for(const it of (s.ranking||[]))list.push({id:it.id,channel:'tiktokshop',title:it.title,units:it.units,value:it.value});
+   for(const it of (s.ranking||[]))list.push({id:it.id,channel:'tiktokshop',title:it.title,image:it.image||null,units:it.units,value:it.value});
    summary.topProducts=list.sort((a,b)=>b.value-a.value||b.units-a.units).slice(0,5);
   }catch(_){/* TikTok é complementar */}
  }

@@ -21,7 +21,7 @@ class MetricQueries{
  this.products=this.db.prepare('SELECT rank,channel,product_id AS id,title,revenue AS value,units FROM metric_products WHERE start=? AND end=? ORDER BY revenue DESC,rank LIMIT 5');
  this.put=this.db.prepare('INSERT INTO metric_periods VALUES(?,?,?,?,?)');this.channel=this.db.prepare('INSERT INTO metric_channels VALUES(?,?,?,?,?,?,?)');this.day=this.db.prepare('INSERT INTO metric_days VALUES(?,?,?,?,?)');this.product=this.db.prepare('INSERT INTO metric_products VALUES(?,?,?,?,?,?,?,?)');this.remove=this.db.prepare('DELETE FROM metric_periods WHERE start=? AND end=?');
  }
- sync(ml,ns,start,end){dates({start,end});const version=JSON.stringify(['v2-net',ml.queriedAt,ml.cache?.updatedAt,ns.queriedAt,ns.cache?.updatedAt]);const old=this.read.get(start,end);let value;
+ sync(ml,ns,start,end){dates({start,end});const version=JSON.stringify(['v3-img',ml.queriedAt,ml.cache?.updatedAt,ns.queriedAt,ns.cache?.updatedAt]);const old=this.read.get(start,end);let value;
  if(old&&old.version===version)value=JSON.parse(old.payload);else{value=summarize(ml,ns,start,end);this.db.exec('BEGIN IMMEDIATE');try{this.remove.run(start,end);this.put.run(start,end,version,JSON.stringify(value),new Date().toISOString());for(const [id,b]of Object.entries(value.byChannel)){this.channel.run(start,end,id,b.revenue,b.paid,b.orders,b.cancelled);for(const [day,total]of Object.entries(b.byDay))this.day.run(start,end,id,day,total);}value.topProducts.forEach((p,i)=>this.product.run(start,end,i+1,p.channel,String(p.id),p.title,p.value,p.units));this.db.exec('COMMIT');}catch(e){this.db.exec('ROLLBACK');throw e;}}
  return {...value,refreshing:!!(ml.cache?.refreshing||ns.cache?.refreshing),warnings:[ml.cache?.error,ns.cache?.error].filter(Boolean)};
  }

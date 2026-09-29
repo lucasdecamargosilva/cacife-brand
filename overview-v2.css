@@ -1,0 +1,122 @@
+/* Visão Geral — layout "Canais + Total" (opção 2): fundo neutro, cards brancos, Total Geral em destaque escuro.
+   Carregado por último em metricas.html; só sobrescreve cores e o bloco da Visão Geral. */
+:root{--canvas:#f6f7f9;--sidebar:#fff;--panel:#fff;--panel-top:#fff;--line:#eceef2;--text:#111827;--secondary:#4b5563;--muted:#6b7280;--blue:#111827;--brand:#111827;--success:#16a34a;--cacife-edge:#eceef2;--cacife-depth-1:0 1px 2px #1118270a;--ink:#111827}
+body{background:var(--canvas);color:var(--text)}
+.market-layout>.sidebar{border-right-color:var(--line)}
+
+/* menu lateral: item ativo neutro */
+.sidebar .market-nav a,.market-layout .market-nav a{color:#374151}
+.sidebar .market-nav a.active,.market-layout .market-nav a.active,.sidebar nav a.active{background:#f3f4f6!important;color:#111827!important;box-shadow:none!important;font-weight:700}
+
+/* período */
+.overview-date-controls .period-presets button{background:#fff;border:1px solid var(--line);border-radius:9px;color:#374151;font-weight:500}
+.overview-date-controls .period-presets button[aria-pressed=true],.period-presets button[aria-pressed=true],.period-presets button:hover{background:#111827;color:#fff;border-color:#111827}
+.date-menu summary{background:#fff;border:1px solid var(--line);border-radius:9px;color:#111827;font-weight:600}
+.apply-button{background:#111827}
+
+/* painéis */
+.panel{background:#fff!important;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px #1118270a}
+.panel h2{font-size:15px;font-weight:700;color:#111827;letter-spacing:-.01em}
+.panel-caption{color:var(--muted)}
+.share-row{grid-template-columns:8px 24px 1fr auto;gap:8px;font-size:12.5px}
+.share-row .platform-icon{width:22px;height:22px;flex-basis:22px}
+.share-row strong{font-size:13px}
+
+/* ---------- bloco Canais + Total (só na Visão Geral) ---------- */
+@media(min-width:851px){
+ body:not([data-metrics-view=channel]) .channel-cards{grid-template-columns:repeat(2,minmax(0,1fr)) minmax(0,1.15fr);gap:14px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 1px 2px #1118270a}
+ body:not([data-metrics-view=channel]) .channel-cards .channel-card.all{grid-column:3;grid-row:1/span 2}
+}
+@media(max-width:850px){body:not([data-metrics-view=channel]) .channel-cards .channel-card.all{grid-column:1/-1;order:-1}}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card:is(.mercadolivre,.nuvemshop,.shopee,.tiktokshop){background:#fff!important;border:1px solid var(--line)!important;border-radius:14px;color:#111827!important;box-shadow:none!important;padding:16px;min-height:0}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card::before{display:none}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card:is(.mercadolivre,.nuvemshop,.shopee,.tiktokshop):hover{border-color:#d1d5db!important;transform:none}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card.nuvemshop .channel-emblem img{filter:none}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .channel-card-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;margin-bottom:12px;color:inherit}
+.channel-card .card-bar{margin-left:auto;width:28px;height:4px;border-radius:9px;flex:none}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-stats{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-stats>div+div{border-left:1px solid var(--line)!important;padding-left:12px}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-stats small{font-size:12px;color:var(--muted)!important;margin-bottom:4px}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-stats strong{font-size:clamp(15px,1.35vw,19px);font-weight:700;letter-spacing:-.02em;color:#111827!important}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-stats strong.card-net{color:var(--success)!important}
+.channel-cards .card-delta{font-size:12px;font-weight:600;margin-top:4px}
+.channel-cards .card-delta.positive{color:var(--success)!important}
+.channel-cards .card-delta.negative{color:#dc2626!important}
+.channel-cards .card-sub{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.channel-cards .card-spark{display:block;width:100%;height:34px;margin-top:10px}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card .card-status{border-top:0;margin-top:10px;padding-top:0;color:var(--muted)!important}
+
+/* Total Geral escuro */
+body:not([data-metrics-view=channel]) .channel-cards .channel-card.all{background:#111827!important;border:0!important;border-radius:14px;color:#fff!important;box-shadow:none!important;padding:26px;display:flex;flex-direction:column;justify-content:center;gap:18px}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card.all .channel-card-title{color:#fff;font-size:15px;margin:0;opacity:.95}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card.all .channel-card-title .platform-icon{background:#ffffff1a;color:#fff;font-size:18px}
+.channel-card.all .total-block small{display:block;font-size:13px;color:#ffffffa6;margin-bottom:6px}
+.channel-card.all .total-block strong{display:block;font-size:clamp(24px,2.4vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.1;color:#fff}
+.channel-card.all .total-block+.total-block{border-top:1px solid #ffffff22;padding-top:18px}
+.channel-card.all .total-block+.total-block strong{font-size:clamp(20px,1.9vw,28px)}
+.channel-card.all .card-delta{display:block;margin-top:6px;color:#ffffffa6!important}
+.channel-card.all .card-delta.positive{color:#4ade80!important}
+.channel-card.all .card-delta.negative{color:#fca5a5!important}
+.channel-card.all .card-sub{color:#ffffffa6}
+body:not([data-metrics-view=channel]) .channel-cards .channel-card.all .card-status{color:#ffffffa6!important}
+
+/* painéis da Visão Geral: vendas largo; participação + pedidos; desempenho + top produtos */
+@media(min-width:851px){
+ body:not([data-metrics-view=channel]) .dashboard-panels{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body:not([data-metrics-view=channel]) .sales-panel{grid-column:1/-1}
+ body:not([data-metrics-view=channel]) .share-panel{grid-column:1}
+ body:not([data-metrics-view=channel]) .orders-panel{grid-column:2}
+ body:not([data-metrics-view=channel]) .performance-panel{grid-column:1}
+ body:not([data-metrics-view=channel]) .products-panel{grid-column:2}
+ body:not([data-metrics-view=channel]) .sales-panel .chart-area{height:300px}
+}
+body:not([data-metrics-view=channel]) .evolution-panel,body:not([data-metrics-view=channel]) .insights-strip{display:none}
+
+/* Top produtos: foto + mesma altura do Desempenho, com rolagem */
+.product-thumb{width:38px;height:38px;flex:0 0 38px;border-radius:9px;background:#f3f4f6;overflow:hidden;display:grid;place-items:center;color:#9ca3af;font-size:18px}
+.product-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.product-rank{background:#f3f4f6;color:#111827;font-weight:700}
+.overview-product-row{border-bottom-color:var(--line);font-size:12.5px}
+.overview-product-name .product-channel-badge.tiktokshop{background:#ffe8ee;color:#c8123a}
+@media(min-width:851px){
+ body:not([data-metrics-view=channel]) .products-panel{height:0;min-height:100%;display:flex;flex-direction:column}
+ body:not([data-metrics-view=channel]) #metrics-products{flex:1;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-width:thin}
+}
+/* ordem: participação + pedidos, depois vendas (largo), depois desempenho + top produtos */
+@media(min-width:851px){
+ body:not([data-metrics-view=channel]) .share-panel{grid-row:1}
+ body:not([data-metrics-view=channel]) .orders-panel{grid-row:1}
+ body:not([data-metrics-view=channel]) .sales-panel{grid-row:2}
+ body:not([data-metrics-view=channel]) .performance-panel,body:not([data-metrics-view=channel]) .products-panel{grid-row:3}
+}
+@media(max-width:850px){
+ body:not([data-metrics-view=channel]) .share-panel{order:1}
+ body:not([data-metrics-view=channel]) .orders-panel{order:2}
+ body:not([data-metrics-view=channel]) .sales-panel{order:3}
+ body:not([data-metrics-view=channel]) .performance-panel{order:4}
+ body:not([data-metrics-view=channel]) .products-panel{order:5}
+}
+/* filtros de período sem roxo */
+.presets,.overview-date-controls .period-presets{background:#fff!important;border:1px solid var(--line)!important;box-shadow:none}
+.presets button,.overview-date-controls .period-presets button{background:transparent;color:#4b5563}
+.presets button:hover,.overview-date-controls .period-presets button:hover{background:#f3f4f6!important;color:#111827!important}
+.presets button[aria-pressed="true"],.overview-date-controls .period-presets button[aria-pressed="true"]{background:#111827!important;color:#fff!important;box-shadow:none!important}
+.date-menu>summary,#date-menu>summary{border-color:var(--line);box-shadow:none}
+.date-menu form,#date-form{border-color:var(--line)}
+.date-menu input,.date-menu select{background:#fff}
+/* rodapé "Horário de Brasília / Consultado às" oculto */
+.dashboard-foot{display:none!important}
+/* períodos: sem cápsula em volta; cada botão é um cardzinho */
+.presets,.overview-date-controls .period-presets{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;gap:6px!important}
+.presets button,.overview-date-controls .period-presets button{background:#fff!important;border:1px solid var(--line)!important;border-radius:9px!important;color:#4b5563!important;padding:8px 12px!important;box-shadow:none!important}
+.presets button:hover,.overview-date-controls .period-presets button:hover{background:#f3f4f6!important;color:#111827!important}
+.presets button[aria-pressed="true"],.overview-date-controls .period-presets button[aria-pressed="true"]{background:#111827!important;border-color:#111827!important;color:#fff!important}
+/* Pedidos por plataforma em barras horizontais */
+.orders-panel .chart-area{height:auto!important;display:block}
+.hbars{display:grid;gap:16px;padding-top:4px}
+.hbar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:13px}
+.hbar-name{display:flex;align-items:center;gap:9px;font-weight:600;color:#111827}
+.hbar-name .platform-icon{width:24px;height:24px;flex:0 0 24px}
+.hbar-top strong{font-size:14px;font-weight:700}
+.hbar-track{height:10px;background:#f3f4f6;border-radius:99px;overflow:hidden}
+.hbar-track i{display:block;height:100%;border-radius:99px;min-width:2px}

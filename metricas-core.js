@@ -68,7 +68,7 @@
         const products=new Map();
         for(const [channel,bucket]of Object.entries(byChannel))for(const item of bucket.ranking||[]){
             const units=item.units??item.quantity,value=item.value;if(!Number.isSafeInteger(value)||!Number.isSafeInteger(units)||units<=0||value<0)continue;
-            const key=channel+':'+item.id;const row=products.get(key)||{id:item.id,channel,title:item.title||'Produto',units:0,value:0};row.units+=units;row.value+=value;products.set(key,row);
+            const key=channel+':'+item.id;const row=products.get(key)||{id:item.id,channel,title:item.title||'Produto',image:null,units:0,value:0};if(!row.image&&(item.image||item.img))row.image=item.image||item.img;row.units+=units;row.value+=value;products.set(key,row);
         }
         return [...products.values()].sort((a,b)=>b.value-a.value||b.units-a.units||a.title.localeCompare(b.title)).slice(0,limit);
     }
