@@ -70,3 +70,9 @@ body{background:var(--bg);color:var(--ink)}
 
 /* rodapé "consultado às" oculto, igual à Visão Geral */
 #updated{display:none}
+/* vendas + visitas lado a lado; saúde da conta sozinha embaixo, itens em 3 colunas */
+.ml-row2{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+@media(max-width:1100px){.ml-row2{grid-template-columns:1fr!important}}
+.ml-health-wide{margin-bottom:18px}
+.ml-health-wide .ml-thermo{max-width:520px}
+@media(min-width:900px){.ml-health-wide .ml-kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:32px}.ml-health-wide .ml-kv>div:last-child{border-bottom:1px solid #f3f4f6}}
