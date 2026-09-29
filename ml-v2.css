@@ -95,3 +95,11 @@ body{background:var(--bg);color:var(--ink)}
 .ml-top-row .product strong{display:block!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset}
 /* links de texto ("Ver todos os produtos →", "Ver perguntas →") sem efeito ao passar o mouse */
 .link-button,.link-button:hover:not(:disabled),.link-button:focus{background:none!important;color:#3483fa!important;box-shadow:none!important;transform:none!important;text-decoration:none;border:0!important}
+/* andamento das entregas em quadradinhos com ícone */
+.ship-tiles-wrap{display:block!important}
+.ship-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.ship-tile{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ship-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:19px;margin-bottom:6px}
+.ship-tile strong{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.ship-tile small{font-size:12px;color:var(--secondary);line-height:1.3}
+.ship-pct{font-size:11.5px;color:var(--muted)}
