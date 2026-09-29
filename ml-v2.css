@@ -91,3 +91,7 @@ body{background:var(--bg);color:var(--ink)}
 .ml-top-row .product strong{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;font-weight:600;line-height:1.3}
 .ml-top-row .product small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;color:var(--muted)}
 .ml-top-row>strong{padding-left:8px}
+/* top 5: nome resumido em uma linha */
+.ml-top-row .product strong{display:block!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset}
+/* links de texto ("Ver todos os produtos →", "Ver perguntas →") sem efeito ao passar o mouse */
+.link-button,.link-button:hover:not(:disabled),.link-button:focus{background:none!important;color:#3483fa!important;box-shadow:none!important;transform:none!important;text-decoration:none;border:0!important}
