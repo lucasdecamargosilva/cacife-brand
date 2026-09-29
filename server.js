@@ -314,11 +314,19 @@ try {
             const qRet = `select count(*) n, round(coalesce(sum(refund_amount*100),0)) valor from shopee_returns where ${per}`;
             const qStatus = `select coalesce(status,'?') status, count(*) n, round(coalesce(sum(total*100),0)) valor from shopee_orders where ${per} group by 1 order by n desc`;
             const qRecent = `select id_pedido, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM HH24:MI') dt, coalesce(status,'?') status, coalesce(payment_status,'?') pay_status, coalesce(payment_method,'-') pay, round(coalesce(total*100,0)) total from shopee_orders where ${per} order by created_at desc limit 40`;
-            const qDev = `select return_sn, order_sn, coalesce(status,'?') status, coalesce(reason,'-') reason, round(coalesce(refund_amount*100,0)) refund, to_char(created_at at time zone 'America/Sao_Paulo','DD/MM') dt from shopee_returns where ${per} order by created_at desc limit 30`;
-            const [base, days, rank, pay, ship, ret, sts, recent, dev] = await Promise.all([
+            // devoluções: lista com o 1º item do pedido (foto/nome/variação) + motivos e status agregados do período inteiro
+            const perR = per.replace(/created_at/g, 'r.created_at');
+            const qDev = `select r.return_sn, r.order_sn, coalesce(r.status,'?') status, coalesce(r.reason,'-') reason, round(coalesce(r.refund_amount*100,0)) refund, to_char(r.created_at at time zone 'America/Sao_Paulo','DD/MM') dt,
+                it.item_name produto, it.image_url img, it.model_sku variacao
+                from shopee_returns r left join lateral (select i.item_name, i.image_url, i.model_sku from shopee_order_items i where i.shop_id=r.shop_id and i.id_pedido=r.order_sn order by i.order_item_id limit 1) it on true
+                where ${perR} order by r.created_at desc limit 100`;
+            const qDevMot = `select coalesce(reason,'-') reason, count(*) n from shopee_returns where ${per} group by 1 order by n desc`;
+            const qDevSt = `select coalesce(status,'?') status, count(*) n from shopee_returns where ${per} group by 1 order by n desc`;
+            const [base, days, rank, pay, ship, ret, sts, recent, dev, devMot, devSt] = await Promise.all([
                 shopee.db.query(q1), shopee.db.query(qDay), shopee.db.query(qRank),
                 shopee.db.query(qPay), shopee.db.query(qShip), shopee.db.query(qRet),
                 shopee.db.query(qStatus), shopee.db.query(qRecent), shopee.db.query(qDev),
+                shopee.db.query(qDevMot), shopee.db.query(qDevSt),
             ]);
             const b = base[0] || {};
             const N = (v) => Math.round(Number(v) || 0);
@@ -335,9 +343,34 @@ try {
                 devolucoes: { n: N(ret[0]?.n), valor: N(ret[0]?.valor) },
                 porStatus: sts.map(r => ({ status: r.status, n: N(r.n), valor: N(r.valor) })),
                 recentes: recent.map(r => ({ id: r.id_pedido, dt: r.dt, status: r.status, pay_status: r.pay_status, pay: r.pay, total: N(r.total) })),
-                devList: dev.map(r => ({ return_sn: r.return_sn, order_sn: r.order_sn, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt })),
+                devList: dev.map(r => ({ return_sn: r.return_sn, order_sn: r.order_sn, status: r.status, reason: r.reason, refund: N(r.refund), dt: r.dt, produto: r.produto || null, img: r.img || null, variacao: r.variacao || null })),
+                devMotivos: devMot.map(r => ({ reason: r.reason, n: N(r.n) })),
+                devStatus: devSt.map(r => ({ status: r.status, n: N(r.n) })),
             });
         } catch (e) { console.error('Shopee overview:', e); res.status(500).json({ error: 'erro interno' }); }
+    });
+
+    // Vendas por produto no período (aba Produtos): unidades, pedidos, valor, vendas por dia e variação mais vendida. Centavos.
+    app.get('/api/shopee/products', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try {
+            if (!requireShopee(res)) return;
+            const re = /^\d{4}-\d{2}-\d{2}$/;
+            const { start, end } = req.query;
+            if (!re.test(start || '') || !re.test(end || '') || start > end) return res.status(400).json({ error: 'período inválido' });
+            const per = `o.created_at >= '${start} 00:00:00-03' and o.created_at < ('${end} 00:00:00-03'::timestamptz + interval '1 day')`;
+            const base = `from shopee_order_items i join shopee_orders o on o.shop_id=i.shop_id and o.id_pedido=i.id_pedido where o.payment_status='paid' and ${per}`;
+            const qProd = `select coalesce(i.item_id,0) id, max(i.item_name) title, max(i.image_url) image, sum(i.qty)::int units, count(distinct i.id_pedido)::int pedidos, round(coalesce(sum(i.price*i.qty*100),0))::bigint gmv ${base} group by 1 order by gmv desc limit 500`;
+            const qDay = `select coalesce(i.item_id,0) id, to_char((o.created_at at time zone 'America/Sao_Paulo')::date,'YYYY-MM-DD') d, round(coalesce(sum(i.price*i.qty*100),0))::bigint v ${base} group by 1,2`;
+            const qVar = `select distinct on (id) id, variacao from (select coalesce(i.item_id,0) id, i.model_sku variacao, sum(i.qty) q ${base} and coalesce(i.model_sku,'')<>'' group by 1,2) t order by id, q desc`;
+            const [prods, days, vars] = await Promise.all([shopee.db.query(qProd), shopee.db.query(qDay), shopee.db.query(qVar)]);
+            const N = (v) => Math.round(Number(v) || 0);
+            const porDia = new Map(); for (const r of days) { const k = String(r.id); if (!porDia.has(k)) porDia.set(k, {}); porDia.get(k)[r.d] = N(r.v); }
+            const varBy = new Map(vars.map(r => [String(r.id), r.variacao]));
+            res.json({
+                produtos: prods.map(r => ({ id: String(r.id), title: r.title || 'Produto', image: r.image || null, units: N(r.units), pedidos: N(r.pedidos), gmv: N(r.gmv), porDia: porDia.get(String(r.id)) || {}, variacaoTop: varBy.get(String(r.id)) || null })),
+            });
+        } catch (e) { console.error('Shopee products:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
     // --- Chat da Shopee (leitura) ---

@@ -20,6 +20,18 @@
     cache.set(key, promise);
     return promise;
   }
+  // vendas por produto (com vendas por dia e variação mais vendida) — aba Produtos
+  const productsCache = new Map();
+  function products(start, end) {
+    const key = start + ':' + end;
+    if (!productsCache.has(key)) productsCache.set(key, (async () => {
+      const { data: { session } } = await sb().auth.getSession();
+      if (!session) return null;
+      const r = await fetch(BASE + '/api/shopee/products?' + new URLSearchParams({ start, end }), { headers: { Authorization: 'Bearer ' + session.access_token } });
+      return r.ok ? r.json() : null;
+    })().catch(() => null));
+    return productsCache.get(key);
+  }
 
   // ---------- cores / helpers ----------
   const SHOPEE = '#ee4d2d', GREEN = '#16a34a', AMBER = '#f59e0b', RED = '#ef4444', BLUE = '#3b82f6';
@@ -337,27 +349,51 @@
     box.append(rec);
     return box;
   }
-  function secProdutos(data) {
+  // Produtos e Devoluções: mesmo desenho do TikTok Shop (window.ChannelKit), nas cores da Shopee
+  const KIT = { accent: SHOPEE, accent2: '#26aa99' };
+  function secProdutos() {
     const box = n('div', 'shp-wrap');
-    const top = panel('Top produtos', 'Itens de pedidos pagos no período, por valor vendido.');
-    const mx = Math.max(1, ...(data.ranking || []).map(p => p.value));
-    (data.ranking || []).forEach((p, i) => top.append(productRow(p, i, mx)));
-    if (!(data.ranking || []).length) top.append(n('p', 'cap', 'Nenhum item no período.'));
-    box.append(top); return box;
+    const K = root.ChannelKit;
+    if (!K) { box.append(n('p', 'cap', 'Não consegui carregar os produtos.')); return box; }
+    K.message(box, 'Carregando produtos…', KIT);
+    const [s, e] = curDates(), pr = prevRange();
+    Promise.all([products(s, e), pr ? products(pr[0], pr[1]) : Promise.resolve(null)]).then(([d, old]) => {
+      box.replaceChildren();
+      if (!d) { K.message(box, 'Não consegui carregar os produtos. Tente Atualizar.', KIT); return; }
+      K.productsView(box, { ...KIT, products: d.produtos || [], prevProducts: old ? old.produtos || [] : null, start: s, end: e });
+    });
+    return box;
   }
+  // status das devoluções da Shopee → [rótulo, tom, em andamento?]
+  const RST = {
+    REQUESTED: ['Solicitada', 'am', 1], PROCESSING: ['Em análise', 'am', 1], JUDGING: ['Em disputa', 'am', 1], SELLER_DISPUTE: ['Em disputa', 'am', 1],
+    ACCEPTED: ['Aceita', 'g', 0], REFUND_PAID: ['Reembolsado', 'g', 0], CLOSED: ['Encerrada', 'gy', 0], CANCELLED: ['Cancelada', 'gy', 0],
+  };
+  const rst = s => RST[s] || [s && s !== '?' ? String(s).replace(/_/g, ' ').toLowerCase() : '—', 'gy', 0];
+  const MOTIVOS = {
+    CHANGE_MIND: 'Mudou de ideia', WRONG_ITEM: 'Item errado', NOT_RECEIPT: 'Não recebeu', DAMAGED_OTHERS: 'Chegou danificado', ITEM_MISSING: 'Faltando itens',
+    FUNCTIONAL_DMG: 'Defeito de funcionamento', ITEM_FAKE: 'Suspeita de falsificação', SUSPICIOUS_PARCEL: 'Pacote suspeito', BROKEN_PRODUCTS: 'Produto quebrado',
+    OUTER_DAMAGED_PACKAGE: 'Embalagem danificada', ITEM_NOT_FIT: 'Não serviu', DIFFERENT_DESCRIPTION: 'Diferente do anúncio', ITEM_WRONGDAMAGED: 'Item errado ou danificado',
+    PHYSICAL_DMG: 'Dano físico', EXPIRED_PRODUCT: 'Produto vencido', NO_REASON: 'Sem motivo', NONE: 'Sem motivo',
+  };
+  const motivo = r => { const s = String(r || '').trim(); if (!s || s === '-') return 'Sem motivo'; if (MOTIVOS[s]) return MOTIVOS[s]; return /^[A-Z0-9_]+$/.test(s) ? s.charAt(0) + s.slice(1).replace(/_/g, ' ').toLowerCase() : s; };
   function secDevolucoes(data) {
     const box = n('div', 'shp-wrap');
-    const kp = n('section', 'v2-strip'); kp.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
-    kp.append(kpiCard('Devoluções', 'ph-arrow-u-up-left', num(data.devolucoes?.n), compare(data.devolucoes?.n || 0, prevVal(p => p.devolucoes?.n || 0), true)), kpiCard('Reembolsado', 'ph-currency-circle-dollar', brl(data.devolucoes?.valor), compare(data.devolucoes?.valor || 0, prevVal(p => p.devolucoes?.valor || 0), true)));
-    box.append(kp);
-    const mot = {}; for (const d of (data.devList || [])) { const k = d.reason || 'Sem motivo'; mot[k] = (mot[k] || 0) + 1; }
-    const motList = Object.entries(mot).sort((a, b) => b[1] - a[1]);
-    if (motList.length) { const mp = panel('Motivos', 'Das últimas devoluções do período.'); mp.append(hbars(motList.map(([k, v], i) => ({ label: k, value: v, color: i === 0 ? SHOPEE : '#f59e7b' })))); box.append(mp); }
-    const lst = panel('Devoluções recentes', 'Últimas 30 devoluções do período.');
-    const rows = (data.devList || []).map(d => { const [sl, sc] = statusInfo(d.status); return [d.return_sn, d.order_sn, { node: badge(sl, sc) }, d.reason, d.dt, { r: true, t: brl(d.refund) }]; });
-    lst.append(table([{ t: 'Devolução' }, { t: 'Pedido' }, { t: 'Status' }, { t: 'Motivo' }, { t: 'Data' }, { t: 'Reembolso', r: true }], rows));
-    if (!rows.length) lst.append(n('p', 'cap', 'Nenhuma devolução no período.'));
-    box.append(lst); return box;
+    const K = root.ChannelKit;
+    if (!K) { box.append(n('p', 'cap', 'Não consegui carregar as devoluções.')); return box; }
+    const dv = data.devolucoes || {};
+    // prevData: null = consultando, false = sem base
+    const prev = prevData === null ? undefined : (prevData ? { n: prevData.devolucoes?.n || 0, valor: prevData.devolucoes?.valor || 0, paid: prevData.paid || 0 } : null);
+    // motivos/status agregados no servidor; se vier só a lista (servidor antigo), agrega a lista
+    const list = data.devList || [];
+    const reasons = (data.devMotivos || list.map(d => ({ reason: d.reason, n: 1 }))).map(m => ({ label: motivo(m.reason), n: m.n }));
+    const statuses = (data.devStatus || list.map(d => ({ status: d.status, n: 1 }))).map(x => { const [label, tone, open] = rst(x.status); return { label, tone, open, n: x.n }; });
+    K.returnsView(box, {
+      ...KIT, n: dv.n || 0, valor: dv.valor || 0, paid: data.paid || 0, prev, reasons, statuses,
+      list: list.map(d => { const [l, t] = rst(d.status); return { product: d.produto || 'Produto', image: d.img, variation: d.variacao, date: d.dt, orderId: d.order_sn, reason: motivo(d.reason), reasonTitle: d.reason, refund: d.refund, statusLabel: l, statusTone: t }; }),
+      listCaption: 'Últimas ' + num(list.length) + ' solicitações do período',
+    });
+    return box;
   }
 
   // ---- Chat ----

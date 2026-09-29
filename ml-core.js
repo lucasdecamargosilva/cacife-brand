@@ -7,6 +7,9 @@
    for(const item of o.items){if(!Number.isSafeInteger(item.quantity)||item.quantity<0||!Number.isSafeInteger(item.price))throw new Error('Item com quantidade ou preço inválido.');result.units+=item.quantity;const key=item.id+':'+(item.variation||'');const row=products.get(key)||{...item,quantity:0,value:0};row.quantity+=item.quantity;row.value+=item.quantity*item.price;products.set(key,row);result.fees+=(Number.isSafeInteger(item.fee)?item.fee:0)*item.quantity;}
   }result.ticket=result.paid?Math.round(result.revenue/result.paid):0;result.net=result.revenue-result.fees;result.ranking=[...products.values()].sort((a,b)=>b.quantity-a.quantity||b.value-a.value);return result;
  }
+ // Linhas de itens de pedidos pagos em BRL (mesmo critério do summarize), para a aba Produtos.
+ const counts=o=>o.status!=='cancelled'&&o.currency==='BRL'&&['paid','partially_refunded'].includes(o.status)&&!((o.payments||[]).some(p=>['refunded','charged_back'].includes(p.status))&&!(o.payments||[]).some(p=>p.status==='approved'));
+ function itemRows(orders){const rows=[];for(const o of orders||[]){if(!counts(o))continue;for(const item of o.items||[]){if(!Number.isSafeInteger(item.quantity)||!Number.isSafeInteger(item.price))continue;rows.push({id:item.id,title:item.title,qty:item.quantity,value:item.quantity*item.price,date:o.created,variation:item.variationName||'',orderId:o.id});}}return rows;}
  function paymentRows(orders){return orders.flatMap(order=>order.payments.length?order.payments.map(payment=>({order,payment})):[{order,payment:{}}]);}
- const api={summarize,paymentRows};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.MLCore=api;
+ const api={summarize,paymentRows,itemRows};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.MLCore=api;
 })(typeof window==='undefined'?globalThis:window);
