@@ -76,3 +76,6 @@ body{background:var(--bg);color:var(--ink)}
 .ml-health-wide{margin-bottom:18px}
 .ml-health-wide .ml-thermo{max-width:520px}
 @media(min-width:900px){.ml-health-wide .ml-kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:32px}.ml-health-wide .ml-kv>div:last-child{border-bottom:1px solid #f3f4f6}}
+/* vendas e visitas: mesma altura, gráfico encostado na base */
+.ml-row2>.card{display:flex;flex-direction:column}
+.ml-row2>.card>.interactive-chart{margin-top:auto}
