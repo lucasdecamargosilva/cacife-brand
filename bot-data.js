@@ -60,11 +60,19 @@ function termoClause(col, termo) {
   return palavras.map((w) => `${norm} like '%${sqlLit(w)}%'`).join(' and ');
 }
 
-function productSql(period, channel, { limit = 3, termo = null } = {}) {
+function productSql(period, channel, { limit = 3, termo = null, shop = null } = {}) {
   if (!ISO_RE.test(period.startISO) || !ISO_RE.test(period.endExclusiveISO)) throw new Error('período inválido');
   const lim = Math.min(20, Math.max(1, Number(limit) || 3));
   const win = `created_at >= '${period.startISO}' and created_at < '${period.endExclusiveISO}'`;
-  const like = termo ? termoClause(channel === 'shopee' ? 'item_name' : 'produto', termo) : null;
+  const like = termo ? termoClause(channel === 'shopee' ? 'item_name' : channel === 'tiktokshop' ? 'i.product_name' : 'produto', termo) : null;
+  if (channel === 'tiktokshop') {
+    // Valor exato: preço de venda do item × quantidade, só pedidos pagos da loja Cacife.
+    if (!TT_SHOP.test(String(shop || ''))) throw new Error('TikTok Shop não conectado');
+    return `select i.product_name as produto, sum(i.qty) as unidades, count(distinct i.id_pedido) as pedidos, round(sum(i.price * i.qty)::numeric, 2) as valor
+      from tiktok_order_items i join tiktok_orders o on o.shop_id = i.shop_id and o.id_pedido = i.id_pedido
+      where o.shop_id = '${shop}' and o.payment_status = 'paid' and o.${win}${like ? ' and ' + like : ''}
+      group by i.product_name order by unidades desc nulls last limit ${lim}`;
+  }
   if (channel === 'shopee') {
     // Rateio do total pago pelo preço dos itens; se algum item do pedido não tem preço, divide igual.
     return `with itens as (
@@ -102,19 +110,19 @@ function mapProductRows(rows, channel) {
   return (rows || []).map((r) => ({
     produto: short(r.produto), produto_completo: String(r.produto || '').trim(),
     unidades: num(r.unidades), pedidos: num(r.pedidos),
-    valor: brlStr(r.valor), valor_tipo: channel === 'shopee' || !r.aproximado ? 'exato' : 'aproximado (rateio em pedidos com vários itens)',
+    valor: brlStr(r.valor), valor_tipo: channel === 'shopee' || channel === 'tiktokshop' || !r.aproximado ? 'exato' : 'aproximado (rateio em pedidos com vários itens)',
   }));
 }
 
 async function topProducts(deps, period, channel, limit = 3) {
-  const rows = await deps.pgQuery(productSql(period, channel, { limit }));
+  const rows = await deps.pgQuery(productSql(period, channel, { limit, shop: deps.tiktokShop }));
   return mapProductRows(rows, channel);
 }
 
 // Busca produto(s) por trecho do nome num canal (ex.: "madrid", "aviador").
 async function productSales(deps, period, channel, termo, limit = 5) {
   if (!termo || String(termo).trim().length < 2) throw new Error('informe parte do nome do produto');
-  const rows = await deps.pgQuery(productSql(period, channel, { limit, termo: String(termo).trim() }));
+  const rows = await deps.pgQuery(productSql(period, channel, { limit, termo: String(termo).trim(), shop: deps.tiktokShop }));
   return mapProductRows(rows, channel);
 }
 
@@ -130,13 +138,27 @@ async function safe(fn, ms, label) {
   catch (e) { console.error('bot-data canal ' + label + ':', e.message); return { error: true, revenue: 0, net: 0, orders: 0 }; }
 }
 
+// --- TikTok Shop (tiktok_orders, valores em reais -> centavos). Líquido = repasse já liquidado pelo TikTok. ---
+const TT_SHOP = /^\d{5,30}$/;
+async function tiktokSummary(pgQuery, period, shopId) {
+  if (!TT_SHOP.test(String(shopId || ''))) throw new Error('TikTok Shop não conectado');
+  if (!ISO_RE.test(period.startISO) || !ISO_RE.test(period.endExclusiveISO)) throw new Error('período inválido');
+  const sql = `select count(*) filter (where payment_status='paid') as orders,
+      coalesce(round(sum(total) filter (where payment_status='paid') * 100), 0) as revenue,
+      coalesce(round(sum(settlement_amount) filter (where payment_status='paid') * 100), 0) as net
+    from tiktok_orders where shop_id = '${shopId}' and created_at >= '${period.startISO}' and created_at < '${period.endExclusiveISO}'`;
+  const r = ((await pgQuery(sql)) || [])[0] || {};
+  return { revenue: num(r.revenue), net: num(r.net), orders: num(r.orders) };
+}
+
 async function overview(deps, period, timeoutMs = 20000) {
-  const [shopee, mercadolivre, nuvemshop] = await Promise.all([
+  const [shopee, mercadolivre, nuvemshop, tiktokshop] = await Promise.all([
     safe(() => shopeeSummary(deps.shopeeRest, period), timeoutMs, 'shopee'),
     safe(() => channelSummary(deps.pgQuery, period, 'mercadolivre'), timeoutMs, 'mercadolivre'),
     safe(() => channelSummary(deps.pgQuery, period, 'nuvemshop'), timeoutMs, 'nuvemshop'),
+    safe(() => tiktokSummary(deps.pgQuery, period, deps.tiktokShop), timeoutMs, 'tiktokshop'),
   ]);
-  const channels = { shopee, mercadolivre, nuvemshop };
+  const channels = { shopee, mercadolivre, nuvemshop, tiktokshop };
   const total = { revenue: 0, net: 0, orders: 0 };
   for (const c of Object.values(channels)) {
     if (c.error) continue;
@@ -145,4 +167,4 @@ async function overview(deps, period, timeoutMs = 20000) {
   return { channels, total, period: { start: period.start, end: period.end, label: period.label } };
 }
 
-module.exports = { shopeeSummary, channelSummary, overview, topProducts, productSales, productSql, PAID_CLAUSE };
+module.exports = { shopeeSummary, channelSummary, tiktokSummary, overview, topProducts, productSales, productSql, PAID_CLAUSE };

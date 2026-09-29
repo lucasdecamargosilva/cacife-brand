@@ -838,17 +838,26 @@ try {
         if (typeof p === 'string' && p.includes(':')) { const [from, to] = p.split(':'); return { from, to }; }
         return p;
     };
-    const botDeps = { shopeeRest: botShopeeRest, pgQuery: botPgQuery };
+    const botDeps = { shopeeRest: botShopeeRest, pgQuery: botPgQuery, tiktokShop: null };
+    // Loja TikTok da Cacife (a mesma do painel) — descoberta uma vez.
+    const botTiktokShop = async () => { if (!botDeps.tiktokShop && typeof tiktokShopId === 'function') { try { botDeps.tiktokShop = await tiktokShopId(); } catch (e) {} } return botDeps.tiktokShop; };
+    // Lê as rotas do próprio painel (mesmos números das telas) usando o token de admin interno.
+    const botPanelGet = async (path) => { const r = await fetch('http://127.0.0.1:' + PORT + path, { headers: { 'x-admin-token': SHOPEE_ADMIN_TOKEN || '' }, signal: AbortSignal.timeout(25000) }); if (!r.ok) throw new Error('painel HTTP ' + r.status); return r.json(); };
+    const brlC = (c) => { const v = (Number(c) || 0) / 100; const [i, d] = v.toFixed(2).split('.'); return 'R$ ' + i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d; };
+    const MOTIVO_PT = { "Item doesn't fit": 'Não serviu', "Package wasn't received": 'Pacote não recebido', 'No longer needed': 'Não precisa mais', 'Color or pattern not as expected': 'Cor ou modelo diferente', "Item doesn't match description": 'Diferente do anúncio', 'Defective item': 'Produto com defeito', 'Wrong item was sent': 'Item errado', 'Damaged item': 'Chegou danificado' };
+    const curtoNome = (t) => { t = String(t || '').trim(); return t.length > 42 ? t.slice(0, 42).trim() + '…' : t; };
     const chSummary = (ov) => Object.fromEntries(Object.entries(ov.channels).map(([k, v]) => [k, v.error ? 'erro' : v.orders + 'ped']));
     const botTools = {
         resumo_geral: async ({ period }) => {
             const t0 = Date.now();
+            await botTiktokShop();
             const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
             pushDebug({ step: 'tool', tool: 'resumo_geral', period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
             return fmtOverview(ov);
         },
         resumo_canal: async ({ canal, period }) => {
             const t0 = Date.now();
+            await botTiktokShop();
             const ov = await overview(botDeps, resolvePeriod(parsePeriodArg(period)));
             pushDebug({ step: 'tool', tool: 'resumo_canal:' + canal, period: ov.period.label, ms: Date.now() - t0, canais: chSummary(ov) });
             const f = fmtOverview(ov);
@@ -857,7 +866,8 @@ try {
         top_produtos: async ({ canal, period, limite }) => {
             const t0 = Date.now();
             const per = resolvePeriod(parsePeriodArg(period));
-            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop'];
+            await botTiktokShop();
+            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop', 'tiktokshop'];
             const top = {};
             await Promise.all(canais.map(async (c) => {
                 try { top[c] = await topProducts(botDeps, per, c, limite || 3); }
@@ -869,7 +879,8 @@ try {
         vendas_produto: async ({ produto, canal, period, limite }) => {
             const t0 = Date.now();
             const per = resolvePeriod(parsePeriodArg(period));
-            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop'];
+            await botTiktokShop();
+            const canais = canal ? [canal] : ['shopee', 'mercadolivre', 'nuvemshop', 'tiktokshop'];
             const resultado = {};
             await Promise.all(canais.map(async (c) => {
                 try { resultado[c] = await productSales(botDeps, per, c, produto, limite || 5); }
@@ -905,6 +916,56 @@ try {
                 pushDebug({ step: 'tool', tool: 'perguntas_ml', ms: Date.now() - t0, pendentes: n });
                 return { perguntas_sem_resposta: n };
             } catch (e) { console.error('perguntas_ml:', e.message); return { erro: 'não consegui consultar o Mercado Livre' }; }
+        },
+        tiktok_painel: async ({ aba, period }) => {
+            const t0 = Date.now();
+            try {
+                await botTiktokShop();
+                const per = resolvePeriod(parsePeriodArg(period));
+                const q = new URLSearchParams({ start: per.start, end: per.end }).toString();
+                let out;
+                if (['resumo', 'financeiro', 'estoque', 'devolucoes'].includes(aba)) {
+                    const o = await botPanelGet('/api/tiktok/overview?' + q);
+                    if (aba === 'resumo') out = { faturamento_bruto: brlC(o.revenue), repasse_liquido_ja_liquidado: brlC(o.liquido), taxas_tiktok: brlC(o.fees), pedidos_pagos: o.paid, pedidos_cancelados: o.cancelled, ticket_medio: brlC(o.ticket), reembolsado: brlC(o.devolucoes && o.devolucoes.valor), status_dos_pedidos: (o.porStatus || []).map((s) => ({ status: s.status, pedidos: s.n })), top_produtos: (o.ranking || []).slice(0, 5).map((p) => ({ produto: curtoNome(p.title), unidades: p.units, valor: brlC(p.value) })) };
+                    else if (aba === 'financeiro') { const f = o.financeiro || {}, e = f.aReceberEstimado || {}, d = (f.extratos && f.extratos.detalhe) || {}; out = { a_receber_estimado: brlC(e.total), quando_vai_cair: { entregues_cai_nos_proximos_dias: { pedidos: e.entregue && e.entregue.n, valor: brlC(e.entregue && e.entregue.v) }, em_transito_cai_depois_da_entrega: { pedidos: e.transito && e.transito.n, valor: brlC(e.transito && e.transito.v) }, aguardando_envio: { pedidos: e.aguardando && e.aguardando.n, valor: brlC(e.aguardando && e.aguardando.v) } }, ja_confirmado_pelo_tiktok: brlC(f.aReceberConfirmado && f.aReceberConfirmado.v), caiu_na_conta_no_periodo: brlC(f.recebido), depositos: f.depositos, taxa_media_de_repasse: (f.taxaRepasse || 0) + '%', extratos_do_periodo: { bruto: brlC(f.extratos && f.extratos.bruto), liquido: brlC(f.extratos && f.extratos.repasse), comissao_tiktok: brlC(d.comTiktok), comissao_afiliados: brlC(d.comAfiliados), frete: brlC(d.frete), outras_taxas: brlC(d.outras), ajustes: brlC(d.ajustes) }, obs: 'a receber é estimativa: pedidos pagos ainda não liquidados × taxa média de repasse dos últimos 30 dias' }; }
+                    else if (aba === 'estoque') { const s = o.estoque || {}; const fmt = (x) => ({ produto: curtoNome(x.title), variacao: x.variacao || x.seller_sku, em_estoque: x.qty, vende_por_dia: Math.round((x.u30 || 0) / 30 * 10) / 10, acaba_em_dias: x.dias }); out = { variacoes_ativas: s.skus, esgotados_que_vendem: s.nEsgotadosVendendo, acabando_ate_10_dias: s.nCriticos, sem_estoque_total: s.semEstoque, repor_primeiro: (s.esgotados || []).slice(0, 5).map(fmt), acabando: (s.criticos || []).slice(0, 5).map(fmt) }; }
+                    else { const st = {}; for (const x of (o.devStatus || [])) st[x.status] = x.n; const andamento = (st.AWAITING_BUYER_SHIP || 0) + (st.BUYER_SHIPPED_ITEM || 0) + (st.RETURN_OR_REFUND_REQUEST_PENDING || 0); out = { devolucoes: o.devolucoes && o.devolucoes.n, valor_devolvido: brlC(o.devolucoes && o.devolucoes.valor), taxa_de_devolucao: o.paid ? (Math.round(((o.devolucoes && o.devolucoes.n) || 0) / o.paid * 1000) / 10) + '%' : '—', em_andamento: andamento, motivos: (o.devMotivos || []).map((m) => ({ motivo: MOTIVO_PT[m.reason] || m.reason, quantidade: m.n })) }; }
+                } else {
+                    const i = await botPanelGet('/api/tiktok/insights?' + q);
+                    if (aba === 'desempenho') { const s = i.shop || {}, tot = (s.gmvPor && ((s.gmvPor.VIDEO || 0) + (s.gmvPor.LIVE || 0) + (s.gmvPor.PRODUCT_CARD || 0))) || 1; out = s.gmv == null ? { erro: 'Analytics do TikTok indisponível para o período' } : { gmv: brlC(s.gmv), pedidos: s.orders, visitantes: s.visitors, visualizacoes_de_produto: s.pageViews, exibicoes: s.impressions, taxa_de_conversao: (s.conversao || 0) + '%', de_onde_vem_as_vendas: [['Vídeos', 'VIDEO'], ['LIVE', 'LIVE'], ['Vitrine / cartão do produto', 'PRODUCT_CARD']].map(([n, k]) => ({ origem: n, vendas: brlC(s.gmvPor && s.gmvPor[k]), percentual: Math.round(((s.gmvPor && s.gmvPor[k]) || 0) / tot * 100) + '%' })).sort((a, b) => parseInt(b.percentual) - parseInt(a.percentual)), dados_disponiveis_ate: i.disponivelAte }; }
+                    else { const a = (i.afiliados && i.afiliados.total) || {}; out = { criadores_que_venderam: a.criadores, vendas_via_criadores: brlC(a.gmv), pedidos_de_afiliados: a.pedidos, comissao_paga: brlC(a.comissao), ranking: ((i.afiliados && i.afiliados.criadores) || []).slice(0, 10).map((c, k) => ({ posicao: k + 1, criador: '@' + c.user, nome: c.nome || undefined, seguidores: c.seguidores, pedidos: c.pedidos, vendas: brlC(c.gmv), comissao: brlC(c.comissao) })) }; }
+                }
+                pushDebug({ step: 'tool', tool: 'tiktok_painel:' + aba, period: per.label, ms: Date.now() - t0 });
+                return { periodo: per.label, aba, ...out };
+            } catch (e) { console.error('tiktok_painel:', e.message); pushDebug({ step: 'tool', tool: 'tiktok_painel:' + aba, erro: String(e.message).slice(0, 120) }); return { erro: 'não consegui consultar o painel do TikTok agora' }; }
+        },
+        chat_tiktok: async () => {
+            const t0 = Date.now();
+            try {
+                const d = await botPanelGet('/api/tiktok/chat/conversations');
+                const list = (d && d.conversations) || [];
+                let aguardando = 0, naoLidas = 0;
+                for (const c of list) { const u = Number(c.unread_count || 0); if (u > 0) { aguardando++; naoLidas += u; } }
+                pushDebug({ step: 'tool', tool: 'chat_tiktok', ms: Date.now() - t0, aguardando });
+                return { conversas_recentes: list.length, aguardando_resposta: aguardando, mensagens_nao_lidas: naoLidas };
+            } catch (e) { console.error('chat_tiktok:', e.message); return { erro: 'não consegui consultar o chat do TikTok' }; }
+        },
+        ml_saude: async () => {
+            const t0 = Date.now();
+            try {
+                const token = await getMLToken();
+                if (!token) return { erro: 'Mercado Livre não conectado' };
+                const H = { headers: { Authorization: 'Bearer ' + token }, timeout: 15000 };
+                const [u, ativos, pausados] = await Promise.all([
+                    axios.get('https://api.mercadolibre.com/users/' + ML_USER_ID, H),
+                    axios.get('https://api.mercadolibre.com/users/' + ML_USER_ID + '/items/search?status=active&limit=1', H).catch(() => null),
+                    axios.get('https://api.mercadolibre.com/users/' + ML_USER_ID + '/items/search?status=paused&limit=1', H).catch(() => null)]);
+                const rep = (u.data && u.data.seller_reputation) || {}, m = rep.metrics || {};
+                const cores = { '5_green': 'Verde', '4_light_green': 'Verde-claro', '3_yellow': 'Amarela', '2_orange': 'Laranja', '1_red': 'Vermelha' };
+                const pct = (x) => (x && Number.isFinite(x.rate)) ? (Math.round(x.rate * 10000) / 100) + '%' : '—';
+                pushDebug({ step: 'tool', tool: 'ml_saude', ms: Date.now() - t0 });
+                return { reputacao: cores[rep.level_id] || 'não informada', medalha: rep.power_seller_status || null, reclamacoes: pct(m.claims), atrasos_de_preparacao: pct(m.delayed_handling_time), cancelamentos_do_vendedor: pct(m.cancellations), anuncios_ativos: ativos && ativos.data && ativos.data.paging ? ativos.data.paging.total : null, anuncios_pausados: pausados && pausados.data && pausados.data.paging ? pausados.data.paging.total : null };
+            } catch (e) { console.error('ml_saude:', e.message); return { erro: 'não consegui consultar o Mercado Livre' }; }
         },
         chat_shopee: async () => {
             const t0 = Date.now();
@@ -944,6 +1005,15 @@ try {
             await sendText(BOT.uazapi, inbound.phone, reply); // responde no telefone real (com DDI)
             pushDebug({ step: 'respondido', reply: reply.slice(0, 120) });
         } catch (e) { console.error('bot whatsapp:', e.message); pushDebug({ step: 'erro', erro: e.message }); }
+    });
+    // Teste do robô SEM WhatsApp (só admin): roda a mesma lógica e devolve a resposta, não envia mensagem.
+    app.post('/api/bot/ask', async (req, res) => {
+        if (!requireAdmin(req, res)) return;
+        if (!botChat) return res.status(503).json({ error: 'robô sem OPENROUTER_KEY' });
+        const text = String((req.body && req.body.text) || '').slice(0, 500);
+        if (!text) return res.status(400).json({ error: 'text obrigatório' });
+        try { const reply = await answer({ chat: botChat, tools: botTools, model: BOT.model, history: [], text }); res.json({ reply: toWhatsApp(reply), debug: botDebug.slice(-6) }); }
+        catch (e) { console.error('bot ask:', e.message); res.status(500).json({ error: 'falhou' }); }
     });
     app.get('/api/bot/debug', (req, res) => {
         if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);

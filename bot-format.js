@@ -19,6 +19,7 @@ function fmtOverview(ov) {
       shopee: fmtChannel(ov.channels.shopee),
       mercadolivre: fmtChannel(ov.channels.mercadolivre),
       nuvemshop: fmtChannel(ov.channels.nuvemshop),
+      tiktokshop: fmtChannel(ov.channels.tiktokshop),
     },
     total: { faturamento: brl(ov.total.revenue), liquido: brl(ov.total.net), pedidos: ov.total.orders },
   };
