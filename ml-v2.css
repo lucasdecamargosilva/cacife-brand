@@ -51,7 +51,7 @@ body{background:var(--bg);color:var(--ink)}
 @media(max-width:560px){.ml-four{grid-template-columns:1fr}}
 
 /* faixa de 3 cards em Pedidos */
-.ml-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px!important;margin-bottom:18px}
+.ml-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:16px!important;margin-bottom:18px}
 @media(max-width:720px){.ml-strip{grid-template-columns:1fr}}
 
 /* Resumo: vendas + saúde da conta; visitas embaixo */
