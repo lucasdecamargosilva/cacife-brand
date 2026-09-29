@@ -22,6 +22,7 @@ function fakeDeps() {
     tiktokShop: '7496183196441545497',
     shopeeRest: async () => [{ total: 100, escrow_amount: 80 }],
     pgQuery: async (sql) => {
+      if (sql.includes('percentile_cont')) return [{ canal: 'shopee', inicio: '2026-08-25' }, { canal: 'nuvemshop', inicio: '2025-01-01' }];
       if (sql.includes('shopee_returns')) return [{ canal: 'shopee', n: 1, valor: 10 }, { canal: 'tiktokshop', n: 2, valor: 20 }];
       if (sql.includes('shopee_order_items')) return [prod('Óculos de Sol Madrid Quadrado Premium', 40, 4000)];
       if (sql.includes('tiktok_order_items')) return [prod('Óculos De Sol Soldador Quadrado Premium', 60, 3000), prod('Óculos de Sol Madrid Preto', 1, 50)];
@@ -41,6 +42,10 @@ test('crossChannel cruza modelos entre canais e aponta oportunidades', async () 
   const shopee = r.canais.find((c) => c.canal === 'Shopee');
   assert.strictEqual(shopee.taxa_devolucao, '100,0%');
   assert.strictEqual(shopee.sobra_do_faturamento, '80,0%');
+  // Shopee sem histórico no período anterior (22/08 a 01/09) -> não compara
+  assert.strictEqual(shopee.variacao_vs_periodo_anterior, 'sem base (histórico completo só desde 25/08/2026)');
+  assert.strictEqual(r.canais.find((c) => c.canal === 'Nuvemshop').variacao_vs_periodo_anterior, '+0,0%');
+  assert.match(r.total.variacao_vs_periodo_anterior, /^sem base completa/);
   const madrid = r.modelos_mais_vendidos.find((m) => m.modelo === 'Madrid');
   assert.strictEqual(madrid.pedidos_total, 96);
   assert.strictEqual(madrid.por_canal.Nuvemshop.pedidos, 50);

@@ -55,12 +55,31 @@ async function devolucoes(deps, per) {
   return out;
 }
 
+// Primeiro dia com histórico "cheio" por canal (dia com >= metade da mediana diária dos últimos 60 dias).
+// Evita comparar com um período anterior em que o canal ainda estava sendo importado (ex.: Shopee em ago/2026).
+async function historicoInicio(deps) {
+  const tt = TT_SHOP.test(String(deps.tiktokShop || ''));
+  const dia = "date(created_at at time zone 'America/Sao_Paulo')";
+  const src = [
+    `select 'shopee' canal, ${dia} d, count(*) n from shopee_orders where payment_status='paid' group by 2`,
+    `select channel, ${dia}, count(*) from cacife_orders where channel in ('mercadolivre','nuvemshop') group by 1, 2`,
+  ];
+  if (tt) src.push(`select 'tiktokshop', ${dia}, count(*) from tiktok_orders where shop_id='${deps.tiktokShop}' and payment_status='paid' group by 2`);
+  const sql = `with dias as (${src.join(' union all ')}),
+    med as (select canal, percentile_cont(0.5) within group (order by n) m from dias where d >= current_date - 60 group by canal)
+    select dias.canal, to_char(min(d), 'YYYY-MM-DD') inicio from dias join med using (canal) where n >= med.m * 0.5 group by dias.canal`;
+  const out = {};
+  for (const r of (await deps.pgQuery(sql)) || []) out[r.canal] = r.inicio;
+  return out;
+}
+
 async function crossChannel(deps, per) {
   const ant = periodoAnterior(per);
-  const [ovA, ovB, dev, ...prods] = await Promise.all([
+  const [ovA, ovB, dev, hist, ...prods] = await Promise.all([
     overview(deps, per),
     overview(deps, ant),
     devolucoes(deps, per).catch(() => ({})),
+    historicoInicio(deps).catch(() => ({})),
     ...CANAIS.map((c) => linhasProdutos(deps, per, c).catch(() => null)),
   ]);
   const prodPor = Object.fromEntries(CANAIS.map((c, i) => [c, prods[i]]));
@@ -70,11 +89,13 @@ async function crossChannel(deps, per) {
   const canais = CANAIS.map((c) => {
     const a = ovA.channels[c] || {}, b = ovB.channels[c] || {};
     if (a.error) return { canal: NOME[c], erro: 'canal não respondeu agora' };
+    // período anterior começa antes do histórico cheio do canal -> comparação não vale
+    const semBase = b.error || (hist[c] && hist[c] > ant.startISO.slice(0, 10)) ? `sem base (histórico completo só desde ${hist[c] ? hist[c].split('-').reverse().join('/') : '?'})` : null;
     const rev = a.revenue / 100, net = a.net / 100;
     const linha = {
       canal: NOME[c], faturamento: brl(rev), participacao: pct(totalRev ? (a.revenue / totalRev) * 100 : 0),
-      variacao_vs_periodo_anterior: b.error ? 'sem base' : varPct(a.revenue, b.revenue),
-      pedidos: a.orders, variacao_pedidos: b.error ? 'sem base' : varPct(a.orders, b.orders),
+      variacao_vs_periodo_anterior: semBase || varPct(a.revenue, b.revenue),
+      pedidos: a.orders, variacao_pedidos: semBase || varPct(a.orders, b.orders),
       ticket_medio: brl(a.orders ? rev / a.orders : 0),
       liquido: brl(net), sobra_do_faturamento: pct(rev ? (net / rev) * 100 : 0),
       _rev: a.revenue,
@@ -130,13 +151,13 @@ async function crossChannel(deps, per) {
   const avisos = [];
   const baixa = CANAIS.filter((c) => prodPor[c] && !confiavel(c));
   if (baixa.length) avisos.push(`${baixa.map((c) => NOME[c]).join(', ')}: títulos dos anúncios quase não trazem o nome do modelo (só ${baixa.map((c) => pct(cobertura[c] * 100, 0)).join('/')} dos pedidos identificados), então esse canal fica de fora da comparação por modelo.`);
-  const dias = (Date.parse(per.endExclusiveISO) - Date.parse(per.startISO)) / 86400000;
-  if (dias > 45) avisos.push('Shopee só tem histórico desde agosto/2026: em períodos longos ela aparece menor, e o crescimento dela vs. período anterior fica inflado.');
+  const curtos = CANAIS.filter((c) => hist[c] && hist[c] > per.startISO.slice(0, 10));
+  if (curtos.length) avisos.push(`${curtos.map((c) => NOME[c] + ' (desde ' + hist[c].split('-').reverse().join('/') + ')').join(', ')}: histórico não cobre o período todo, então aparece menor que o real.`);
   avisos.push('Não temos custo de produto nem gasto com anúncios: "sobra do faturamento" é só depois das taxas do canal, não é lucro.');
 
   return {
     periodo: ovA.period.label, comparado_com: `${ant.label} (${ant.startISO.slice(0, 10)} a ${per.startISO.slice(0, 10)})`,
-    total: { faturamento: brl(totalRev / 100), variacao_vs_periodo_anterior: varPct(ovA.total.revenue, ovB.total.revenue), pedidos: ovA.total.orders, ticket_medio: brl(ovA.total.orders ? totalRev / 100 / ovA.total.orders : 0) },
+    total: { faturamento: brl(totalRev / 100), variacao_vs_periodo_anterior: CANAIS.some((c) => hist[c] && hist[c] > ant.startISO.slice(0, 10)) ? 'sem base completa (algum canal não tem histórico no período anterior)' : varPct(ovA.total.revenue, ovB.total.revenue), pedidos: ovA.total.orders, ticket_medio: brl(ovA.total.orders ? totalRev / 100 / ovA.total.orders : 0) },
     canais, modelos_mais_vendidos: modelosOut,
     oportunidades_entre_canais: oportunidades.length ? oportunidades : ['nenhum modelo forte num canal e quase ausente em outro neste período'],
     avisos,
