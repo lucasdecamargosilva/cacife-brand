@@ -241,6 +241,21 @@
     .shp-v2 .v2-row>.shp-panel>svg:last-child,.shp-v2 .v2-row>.shp-panel>.shp-donut{margin-top:auto;margin-bottom:auto}
     .shp-v2 .shp-prod b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
     .shp-v2 .v2-link{background:none!important;border:0!important;padding:0;margin-top:10px;color:#d0011b!important;font:inherit;font-weight:600;cursor:pointer;text-align:left}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-top:0!important}
+    @media(min-width:721px){body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-left:28px!important;padding-right:28px!important}}
+    @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .market-content{padding-left:14px!important;padding-right:14px!important}}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header{background:#ee4d2d!important;margin:0 -28px!important;padding:22px 28px 12px!important;min-height:0}
+    @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .market-header{margin:0 -14px!important;padding:16px 14px 10px!important}}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header h1{color:#fff!important}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header p{display:none!important}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header h1{display:flex;align-items:center;gap:12px;margin:0}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header h1::before{content:'';width:40px;height:40px;flex:0 0 40px;border-radius:10px;background:#fff url(shopee-logo.png) center/26px no-repeat}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header .period-presets button{border-color:#ffffff33!important}
+    body[data-marketplace=shopee][data-metrics-view=channel] .market-header .period-presets button[aria-pressed=true]{background:#111827!important;border-color:#111827!important;color:#fff!important}
+    body[data-marketplace=shopee][data-metrics-view=channel] #metrics-notice:empty{display:none}
+    body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band{border-radius:0;margin:0 -28px 18px;padding:0 28px 14px}
+    @media(max-width:720px){body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band{margin:0 -14px 18px;padding:0 14px 12px}}
+    body[data-marketplace=shopee][data-metrics-view=channel] .shp-v2 .shp-band-top{display:none}
     @media(max-width:1100px){.shp-v2 .v2-block{grid-template-columns:1fr}.shp-v2 .v2-dark{order:-1}.shp-v2 .v2-row{grid-template-columns:1fr!important}}
     @media(max-width:560px){.shp-v2 .v2-four{grid-template-columns:1fr}.shp-v2 .v2-strip{grid-template-columns:1fr!important}}`;
     document.head.append(Object.assign(document.createElement('style'), { id: 'shp-v2-style', textContent: css }));
