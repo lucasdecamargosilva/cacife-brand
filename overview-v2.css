@@ -132,3 +132,10 @@ body:not([data-metrics-view=channel]) .market-header .period-presets button{back
 body:not([data-metrics-view=channel]) .market-header .period-presets button:hover{background:#ffffff1a!important;color:#fff!important}
 body:not([data-metrics-view=channel]) .market-header .period-presets button[aria-pressed="true"]{background:#fff!important;border-color:#fff!important;color:#111827!important}
 body:not([data-metrics-view=channel]) .market-header .date-menu>summary{background:#ffffff14!important;border-color:#ffffff33!important;color:#fff!important}
+
+/* Visão Geral: sem "Desempenho por plataforma"; Top 5 produtos ao lado de Vendas por plataforma (mesma altura, com rolagem) */
+body:not([data-metrics-view=channel]) .performance-panel{display:none}
+@media(min-width:851px){
+ body:not([data-metrics-view=channel]) .sales-panel{grid-column:1;grid-row:2}
+ body:not([data-metrics-view=channel]) .products-panel{grid-column:2;grid-row:2}
+}
