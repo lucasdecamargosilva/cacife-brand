@@ -32,6 +32,7 @@ function toWhatsApp(text) {
     .replace(/__(.+?)__/g, '_$1_')       // __itálico__ -> _itálico_
     .replace(/^#{1,6}\s*(.+)$/gm, '*$1*') // # Título -> *Título*
     .replace(/^\s*[-•]\s+/gm, '• ')      // marcadores uniformes
+    .replace(/^\s*\*\s+/gm, '• ')        // '* item' (marcador markdown) -> '• item' (no WhatsApp viraria asterisco solto)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
