@@ -410,6 +410,22 @@ try {
         } catch (e) { console.error('Shopee products:', e); res.status(500).json({ error: 'erro interno' }); }
     });
 
+    // --- WhatsApp de atendimento (Uazapi "Cacife Atendimento"), só leitura ---
+    // Token só no servidor (UAZAPI_ATD_TOKEN / UAZAPI_ATD_SERVER); o navegador fala apenas com estas rotas.
+    const whatsappAtd = require('./whatsapp-atd').createWhatsApp({ server: process.env.UAZAPI_ATD_SERVER || 'https://quantic.uazapi.com', token: process.env.UAZAPI_ATD_TOKEN || '' });
+    const waRoute = (fn) => async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        try { res.set('Cache-Control', 'no-store'); res.json(await fn(req.query)); }
+        catch (e) {
+            const st = e && e.status >= 400 && e.status < 600 ? e.status : 500;
+            if (st >= 500) console.error('WhatsApp atendimento:', st, (e && e.message) || 'erro');
+            res.status(st).json({ error: st === 400 ? e.message : st === 503 ? 'WhatsApp de atendimento não configurado.' : 'WhatsApp indisponível no momento.' });
+        }
+    };
+    app.get('/api/whatsapp/status', waRoute(() => whatsappAtd.status()));
+    app.get('/api/whatsapp/chats', waRoute((q) => whatsappAtd.chats({ page: q.page, q: q.q, filtro: q.filtro })));
+    app.get('/api/whatsapp/messages', waRoute((q) => whatsappAtd.messages({ chat: q.chat, page: q.page })));
+
     // --- Chat da Shopee (leitura) ---
     const shopeeShopId = async () => Number((await shopee.status()).shops[0]?.shop_id) || 0;
     app.get('/api/shopee/chat/conversations', async (req, res) => {

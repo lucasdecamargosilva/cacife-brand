@@ -523,7 +523,7 @@
   }
 
   // Atendimento: lista de conversas | conversa | painel lateral (opcional).
-  // o: { search, chips: [{key, label}], chip, onChip(key), load() -> Promise<items|null>, open(item, ui), side (bool), footer(node), emptyText }
+  // o: { search, chips: [{key, label}], chip, onChip(key), onSearch(q, api) (busca no servidor), load() -> Promise<items|null>, open(item, ui), side (bool), footer(node), emptyText }
   //    item: {id, name, avatar, time, preview, unread}; ui: {head(name, avatar, pillHtml), messages([{side:'c'|'s'|'bot'|'sys', text, time, tag}]),
   //    composer({send(text) -> Promise<bool>} | {note, disabled}), side(html seguro), wait(text), current() }
   const avatar = (url, name, size = 38) => { const u = safeUrl(url); const st = size !== 38 ? ` style="width:${size}px;height:${size}px;flex-basis:${size}px"` : ''; return u ? `<img class="ck-av" src="${esc(u)}" alt=""${st}>` : `<span class="ck-av"${st}>${esc(String(name || '?').trim().slice(0, 2) || '?')}</span>`; };
@@ -534,20 +534,21 @@
     const items = el.querySelector('.items'), thread = el.querySelector('.ck-thread'), cpanel = el.querySelector('.ck-cpanel'), inp = el.querySelector('input'), ft = el.querySelector('.ft');
     let list = [], sel = null;
     const paintList = () => {
-      const q = inp.value.trim().toLowerCase();
+      const q = o.onSearch ? '' : inp.value.trim().toLowerCase();
       const arr = list.filter(c => !q || (String(c.name || '') + ' ' + String(c.preview || '') + ' ' + String(c.search || '')).toLowerCase().includes(q));
       items.innerHTML = arr.length ? arr.map(c => `<button type="button" class="ck-ci${sel === c.id ? ' on' : ''}" data-id="${esc(c.id)}">${c.image !== undefined ? foto(c.image) : avatar(c.avatar, c.name)}<div class="tx"><div class="top"><b>${esc(c.name || 'Cliente')}</b><small>${esc(c.time || '')}</small></div><div class="pv"><span>${esc(String(c.preview || '').replace(/\s+/g, ' '))}</span>${c.unread > 0 ? `<span class="ck-badge">${num(c.unread)}</span>` : ''}</div></div></button>`).join('') : `<div class="ck-empty">${esc(list.length ? 'Nada encontrado.' : (o.emptyText || 'Nenhuma conversa.'))}</div>`;
       fixImgs(items);
       items.querySelectorAll('.ck-ci').forEach(bt => bt.onclick = () => { const c = list.find(x => String(x.id) === bt.dataset.id); if (c) open(c); });
     };
-    inp.oninput = paintList;
+    let st; inp.oninput = o.onSearch ? () => { clearTimeout(st); st = setTimeout(() => o.onSearch(inp.value.trim(), api), 400); } : paintList;
     el.querySelectorAll('.ck-chip[data-k]').forEach(b => b.onclick = () => { el.querySelectorAll('.ck-chip[data-k]').forEach(x => x.classList.toggle('on', x === b)); if (o.onChip) o.onChip(b.dataset.k, api); });
     const ui = c => ({
       current: () => sel === c.id,
       head: (name, av, pillHtml) => { if (sel !== c.id) return; thread.innerHTML = `<div class="hd">${av !== undefined && av !== null && typeof av === 'object' ? foto(av.image) : avatar(av, name, 34)}<b class="ck-one">${esc(name || 'Cliente')}</b><span style="margin-left:auto">${pillHtml || ''}</span></div><div class="ck-msgs"><div class="ck-empty">Carregando mensagens…</div></div>`; fixImgs(thread); },
       wait: (text) => { if (sel !== c.id) return; const m = thread.querySelector('.ck-msgs'); if (m) m.innerHTML = `<div class="ck-empty">${esc(text)}</div>`; },
-      messages: (msgs) => {
-        if (sel !== c.id) return; const m = thread.querySelector('.ck-msgs'); if (!m) return; m.replaceChildren();
+      messages: (msgs, opt = {}) => {
+        if (sel !== c.id) return; const m = thread.querySelector('.ck-msgs'); if (!m) return; const fromBottom = m.scrollHeight - m.scrollTop; m.replaceChildren();
+        if (opt.more) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ck-btn ghost sm'; b.style.alignSelf = 'center'; b.textContent = opt.more.label || 'Carregar mensagens anteriores'; b.onclick = () => { b.disabled = true; b.textContent = 'Carregando…'; opt.more.onClick(); }; m.append(b); }
         for (const x of msgs || []) {
           if (x.side === 'sys') { const s = document.createElement('span'); s.className = 'ck-sysn'; s.textContent = x.text + (x.time ? ' · ' + x.time : ''); m.append(s); continue; }
           const b = document.createElement('div'); b.className = 'ck-bub ' + (x.side === 's' ? 's' : x.side === 'bot' ? 'bot' : 'c');
@@ -556,8 +557,8 @@
           if (x.time) { const sm = document.createElement('small'); sm.textContent = x.time; b.append(sm); }
           m.append(b);
         }
-        if (!m.children.length) m.innerHTML = '<div class="ck-empty">Sem mensagens.</div>';
-        m.scrollTop = m.scrollHeight;
+        if (!m.querySelector('.ck-bub,.ck-sysn')) m.insertAdjacentHTML('beforeend', '<div class="ck-empty">Sem mensagens.</div>');
+        m.scrollTop = opt.keep ? m.scrollHeight - fromBottom : m.scrollHeight;
       },
       composer: (cfg = {}) => {
         if (sel !== c.id) return; thread.querySelectorAll('.ck-comp,.ck-senderr').forEach(x => x.remove());
@@ -576,6 +577,7 @@
         btn.onclick = send; ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
         thread.append(comp, err);
       },
+      readonly: (text) => { if (sel !== c.id) return; thread.querySelectorAll('.ck-comp,.ck-senderr').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'ck-comp'; d.style.cssText = 'justify-content:center;color:var(--mut);font-size:12.5px;gap:8px;align-items:center'; d.innerHTML = '<i class="ph ph-lock-simple"></i>'; d.append(document.createTextNode(text || 'Somente leitura')); const m = thread.querySelector('.ck-msgs'), atB = m && m.scrollHeight - m.scrollTop - m.clientHeight < 40; thread.append(d); if (atB) m.scrollTop = m.scrollHeight; },
       side: (html) => { if (sel !== c.id || !cpanel) return; cpanel.innerHTML = html; fixImgs(cpanel); },
     });
     function open(c) {
@@ -584,9 +586,10 @@
       if (o.open) o.open(c, ui(c));
     }
     const api = {
-      reload: () => { items.innerHTML = '<div class="ck-empty">Carregando…</div>'; return Promise.resolve(o.load ? o.load() : []).catch(() => null).then(d => {
-        if (!d) { items.innerHTML = '<div class="ck-empty">Não consegui carregar agora.</div>'; return; }
-        list = d; if (!list.some(c => c.id === sel)) sel = null; paintList();
+      reload: (opt = {}) => { if (!opt.quiet) items.innerHTML = '<div class="ck-empty">Carregando…</div>'; return Promise.resolve(o.load ? o.load() : []).catch(() => null).then(d => {
+        if (!d) { if (!opt.quiet) items.innerHTML = '<div class="ck-empty">Não consegui carregar agora.</div>'; return; }
+        const top = items.scrollTop; list = d; const had = list.some(c => c.id === sel); if (!had) sel = null; paintList(); if (opt.quiet) items.scrollTop = top;
+        if (opt.keepOpen && had) return;
         if (list.length) open(list.find(c => c.id === sel) || list.find(c => c.id === o.selected) || list[0]); else { thread.innerHTML = `<div class="ck-empty" style="margin:auto">${esc(o.emptyText || 'Nenhuma conversa.')}</div>`; if (cpanel) cpanel.innerHTML = ''; }
       }); },
       footer: (node) => { ft.replaceChildren(); if (node) { ft.append(node); ft.hidden = false; } else ft.hidden = true; },

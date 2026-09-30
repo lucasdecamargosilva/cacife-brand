@@ -86,3 +86,6 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #b9
 .channel-cards .channel-card .card-stats>div+div{padding-left:8px}
 .channel-cards .channel-card .card-stats strong{font-size:min(20px,13cqi);white-space:nowrap;letter-spacing:-.35px;line-height:1.35;font-variant-numeric:tabular-nums}
 .channel-cards .channel-card .card-stats>div+div strong{font-size:min(20px,25cqi)}
+/* WhatsApp (atendimento): símbolo em verde, mesmo tamanho dos outros emblemas */
+.platform-icon.official-channel-icon.whatsapp-icon,.sidebar nav a>span.official-channel-icon.whatsapp-icon{background:#25d366;color:#fff;border-radius:7px;font-size:18px;line-height:1}
+.whatsapp-icon i{display:block}

@@ -1,0 +1,23 @@
+/* WhatsApp (atendimento) — mesma faixa de cabeçalho + abas dos outros canais, em verde WhatsApp. Carregado por último em whatsapp.html. */
+:root{--bg:#f6f7f9;--purple:#128c7e;--purple-dark:#075e54;--lavender:#e7f8ef;--line:#eceef2;--ink:#111827;--secondary:#4b5563;--muted:#6b7280;--green:#16a34a;--wa-dark:#075e54;--wa-green:#25d366}
+body{background:var(--bg);color:var(--ink)}
+.sidebar nav a.active,.sidebar .market-nav a.active{background:#f3f4f6!important;color:#111827!important;box-shadow:none!important;font-weight:700}
+
+/* faixa verde-escura: cabeçalho + abas (mesmas medidas da Nuvemshop) */
+@media(min-width:721px){.workspace{padding:0 28px 12px!important}}
+@media(max-width:720px){.workspace{padding:0 12px 12px!important}}
+.workspace>header{background:var(--wa-dark);margin:0 -28px!important;padding:22px 28px 12px;margin-bottom:0!important;min-height:81px}
+.workspace>.tabs{background:var(--wa-dark)!important;margin:0 -28px 14px!important;padding:0 28px 14px!important;border:0!important;border-radius:0!important;gap:4px!important;box-shadow:none!important}
+@media(max-width:720px){.workspace>header,.workspace>.tabs{margin-left:-12px!important;margin-right:-12px!important;padding-left:12px!important;padding-right:12px!important}}
+.workspace>.tabs a{color:#cfe9e4;border-bottom:0!important;border-radius:10px;padding:10px 14px!important;font-weight:600}
+.workspace>.tabs a[aria-current=page]{background:#fff;color:var(--wa-dark);border:0}
+.workspace>.page-meta{margin:0 0 12px}
+.wa-title{display:flex;align-items:center;gap:12px;color:#fff;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:47px;white-space:nowrap}
+.wa-logo{width:40px;height:40px;flex:0 0 40px;border-radius:10px;background:#fff;color:var(--wa-green);display:grid;place-items:center;font-size:28px}
+.wa-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wa-conn{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#e5f6f1;background:#ffffff14;border:1px solid #ffffff26;border-radius:999px;padding:6px 11px;white-space:nowrap}
+.wa-conn::before{content:'';width:8px;height:8px;border-radius:50%;background:#9ca3af}
+.wa-conn.on::before{background:var(--wa-green)}.wa-conn.off::before{background:#f87171}
+.wa-refresh{background:#fff!important;border:1px solid #ffffff33!important;border-radius:9px!important;color:#374151!important;padding:8px 12px!important;font-size:12.5px!important;font-weight:600!important;cursor:pointer}
+.wa-refresh:hover{background:#f3f4f6!important}
+@media(max-width:720px){.wa-title{font-size:22px;line-height:40px}.wa-logo{width:34px;height:34px;flex-basis:34px;font-size:24px}}

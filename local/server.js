@@ -16,7 +16,7 @@ const ROOT = path.resolve(__dirname, '..');
 const PRIVATE = path.join(os.homedir(), '.cacife-local');
 const PUBLIC = new Set(['metricas.html', 'metricas.css', 'metricas.js', 'metricas-core.js', 'supabase-config.js', 'auth-guard.js', 'login.html', 'redefinir-senha.html', 'redefinir-senha.js', 'favicon.png', 'provoulevou-logo.png', 'ranking-produtos.html','crm.html','pedidos.html','style.css','dashboard-shell.css','theme-handler.js','crm-logic.js','script.js','sync-orders.js','fast-data.js','overview-shell.css','cacife-logo.png','shopee-logo.png','tiktokshop-logo.ico', 'shopee-local.html', 'shopee-local.js', 'shopee-local.css']);
 
-function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-store.json')), config = {}, channelsConfig = {}, client } = {}) {
+function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-store.json')), config = {}, channelsConfig = {}, client, whatsappConfig = {}, whatsapp } = {}) {
   const channelCache=new ChannelCache(), nsSync=createSync(channelCache);
   const {MetricQueries,dates}=require('./metric-queries'),metricQueries=new MetricQueries();
   const app = express(), origin = `http://127.0.0.1:${port}`, sessions = new Map();
@@ -63,6 +63,17 @@ function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-
   app.get('/api/channels/mercadolivre/workspace/listings',async(req,res)=>res.json(await mlWorkspace.listings({...mlOptions(req),noCache:false},{status:req.query.status,offset:Number(req.query.offset||0),q:String(req.query.q||'')})));
   app.get('/api/channels/mercadolivre/workspace/questions',async(req,res)=>res.json(await mlWorkspace.questions({...mlOptions(req),noCache:false},{status:req.query.status,offset:Number(req.query.offset||0)})));
   app.get('/api/channels/mercadolivre/workspace/shipment/:id',async(req,res)=>res.json(await mlWorkspace.shipment({...mlOptions(req),noCache:false},req.params.id)));
+  // WhatsApp de atendimento (Uazapi), só leitura. Token lido de ~/.cacife-local/uazapi-0708.json; nunca vai ao navegador.
+  const wa = whatsapp || require('../whatsapp-atd').createWhatsApp({ server: whatsappConfig.server, token: whatsappConfig.token });
+  const waRoute = fn => async (req, res) => {
+    try { await mercadoLivre.authorize({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization }); }
+    catch (e) { return res.status(401).json({ error: 'Entre na conta da Cacife.' }); }
+    try { res.json(await fn(req.query)); }
+    catch (e) { const st = e && e.status >= 400 && e.status < 600 ? e.status : 500; res.status(st).json({ error: st === 400 ? e.message : st === 503 ? 'WhatsApp de atendimento não configurado.' : 'WhatsApp indisponível no momento.' }); }
+  };
+  app.get('/api/whatsapp/status', waRoute(() => wa.status()));
+  app.get('/api/whatsapp/chats', waRoute(q => wa.chats({ page: q.page, q: q.q, filtro: q.filtro })));
+  app.get('/api/whatsapp/messages', waRoute(q => wa.messages({ chat: q.chat, page: q.page })));
   app.get('/api/channels/nuvemshop',async(req,res)=>res.json(await nuvemshop.summary(nsOptions(req))));
   app.get('/api/channels/nuvemshop/workspace/orders',async(req,res)=>res.json(await nsSync.orders(nsOptions(req),req.query.start,req.query.end,req.query.refresh==='1')));
   app.get('/api/channels/nuvemshop/workspace/products',async(req,res)=>res.json(await cachedChannel(req,'ns-products',()=>nsWorkspace.products(nsOptions(req)),300000)));
@@ -102,7 +113,7 @@ function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-
   });
   app.use((req, res) => {
     const name = req.path.slice(1);
-    if (!(PUBLIC.has(name) || ['metricas-channel.js','metricas-marketplaces.js','shopee-panel.js','tiktok-panel.js','channel-kit.js','mercadolivre.html','mercadolivre.css','mercadolivre.js','ml-core.js','nuvemshop.html','nuvemshop.js','nuvemshop.css','ns-core.js','channel-logos.css','overview-v2.css','ml-v2.css','ns-v2.css','mercadolivre-logo.png','nuvemshop-logo.png'].includes(name)) || !['GET', 'HEAD'].includes(req.method)) return res.sendStatus(404);
+    if (!(PUBLIC.has(name) || ['metricas-channel.js','metricas-marketplaces.js','shopee-panel.js','tiktok-panel.js','channel-kit.js','whatsapp.html','whatsapp.js','whatsapp.css','mercadolivre.html','mercadolivre.css','mercadolivre.js','ml-core.js','nuvemshop.html','nuvemshop.js','nuvemshop.css','ns-core.js','channel-logos.css','overview-v2.css','ml-v2.css','ns-v2.css','mercadolivre-logo.png','nuvemshop-logo.png'].includes(name)) || !['GET', 'HEAD'].includes(req.method)) return res.sendStatus(404);
     res.sendFile(path.join(name.startsWith('shopee-local.') ? __dirname : ROOT, name));
   });
   app.use((error, req, res, next) => res.status(400).json({ error: error instanceof SyntaxError ? 'Solicitação inválida.' : error.message }));
@@ -113,7 +124,9 @@ if (require.main === module) {
   const config = fs.existsSync(configFile) ? JSON.parse(fs.readFileSync(configFile, 'utf8')) : {};
   const channelsFile = path.join(PRIVATE, 'channels.json');
   const channelsConfig = fs.existsSync(channelsFile) ? JSON.parse(fs.readFileSync(channelsFile, 'utf8')) : {};
-  const server = createApp({ config, channelsConfig }).listen(8879, '127.0.0.1');
+  const waFile = path.join(PRIVATE, 'uazapi-0708.json');
+  const whatsappConfig = fs.existsSync(waFile) ? JSON.parse(fs.readFileSync(waFile, 'utf8')) : {};
+  const server = createApp({ config, channelsConfig, whatsappConfig }).listen(8879, '127.0.0.1');
   server.once('listening', () => console.log('Painel local: http://127.0.0.1:8879/metricas.html'));
   server.once('error', () => { console.error('Não foi possível iniciar o painel. Verifique se a porta 8879 já está em uso.'); process.exitCode = 1; });
 }
