@@ -178,7 +178,7 @@
     .ck .ck-bub.s.err{background:#fdecec;color:#b42318;border:1px solid #f5c2c0}
     .ck .ck-bub .ck-retry,.ck .ck-bub .ck-retry:hover:not(:disabled){background:none;border:0;padding:0;font:inherit;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer}
     .ck .ck-bub em{display:block;font-style:normal;font-size:11px;font-weight:700;opacity:.75;margin-bottom:2px;white-space:normal}
-    .ck .ck-bub small{display:block;font-size:10.5px;opacity:.65;margin-top:3px;text-align:right;white-space:normal}
+    .ck .ck-bub small{display:block;font-size:10.5px;opacity:.65;margin-top:3px;text-align:right;white-space:normal}.ck .ck-bub.s:not(.err) small,.ck .ck-bub.s:not(.err) em{opacity:1;color:var(--pt,#fff)}
     .ck .ck-sysn{align-self:center;font-size:11.5px;color:var(--mut);background:#fff;border:1px solid var(--ln);border-radius:999px;padding:3px 12px;text-align:center;max-width:90%}
     .ck .ck-comp{display:flex;gap:10px;align-items:flex-end;padding:12px 16px;border-top:1px solid var(--ln);background:#fff}
     .ck .ck-comp textarea{flex:1;border:1px solid var(--ln);border-radius:10px;padding:10px 12px;min-width:0;resize:none;font:inherit;font-size:13.5px;color:var(--ink);max-height:110px;min-height:0;background:#fff}
