@@ -175,6 +175,8 @@
     .ck .ck-bub.c{background:#eef0f3;color:#111827;align-self:flex-start;border-radius:14px 14px 14px 4px}
     .ck .ck-bub.s{background:var(--p);color:var(--pt,#fff);align-self:flex-end;border-radius:14px 14px 4px 14px}
     .ck .ck-bub.bot{background:#e5e7eb;color:#374151;align-self:flex-end;border-radius:14px 14px 4px 14px}
+    .ck .ck-bub.s.err{background:#fdecec;color:#b42318;border:1px solid #f5c2c0}
+    .ck .ck-bub .ck-retry,.ck .ck-bub .ck-retry:hover:not(:disabled){background:none;border:0;padding:0;font:inherit;font-weight:700;color:inherit;text-decoration:underline;cursor:pointer}
     .ck .ck-bub em{display:block;font-style:normal;font-size:11px;font-weight:700;opacity:.75;margin-bottom:2px;white-space:normal}
     .ck .ck-bub small{display:block;font-size:10.5px;opacity:.65;margin-top:3px;text-align:right;white-space:normal}
     .ck .ck-sysn{align-self:center;font-size:11.5px;color:var(--mut);background:#fff;border:1px solid var(--ln);border-radius:999px;padding:3px 12px;text-align:center;max-width:90%}
@@ -567,14 +569,34 @@
         const err = document.createElement('div'); err.className = 'ck-senderr'; if (cfg.note) err.style.color = 'var(--mut)'; err.textContent = cfg.note || '';
         const ta = comp.querySelector('textarea'), btn = comp.querySelector('button');
         if (cfg.draft) { ta.value = cfg.draft.get() || ''; ta.oninput = () => cfg.draft.set(ta.value); }
-        if (cfg.disabled || !cfg.send) btn.disabled = true;
-        const send = async () => {
-          const text = ta.value.trim(); if (!text || !cfg.send || btn.disabled) return; btn.disabled = true; err.style.color = ''; err.textContent = '';
-          try { if (!(await cfg.send(text))) err.textContent = 'Não consegui enviar. Tente de novo.'; else { ta.value = ''; if (cfg.draft) cfg.draft.set(''); const m = thread.querySelector('.ck-msgs'); if (m) { m.querySelector('.ck-empty')?.remove(); const b = document.createElement('div'); b.className = 'ck-bub s'; b.textContent = text; const sm = document.createElement('small'); sm.textContent = 'agora'; b.append(sm); m.append(b); m.scrollTop = m.scrollHeight; } } }
-          catch (e) { err.textContent = 'Não consegui enviar. Tente de novo.'; }
-          btn.disabled = false;
+        // botão só fica ativo com texto e fora de um envio (evita envio acidental / duplo clique)
+        let sending = false;
+        const sync = () => { btn.disabled = !!cfg.disabled || !cfg.send || sending || !ta.value.trim() || (cfg.max && ta.value.trim().length > cfg.max); };
+        const oldInput = ta.oninput; ta.addEventListener('input', () => { sync(); if (!oldInput && cfg.draft) cfg.draft.set(ta.value); });
+        sync();
+        // balão otimista: "enviando…" → "enviada" ou "não enviada · tentar de novo"
+        const deliver = async (text, b) => {
+          const sm = b.querySelector('small'); sm.replaceChildren(document.createTextNode('enviando…')); b.classList.remove('err');
+          let res, msg = '';
+          try { res = await cfg.send(text); if (!res) msg = 'Não consegui enviar.'; } catch (e) { msg = (e && e.message) || 'Não consegui enviar.'; }
+          if (!b.isConnected) return res;
+          if (!msg) { sm.textContent = 'enviada · ' + new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(new Date()); if (cfg.onSent) cfg.onSent(res, text); return res; }
+          b.classList.add('err'); sm.replaceChildren(document.createTextNode('não enviada · '));
+          const again = document.createElement('button'); again.type = 'button'; again.className = 'ck-retry'; again.textContent = 'tentar de novo';
+          again.onclick = () => deliver(text, b); sm.append(again);
+          err.style.color = ''; err.textContent = msg;
+          return null;
         };
-        btn.onclick = send; ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+        const send = async () => {
+          const text = ta.value.trim(); sync(); if (!text || btn.disabled) return;
+          sending = true; sync(); err.style.color = 'var(--mut)'; err.textContent = cfg.note || '';
+          const m = thread.querySelector('.ck-msgs'); let b = null;
+          if (m) { m.querySelector('.ck-empty')?.remove(); b = document.createElement('div'); b.className = 'ck-bub s pend'; b.append(document.createTextNode(text)); const sm = document.createElement('small'); b.append(sm); m.append(b); m.scrollTop = m.scrollHeight; }
+          ta.value = ''; if (cfg.draft) cfg.draft.set('');
+          try { if (b) await deliver(text, b); else if (!(await cfg.send(text))) err.textContent = 'Não consegui enviar.'; }
+          finally { sending = false; sync(); ta.focus(); }
+        };
+        btn.onclick = send; ta.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
         thread.append(comp, err);
       },
       readonly: (text) => { if (sel !== c.id) return; thread.querySelectorAll('.ck-comp,.ck-senderr').forEach(x => x.remove()); const d = document.createElement('div'); d.className = 'ck-comp'; d.style.cssText = 'justify-content:center;color:var(--mut);font-size:12.5px;gap:8px;align-items:center'; d.innerHTML = '<i class="ph ph-lock-simple"></i>'; d.append(document.createTextNode(text || 'Somente leitura')); const m = thread.querySelector('.ck-msgs'), atB = m && m.scrollHeight - m.scrollTop - m.clientHeight < 40; thread.append(d); if (atB) m.scrollTop = m.scrollHeight; },

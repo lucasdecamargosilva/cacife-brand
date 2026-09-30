@@ -45,13 +45,16 @@ function normChat(c) {
     naoLidas: Math.max(0, Number(c.wa_unreadCount) || 0),
   };
 }
-function normMsg(m) {
+// origem das respostas enviadas pelo painel (vai no track_source do /send/text e volta nas mensagens)
+const TRACK = 'painel-cacife';
+function normMsg(m, sentIds) {
   const tipo = tipoOf(m.messageType), content = m.content && typeof m.content === 'object' ? m.content : {};
   const texto = tipo === 'reacao' ? str(m.text || content.text, 20) : str(m.text || content.caption || content.text, 4000);
   return {
     id: str(m.messageid || m.id, 120),
     deMim: m.fromMe === true,
-    auto: m.fromMe === true && m.wasSentByApi === true,
+    painel: m.fromMe === true && (m.track_source === TRACK || Boolean(sentIds && sentIds.has(String(m.messageid || '')))),
+    auto: m.fromMe === true && m.wasSentByApi === true && !(m.track_source === TRACK || Boolean(sentIds && sentIds.has(String(m.messageid || '')))),
     texto, tipo, rotulo: tipo === 'texto' ? '' : ROTULO[tipo],
     arquivo: tipo === 'documento' ? str(content.fileName || content.title, 80) || null : null,
     quando: iso(m.messageTimestamp),
@@ -59,7 +62,7 @@ function normMsg(m) {
   };
 }
 
-function createWhatsApp({ server, token, fetchImpl = fetch, ttl = 25000, timeout = 15000 } = {}) {
+function createWhatsApp({ server, token, fetchImpl = fetch, ttl = 25000, timeout = 15000, log = (...a) => console.log(...a), now = () => Date.now(), maxPorMinuto = 20 } = {}) {
   const base = /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(String(server || '').replace(/\/+$/, '')) ? String(server).replace(/\/+$/, '') : '';
   const ok = Boolean(base && token && /^[\w-]{10,200}$/.test(String(token)));
   const cache = new Map();
@@ -116,9 +119,51 @@ function createWhatsApp({ server, token, fetchImpl = fetch, ttl = 25000, timeout
     const id = chatId(chat), p = page(pg);
     const d = await call('POST', '/message/find', { chatid: id, limit: PER_MSGS, offset: (p - 1) * PER_MSGS });
     const list = ((d && d.messages) || []).filter(m => m && m.isGroup !== true && (!m.chatid || m.chatid === id));
-    return { pagina: p, temMais: d && d.hasMore === true, mensagens: list.map(normMsg) };
+    return { pagina: p, temMais: d && d.hasMore === true, mensagens: list.map(m => normMsg(m, sentIds)) };
   }
-  return { configured: ok, status, chats, messages };
+
+  // ---------- envio de resposta (texto) ----------
+  const sentIds = new Map(); // messageid -> quando (ids devolvidos pelo /send/text; reserva caso o track_source não volte)
+  const rate = new Map();    // quem -> [instantes dos últimos envios]
+  const recent = new Map();  // quem|chat|texto -> {t, p} (evita duplo clique)
+  const mask = s => { const d = String(s || '').replace(/@.*/, ''); return d.length > 4 ? '…' + d.slice(-4) : '…'; };
+  function text(v) {
+    if (typeof v !== 'string') throw new BadInput('Mensagem inválida.');
+    const t = v.replace(/\r\n?/g, '\n').trim();
+    if (!t) throw new BadInput('Escreva a mensagem.');
+    if (t.length > 4000) throw new BadInput('Mensagem longa demais (máximo 4.000 caracteres).');
+    return t;
+  }
+  async function send({ chat, text: raw, who } = {}) {
+    const id = chatId(chat), t = text(raw), quem = String(who || '');
+    if (!quem) { const e = new Error('Sessão sem usuário.'); e.status = 401; throw e; }
+    const agora = now();
+    const key = quem + '|' + id + '|' + t, dup = recent.get(key);
+    if (dup && agora - dup.t < 5000) return dup.p; // mesmo texto para a mesma conversa em 5s: devolve o primeiro envio
+    const win = (rate.get(quem) || []).filter(x => agora - x < 60000);
+    if (win.length >= maxPorMinuto) { const e = new Error('Muitos envios em sequência. Aguarde um minuto.'); e.status = 429; throw e; }
+    win.push(agora); rate.set(quem, win);
+    const p = (async () => {
+      const trackId = 'pc-' + agora.toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+      const number = /@c\.us$/.test(id) ? id.replace(/@c\.us$/, '') : id;
+      let d, okSend = false;
+      try {
+        d = await call('POST', '/send/text', { number, text: t, track_source: TRACK, track_id: trackId });
+        okSend = Boolean(d && typeof d === 'object' && !d.error && (d.messageid || d.id));
+        if (!okSend) { const e = new Error('WhatsApp não confirmou o envio.'); e.status = 502; throw e; }
+      } finally {
+        log('[whatsapp] envio', JSON.stringify({ quem: mask(quem), chat: mask(id), quando: new Date(agora).toISOString(), ok: okSend }));
+      }
+      const mid = str(d.messageid || d.id, 120);
+      sentIds.set(mid, agora); if (sentIds.size > 5000) sentIds.delete(sentIds.keys().next().value);
+      for (const k of [...cache.keys()]) if (k === 'status' || k.startsWith('chats:')) cache.delete(k);
+      return { ok: true, id: mid, quando: iso(d.messageTimestamp) || new Date(agora).toISOString(), status: str(d.status, 30) || 'Sent' };
+    })();
+    recent.set(key, { t: agora, p }); if (recent.size > 500) recent.delete(recent.keys().next().value);
+    p.catch(() => recent.delete(key)); // falhou: pode tentar de novo na hora
+    return p;
+  }
+  return { configured: ok, status, chats, messages, send };
 }
 
 module.exports = { createWhatsApp, normChat, normMsg, JID, BadInput };

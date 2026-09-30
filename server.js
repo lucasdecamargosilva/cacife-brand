@@ -180,7 +180,7 @@ try {
         if (m && SUPABASE_ANON_KEY) {
             try {
                 const u = await axios.get(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${m[1]}` } });
-                if (u.data && u.data.id) return true;
+                if (u.data && u.data.id) { req.viewerId = String(u.data.id); return true; }
             } catch { /* sessão inválida */ }
         }
         res.status(401).json({ error: 'não autorizado' });
@@ -425,6 +425,22 @@ try {
     app.get('/api/whatsapp/status', waRoute(() => whatsappAtd.status()));
     app.get('/api/whatsapp/chats', waRoute((q) => whatsappAtd.chats({ page: q.page, q: q.q, filtro: q.filtro })));
     app.get('/api/whatsapp/messages', waRoute((q) => whatsappAtd.messages({ chat: q.chat, page: q.page })));
+    // Responder o cliente (texto). Só usuário logado (Bearer do Supabase no cabeçalho — não vai sozinho num POST de outro site);
+    // o token de admin do bot não envia. Corpo tem de ser JSON (formulário de outro site não passa).
+    app.post('/api/whatsapp/send', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
+        if (!req.viewerId) return res.status(403).json({ error: 'Entre na conta para responder.' });
+        if (!req.is('application/json')) return res.status(415).json({ error: 'Envie JSON.' });
+        // o CORS geral do servidor reflete qualquer origem; para enviar, só a própria página do painel
+        const origem = req.headers.origin;
+        if (origem) { let h = ''; try { h = new URL(origem).host; } catch { /* inválida */ } const hosts = [req.headers.host, req.headers['x-forwarded-host']].filter(Boolean).map(x => String(x).split(',')[0].trim()); if (!hosts.includes(h)) return res.status(403).json({ error: 'Origem não permitida.' }); }
+        try { res.set('Cache-Control', 'no-store'); res.json(await whatsappAtd.send({ chat: req.body && req.body.chat, text: req.body && req.body.text, who: 'u:' + req.viewerId })); }
+        catch (e) {
+            const st = e && e.status >= 400 && e.status < 600 ? e.status : 500;
+            if (st >= 500) console.error('WhatsApp envio:', st);
+            res.status(st).json({ error: st === 400 || st === 429 ? e.message : st === 503 ? 'WhatsApp de atendimento não configurado.' : 'Não consegui enviar agora. Tente de novo.' });
+        }
+    });
 
     // --- Chat da Shopee (leitura) ---
     const shopeeShopId = async () => Number((await shopee.status()).shops[0]?.shop_id) || 0;

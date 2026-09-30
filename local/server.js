@@ -29,7 +29,7 @@ function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-
     if (req.headers['sec-fetch-site'] === 'cross-site' && req.path !== '/shopee/callback') return res.sendStatus(403);
     next();
   });
-  app.use(express.json({ limit: '12kb' }));
+  app.use(express.json({ limit: '24kb' }));
   app.use('/api', (req,res,next)=>{const json=res.json.bind(res);res.json=function(data){if(!/\bgzip\b/.test(req.headers['accept-encoding']||''))return json(data);const body=JSON.stringify(data);if(Buffer.byteLength(body)<2048)return json(data);require('node:zlib').gzip(body,{level:1},(error,compressed)=>{if(error)return json(data);res.set({'Content-Type':'application/json; charset=utf-8','Content-Encoding':'gzip','Vary':'Accept-Encoding'});res.send(compressed);});return res;};next();});
   app.use('/api', (req, res, next) => {
     const cookie = /(?:^|;\s*)cacife_local=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '');
@@ -74,6 +74,15 @@ function createApp({ port = 8879, store = new Store(path.join(PRIVATE, 'sandbox-
   app.get('/api/whatsapp/status', waRoute(() => wa.status()));
   app.get('/api/whatsapp/chats', waRoute(q => wa.chats({ page: q.page, q: q.q, filtro: q.filtro })));
   app.get('/api/whatsapp/messages', waRoute(q => wa.messages({ chat: q.chat, page: q.page })));
+  // Responder (texto): o /api já exige cookie de sessão local + cabeçalho X-Cacife-Local (anti-CSRF) e origem 127.0.0.1; aqui ainda valida a conta da Cacife.
+  app.post('/api/whatsapp/send', async (req, res) => {
+    try { await mercadoLivre.authorize({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization }); }
+    catch (e) { return res.status(401).json({ error: 'Entre na conta da Cacife.' }); }
+    if (!req.is('application/json')) return res.status(415).json({ error: 'Envie JSON.' });
+    const s = req.localSession; if (!s.waId) s.waId = randomBytes(6).toString('hex');
+    try { res.json(await wa.send({ chat: req.body && req.body.chat, text: req.body && req.body.text, who: 'local:' + s.waId })); }
+    catch (e) { const st = e && e.status >= 400 && e.status < 600 ? e.status : 500; res.status(st).json({ error: st === 400 || st === 429 ? e.message : st === 503 ? 'WhatsApp de atendimento não configurado.' : 'Não consegui enviar agora. Tente de novo.' }); }
+  });
   app.get('/api/channels/nuvemshop',async(req,res)=>res.json(await nuvemshop.summary(nsOptions(req))));
   app.get('/api/channels/nuvemshop/workspace/orders',async(req,res)=>res.json(await nsSync.orders(nsOptions(req),req.query.start,req.query.end,req.query.refresh==='1')));
   app.get('/api/channels/nuvemshop/workspace/products',async(req,res)=>res.json(await cachedChannel(req,'ns-products',()=>nsWorkspace.products(nsOptions(req)),300000)));

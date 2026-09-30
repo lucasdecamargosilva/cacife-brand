@@ -1,4 +1,4 @@
-// WhatsApp de atendimento (somente leitura): KPIs + conversas no desenho do Atendimento do TikTok (channel-kit.js).
+// WhatsApp de atendimento: KPIs + conversas no desenho do Atendimento do TikTok (channel-kit.js).
 // O navegador só chama as rotas /api/whatsapp/* do nosso servidor; o token da Uazapi nunca chega aqui.
 document.addEventListener('DOMContentLoaded', async () => {
   'use strict';
@@ -11,13 +11,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!csrfPromise) csrfPromise = fetch('/api/session').then(r => r.ok ? r.json() : {}).catch(() => ({}));
     return csrfPromise;
   }
-  async function api(path, query = {}, retried = false) {
+  async function api(path, query = {}, retried = false, post) {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { location.href = 'login.html'; throw Error('Entre novamente.'); }
     const { csrf: token } = await csrf();
     const qs = new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== ''));
-    const r = await fetch('/api/whatsapp/' + path + (String(qs) ? '?' + qs : ''), { headers: { Authorization: 'Bearer ' + session.access_token, ...(token ? { 'X-Cacife-Local': token } : {}) } });
-    if (r.status === 403 && !retried) { csrfPromise = null; return api(path, query, true); }
+    const r = await fetch('/api/whatsapp/' + path + (String(qs) ? '?' + qs : ''), { method: post ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + session.access_token, ...(token ? { 'X-Cacife-Local': token } : {}), ...(post ? { 'Content-Type': 'application/json' } : {}) }, body: post ? JSON.stringify(post) : undefined });
+    if (r.status === 403 && !retried && token) { csrfPromise = null; return api(path, query, true, post); }
     let d = null; try { d = await r.json(); } catch { /* sem corpo */ }
     if (!r.ok) throw Error((d && d.error) || 'WhatsApp indisponível no momento.');
     return d;
@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---------- estado ----------
   const st = { filtro: 'todas', q: '', pagina: 1, temMais: false, total: 0, itens: [], carregado: false, selecionada: null };
   let status = null, chat, kpiBox;
+  const drafts = new Map(), painelIds = new Set(), enviadas = new Map(); // rascunho por conversa; ids das respostas enviadas daqui
 
   function paintStatus() {
     const c = $('wa-conn');
@@ -74,7 +75,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let text = m.texto || '';
     if (m.tipo === 'reacao') text = 'Reagiu ' + (m.texto || '');
     else if (m.rotulo) text = [m.rotulo, m.arquivo, m.texto].filter(Boolean).join(' · ');
-    return { side: m.deMim ? (m.auto ? 'bot' : 's') : 'c', tag: m.auto ? 'Resposta automática' : '', text: text || 'Mensagem', time: hora(m.quando) };
+    const painel = m.deMim && (m.painel || painelIds.has(m.id));
+    return { side: m.deMim ? (m.auto && !painel ? 'bot' : 's') : 'c', tag: painel ? 'Enviada pelo painel' : m.auto ? 'Resposta automática' : '', text: text || 'Mensagem', time: hora(m.quando) };
   }
   function openChat(it, ui) {
     const c = it.c; st.selecionada = c.id;
@@ -82,18 +84,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const wa = /^\d{10,15}$/.test(c.telefone || '') ? 'https://wa.me/' + c.telefone : '';
     ui.side(`<div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">${H.avatar(c.foto, c.nome, 72)}<b style="font-size:15px;max-width:100%" class="ck-one" title="${H.esc(c.nome)}">${H.esc(c.nome)}</b><span class="ck-mut" style="font-size:13px">${H.esc(fone(c.telefone))}</span>${wa ? `<a class="ck-btn sm" style="text-decoration:none;color:#fff;margin-top:4px" href="${H.esc(wa)}" target="_blank" rel="noopener noreferrer"><i class="ph-fill ph-whatsapp-logo"></i>Abrir no WhatsApp</a>` : ''}</div>
       <h4>Conversa</h4><div class="ck-kv"><span class="ck-mut">Não lidas</span><b>${H.esc(H.num(c.naoLidas))}</b></div><div class="ck-kv"><span class="ck-mut">Última mensagem</span><b>${H.esc(H.when(c.quando))}</b></div><div class="ck-kv"><span class="ck-mut">Telefone</span><b>${H.esc(fone(c.telefone))}</b></div>
-      <p class="ck-cap" style="margin-top:12px">Somente leitura — responda pelo WhatsApp.</p>`);
+      <p class="ck-cap" style="margin-top:12px">As respostas enviadas daqui saem pelo número de atendimento da loja e aparecem como “Enviada pelo painel”.</p>`);
     const pages = [];
     const paint = (keep) => {
       if (!ui.current()) return;
-      const all = pages.flatMap(p => p.mensagens).slice().sort((a, b) => String(a.quando).localeCompare(String(b.quando)));
+      const got = pages.flatMap(p => p.mensagens), ids = new Set(got.map(m => m.id));
+      // respostas enviadas daqui que a Uazapi ainda não devolveu na lista continuam visíveis
+      const all = got.concat((enviadas.get(c.id) || []).filter(m => !ids.has(m.id))).sort((a, b) => String(a.quando).localeCompare(String(b.quando)));
       const out = []; let last = '';
       for (const m of all) { const k = dayKey(m.quando); if (k && k !== last) { out.push({ side: 'sys', text: diaLongo(m.quando) }); last = k; } out.push(msgView(m)); }
       const more = pages.length && pages[pages.length - 1].temMais ? { label: 'Carregar mensagens anteriores', onClick: () => load(pages.length + 1, true) } : null;
       ui.messages(out, { more, keep });
     };
     const load = (p, keep) => api('messages', { chat: c.id, page: p }).then(d => { pages[p - 1] = d; paint(keep); }).catch(e => { if (ui.current()) { if (p === 1) ui.wait(e.message || 'Não consegui carregar as mensagens.'); else paint(true); } });
-    load(1, false).then(() => ui.readonly('Somente leitura — responda pelo WhatsApp.'));
+    load(1, false).then(() => ui.composer({
+      placeholder: 'Escreva uma resposta… (Enter envia, Shift+Enter quebra linha)', max: 4000,
+      draft: { get: () => drafts.get(c.id) || '', set: v => { if (v) drafts.set(c.id, v); else drafts.delete(c.id); } },
+      send: async text => { const r = await api('send', {}, false, { chat: c.id, text }); if (r && r.id) { painelIds.add(r.id); const l = enviadas.get(c.id) || []; l.push({ id: r.id, deMim: true, painel: true, auto: false, texto: text, tipo: 'texto', rotulo: '', quando: r.quando || new Date().toISOString() }); enviadas.set(c.id, l.slice(-30)); } return r && r.ok ? r : null; },
+      // depois de enviar: recarrega a conversa (a mensagem real vem da Uazapi) e a lista
+      onSent: () => setTimeout(() => { if (!ui.current()) return; pages.length = 1; load(1, false); st.carregado = false; chat.ckChat.reload({ keepOpen: true, quiet: true }); }, 1500),
+    }));
   }
 
   function build() {
