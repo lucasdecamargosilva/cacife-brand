@@ -187,19 +187,25 @@ try {
         return false;
     };
 
-    // Sync automático: 1 min após subir e a cada 24h (últimos 7 dias por atualização).
+    // Sync automático da Shopee (por data de atualização): a cada 30 min os últimos 2 dias (pedidos novos e
+    // mudanças de status) e 1x por dia os últimos 7 dias. Sem sobreposição de execuções.
     if (shopee) {
-        const runDailySync = async () => {
+        let shopeeSyncing = false;
+        const runShopeeSync = async (dias, rotulo) => {
+            if (shopeeSyncing) return;
+            shopeeSyncing = true;
             try {
                 const st = await shopee.status();
                 for (const s of st.shops) {
-                    const to = Math.floor(Date.now() / 1000), from = to - 7 * 86400;
-                    console.log('🛍️  sync diário:', JSON.stringify(await shopee.sync(Number(s.shop_id), from, to, 'update_time')));
+                    const to = Math.floor(Date.now() / 1000), from = to - dias * 86400;
+                    console.log('🛍️  sync ' + rotulo + ':', JSON.stringify(await shopee.sync(Number(s.shop_id), from, to, 'update_time')));
                 }
-            } catch (e) { console.error('sync diário falhou:', e.message); }
+            } catch (e) { console.error('sync ' + rotulo + ' falhou:', e.message); }
+            finally { shopeeSyncing = false; }
         };
-        setTimeout(runDailySync, 60000);
-        setInterval(runDailySync, 24 * 60 * 60 * 1000);
+        setTimeout(() => runShopeeSync(7, 'diário'), 60000);
+        setInterval(() => runShopeeSync(2, '30min'), 30 * 60 * 1000);
+        setInterval(() => runShopeeSync(7, 'diário'), 24 * 60 * 60 * 1000);
     }
 
     // Inicia a autorização: manda o lojista pra página da Shopee aprovar a loja.
