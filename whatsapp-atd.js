@@ -59,8 +59,11 @@ function normMsg(m, sentIds) {
     arquivo: tipo === 'documento' ? str(content.fileName || content.title, 80) || null : null,
     quando: iso(m.messageTimestamp),
     autor: str(m.senderName, 80) || null,
+    status: m.fromMe === true ? (STATUS_PT[String(m.status || '')] || 'enviada') : null,
   };
 }
+// status de entrega das mensagens da loja, como o WhatsApp informa
+const STATUS_PT = { Pending: 'enviando', Sent: 'enviada', ServerAck: 'enviada', Delivered: 'entregue', DeliveryAck: 'entregue', Read: 'lida', Played: 'lida', Error: 'falhou', Failed: 'falhou' };
 
 function createWhatsApp({ server, token, fetchImpl = fetch, ttl = 25000, timeout = 15000, log = (...a) => console.log(...a), now = () => Date.now(), maxPorMinuto = 20 } = {}) {
   const base = /^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(String(server || '').replace(/\/+$/, '')) ? String(server).replace(/\/+$/, '') : '';

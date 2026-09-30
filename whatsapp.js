@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (m.tipo === 'reacao') text = 'Reagiu ' + (m.texto || '');
     else if (m.rotulo) text = [m.rotulo, m.arquivo, m.texto].filter(Boolean).join(' · ');
     const painel = m.deMim && (m.painel || painelIds.has(m.id));
-    return { side: m.deMim ? (m.auto && !painel ? 'bot' : 's') : 'c', tag: painel ? 'Enviada pelo painel' : m.auto ? 'Resposta automática' : '', text: text || 'Mensagem', time: hora(m.quando) };
+    return { side: m.deMim ? (m.auto && !painel ? 'bot' : 's') : 'c', tag: painel ? 'Enviada pelo painel' : m.auto ? 'Resposta automática' : '', text: text || 'Mensagem', time: m.deMim ? (m.status || 'enviada') + ' · ' + hora(m.quando) : hora(m.quando) };
   }
   function openChat(it, ui) {
     const c = it.c; st.selecionada = c.id;
