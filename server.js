@@ -1145,6 +1145,14 @@ try {
         res.status(200).json({ status: 'ok', service: 'Cacife Dashboard with Proxy' });
     });
 
+    // --- Visão Geral (Mercado Livre + Nuvemshop): mesmas rotas do painel local ---
+    require('./local/channels-routes').mountChannels(app, { channelsConfig: {
+        serviceKey: SUPABASE_SERVICE_KEY,
+        mercadolivre: { clientId: process.env.ML_CLIENT_ID, clientSecret: process.env.ML_CLIENT_SECRET },
+        nuvemshop: { storeId: Number(process.env.NUVEMSHOP_STORE_ID), token: process.env.NUVEMSHOP_TOKEN },
+    } });
+    app.get('/', (req, res) => res.redirect('/metricas.html'));
+
     // --- Servir Arquivos Estáticos do Dashboard ---
     // Fazemos isso ANTES do proxy para que as rotas locais tenham prioridade
     app.use(express.static(__dirname));

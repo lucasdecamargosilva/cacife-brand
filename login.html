@@ -157,7 +157,7 @@
                 // Sucesso!
                 loginBtn.textContent = 'Sucesso!';
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    window.location.href = 'metricas.html';
                 }, 500);
 
             } catch (err) {
@@ -173,7 +173,7 @@
         async function checkSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
-                window.location.href = 'index.html';
+                window.location.href = 'metricas.html';
             }
         }
         checkSession();

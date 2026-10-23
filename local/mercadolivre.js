@@ -5,7 +5,9 @@ const SELLER='674281461';
 async function authorize({serviceKey,authorization,fetchImpl=fetch}){
  if(!serviceKey||!/^Bearer [A-Za-z0-9._-]+$/.test(authorization||''))throw new Error('Entre na conta da Cacife.');
  let r;try{r=await fetchImpl(SUPABASE+'/auth/v1/user',{headers:{apikey:serviceKey,Authorization:authorization},signal:AbortSignal.timeout(15000),redirect:'error'});}catch{throw new Error('Não foi possível validar a sessão.');}
- if(!r.ok||(await r.json()).id!==USER)throw new Error('Esta consulta está restrita à conta da Cacife.');
+ // Contas liberadas: CACIFE_ALLOWED_USERS (ids do Supabase separados por vírgula); sem a variável, só a conta da Cacife.
+ const allowed=String(process.env.CACIFE_ALLOWED_USERS||USER).split(',').map(id=>id.trim()).filter(Boolean);
+ if(!r.ok||!allowed.includes((await r.json()).id))throw new Error('Esta consulta está restrita à conta da Cacife.');
 }
 async function summary({serviceKey,authorization,config,fetchImpl=fetch}){
  if(!serviceKey||!/^Bearer [A-Za-z0-9._-]+$/.test(authorization||''))throw new Error('Entre na conta da Cacife para consultar o Mercado Livre.');

@@ -23,7 +23,7 @@ async function initAuthGuard() {
 
     if (isLoginPage) {
         if (session) {
-            window.location.href = 'index.html';
+            window.location.href = 'metricas.html';
         }
         return; // Não faz mais nada na tela de login
     }
