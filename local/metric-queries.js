@@ -8,7 +8,7 @@ function dates(input={},today=M.day(new Date())){
  M.range(start,end);if((new Date(end)-new Date(start))/86400000>365||new Date(start+'T12:00:00Z').toISOString().slice(0,10)!==start||new Date(end+'T12:00:00Z').toISOString().slice(0,10)!==end)throw Error('Selecione até 366 dias válidos.');return {start,end};
 }
 class MetricQueries{
- constructor(file=path.join(os.homedir(),'.cacife-local','metrics.sqlite')){
+ constructor(file=path.join(process.env.CACIFE_DATA_DIR||path.join(os.homedir(),'.cacife-local'),'metrics.sqlite')){
  if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});this.db=new DatabaseSync(file);this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
  CREATE TABLE IF NOT EXISTS metric_periods(start TEXT NOT NULL,end TEXT NOT NULL,version TEXT NOT NULL,payload TEXT NOT NULL,calculated_at TEXT NOT NULL,PRIMARY KEY(start,end));
  CREATE TABLE IF NOT EXISTS metric_channels(start TEXT NOT NULL,end TEXT NOT NULL,channel TEXT NOT NULL,revenue INTEGER NOT NULL,paid INTEGER NOT NULL,orders INTEGER NOT NULL,cancelled INTEGER NOT NULL,PRIMARY KEY(start,end,channel),FOREIGN KEY(start,end) REFERENCES metric_periods(start,end) ON DELETE CASCADE);
