@@ -6,6 +6,8 @@ const { createHmac } = require('node:crypto');
 const API = 'https://open-api.tiktokglobalshop.com';
 const AUTH = 'https://auth.tiktok-shops.com';
 const AUTHORIZE = 'https://services.tiktokshop.com/open/authorize';
+// O TikTok devolve *_expire_in como timestamp Unix absoluto (não segundos restantes); aceita os dois formatos.
+const expAt = (v, now) => { const n = Number(v || 0); return new Date((n > 1e9 ? n : now + n) * 1000).toISOString(); };
 
 function sign(appSecret, path, queries, body) {
   const keys = Object.keys(queries).filter((k) => k !== 'sign' && k !== 'access_token').sort();
@@ -168,8 +170,8 @@ class TikTokProd {
         if (this.trustedSellerName && d.seller_name === this.trustedSellerName && this.fallbackShopId && this.allowedShopIds.includes(String(this.fallbackShopId))) {
           await this.db.saveToken({ shop_id: String(this.fallbackShopId), cipher: null, shop_name: d.seller_name, region: d.seller_base_region || null,
             access_token: d.access_token, refresh_token: d.refresh_token || null,
-            expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
-            refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+            expires_at: expAt(d.access_token_expire_in, now),
+            refresh_expires_at: expAt(d.refresh_token_expire_in, now),
             updated_at: new Date(now * 1000).toISOString() });
           return { shops: [{ id: this.fallbackShopId, name: d.seller_name, hasCipher: false }], granted: d.granted_scopes || [] };
         }
@@ -178,8 +180,8 @@ class TikTokProd {
       const fallback = (d.seller_name ? 'pending:' + String(d.seller_name).replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40) : (this.fallbackShopId || 'pending'));
       await this.db.saveToken({ shop_id: String(fallback), cipher: null, shop_name: '(scopes pendentes)', region: null,
         access_token: d.access_token, refresh_token: d.refresh_token || null,
-        expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
-        refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+        expires_at: expAt(d.access_token_expire_in, now),
+        refresh_expires_at: expAt(d.refresh_token_expire_in, now),
         updated_at: new Date(now * 1000).toISOString() });
       throw new Error('Token salvo (' + (d.seller_name || '?') + '), mas o app está sem permissões (scopes) no Partner Center: ' + e.message);
     }
@@ -193,8 +195,8 @@ class TikTokProd {
       await this.db.saveToken({
         shop_id: String(s.id), cipher: s.cipher || null, shop_name: s.name || null, region: s.region || null,
         access_token: d.access_token, refresh_token: d.refresh_token || null,
-        expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
-        refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+        expires_at: expAt(d.access_token_expire_in, now),
+        refresh_expires_at: expAt(d.refresh_token_expire_in, now),
         updated_at: new Date(now * 1000).toISOString(),
       });
     }
@@ -214,8 +216,8 @@ class TikTokProd {
       const d = j.data, now = this.now();
       await this.db.saveToken({ shop_id: String(shopId), cipher: tk.cipher, shop_name: tk.shop_name, region: tk.region,
         access_token: d.access_token, refresh_token: d.refresh_token || tk.refresh_token,
-        expires_at: new Date((now + Number(d.access_token_expire_in || 0)) * 1000).toISOString(),
-        refresh_expires_at: new Date((now + Number(d.refresh_token_expire_in || 0)) * 1000).toISOString(),
+        expires_at: expAt(d.access_token_expire_in, now),
+        refresh_expires_at: expAt(d.refresh_token_expire_in, now),
         updated_at: new Date(now * 1000).toISOString() });
       return d.access_token;
     })();
