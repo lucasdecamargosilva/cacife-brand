@@ -508,7 +508,8 @@ try {
     app.get('/api/tiktok/connect-link', (req, res) => {
         if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
         const exp = String(Date.now() + 48 * 3600000);
-        res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${exp}.${connectSign(exp)}`, expira: new Date(Number(exp)).toISOString() });
+        const app = req.query.app === 'analytics' ? '&app=analytics' : '';
+        res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${exp}.${connectSign(exp)}${app}`, expira: new Date(Number(exp)).toISOString() });
     });
     app.get('/tiktok/connect', (req, res) => {
         if (!requireTiktok(res)) return;
@@ -517,7 +518,9 @@ try {
         res.set('Referrer-Policy', 'no-referrer');
         // state assinado com validade (2h): o TikTok devolve e a gente confere a assinatura — não depende de cookie.
         const exp = String(Date.now() + 2 * 3600000);
-        res.redirect(tiktok.authUrl(exp + '.' + stateSign(exp)));
+        // ?app=analytics reautoriza o app de Analytics (desempenho, produtos, vídeos); sem o parâmetro, o app principal.
+        const inst = req.query.app === 'analytics' && tiktok2 ? tiktok2 : tiktok;
+        res.redirect(inst.authUrl(exp + '.' + stateSign(exp)));
     });
     const tiktokDebug = [];
     const tkLog = (o) => { tiktokDebug.push({ at: new Date().toISOString(), ...o }); if (tiktokDebug.length > 20) tiktokDebug.shift(); };

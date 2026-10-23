@@ -257,7 +257,13 @@ class TikTokProd {
   async shopRequest(shopId, path, { query = {}, body } = {}) {
     const tk = await this.db.getToken(shopId);
     if (!tk || !tk.cipher) throw new Error('Loja sem cipher; reautorize.');
-    return this.request(path, { query: Object.assign({ shop_cipher: tk.cipher }, query), body, accessToken: await this.access(shopId) });
+    const q = Object.assign({ shop_cipher: tk.cipher }, query);
+    try { return await this.request(path, { query: q, body, accessToken: await this.access(shopId) }); }
+    catch (e) {
+      // Token vencido antes da data salva (ex.: expires_at gravado errado): renova e tenta uma vez.
+      if (!/expired/i.test(e.message)) throw e;
+      return this.request(path, { query: q, body, accessToken: await this.refresh(shopId) });
+    }
   }
 
   // Busca pedidos por janela de tempo (create_time ou update_time), paginando.
