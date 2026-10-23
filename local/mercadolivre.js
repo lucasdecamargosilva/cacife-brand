@@ -2,7 +2,10 @@
 const SUPABASE='https://quantic-supabase.k5jwra.easypanel.host';
 const USER='9d41b952-5345-4bb9-bac2-ee64023d88bd';
 const SELLER='674281461';
-async function authorize({serviceKey,authorization,fetchImpl=fetch}){
+// Marca das consultas feitas pelo próprio servidor (pré-aquecimento do cache). Symbol não chega por HTTP.
+const INTERNAL=Symbol('cacife-internal');
+async function authorize({serviceKey,authorization,internal,fetchImpl=fetch}){
+ if(internal===INTERNAL&&serviceKey)return;
  if(!serviceKey||!/^Bearer [A-Za-z0-9._-]+$/.test(authorization||''))throw new Error('Entre na conta da Cacife.');
  let r;try{r=await fetchImpl(SUPABASE+'/auth/v1/user',{headers:{apikey:serviceKey,Authorization:authorization},signal:AbortSignal.timeout(15000),redirect:'error'});}catch{throw new Error('Não foi possível validar a sessão.');}
  // Contas liberadas: CACIFE_ALLOWED_USERS (ids do Supabase separados por vírgula); sem a variável, só a conta da Cacife.
@@ -27,4 +30,4 @@ async function summary({serviceKey,authorization,config,fetchImpl=fetch}){
  delete result.itemIds;
  return result;
 }
-module.exports={summary,authorize};
+module.exports={summary,authorize,INTERNAL};

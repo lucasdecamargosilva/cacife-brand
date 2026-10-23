@@ -11,7 +11,7 @@ const nsWorkspace = require('./ns-workspace');
 const { ChannelCache } = require('./channel-cache');
 const { createSync } = require('./ns-sync');
 
-function mountChannels(app, { channelsConfig = {} } = {}) {
+function mountChannels(app, { channelsConfig = {}, warmOnStart = true } = {}) {
   const channelCache = new ChannelCache(), nsSync = createSync(channelCache);
   const { MetricQueries, dates } = require('./metric-queries'), metricQueries = new MetricQueries();
   const M = require('../metricas-core');
@@ -31,9 +31,9 @@ function mountChannels(app, { channelsConfig = {} } = {}) {
     if (!session || session.until < Date.now() || req.headers['x-cacife-local'] !== session.csrf) return res.sendStatus(403);
     next();
   });
-  const mlOptions = req => ({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization, config: channelsConfig.mercadolivre, noCache: true });
-  const nsOptions = req => ({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization, config: channelsConfig.nuvemshop, noCache: true });
-  async function cachedChannel(req, key, load, ttl = 120000, seed) { await mercadoLivre.authorize({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization }); return channelCache.get(key, load, { ttl, force: req.query.refresh === '1', seed }); }
+  const mlOptions = req => ({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization, internal: req.internal, config: channelsConfig.mercadolivre, noCache: true });
+  const nsOptions = req => ({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization, internal: req.internal, config: channelsConfig.nuvemshop, noCache: true });
+  async function cachedChannel(req, key, load, ttl = 120000, seed) { await mercadoLivre.authorize({ serviceKey: channelsConfig.serviceKey, authorization: req.headers.authorization, internal: req.internal }); return channelCache.get(key, load, { ttl, force: req.query.refresh === '1', seed }); }
   async function mlOrders(req) {
     const { start, end } = req.query; mlWorkspace.validRange(start, end);
     const cover = channelCache.coveringOrders(start, end); let seed;
@@ -41,7 +41,7 @@ function mountChannels(app, { channelsConfig = {} } = {}) {
     return cachedChannel(req, 'ml-orders:' + start + ':' + end, () => mlWorkspace.orders({ ...mlOptions(req), blockCache: channelCache }, start, end), 120000, seed);
   }
   async function preparedOverview(req, range) {
-    const { start, end } = range, scoped = { headers: req.headers, query: { ...req.query, start, end } };
+    const { start, end } = range, scoped = { headers: req.headers, internal: req.internal, query: { ...req.query, start, end } };
     const [ml, ns] = await Promise.all([mlOrders(scoped), nsSync.orders(nsOptions(req), start, end, req.query.refresh === '1')]);
     const r = metricQueries.sync(ml, ns, start, end);
     const need = (r.topProducts || []).filter(p => p.channel === 'mercadolivre' && !p.image).map(p => p.id);
@@ -68,6 +68,20 @@ function mountChannels(app, { channelsConfig = {} } = {}) {
   router.get('/channels/nuvemshop/workspace/products', async (req, res) => res.json(await cachedChannel(req, 'ns-products', () => nsWorkspace.products(nsOptions(req)), 300000)));
   router.get('/channels/nuvemshop/workspace/checkouts', async (req, res) => res.json(await cachedChannel(req, 'ns-checkouts', () => nsWorkspace.checkouts(nsOptions(req)), 60000)));
   router.use((error, req, res, next) => { const auth = /Entre na conta|restrita à conta/.test(error.message || ''); res.status(auth ? 401 : 400).json({ error: error.message || 'Consulta indisponível.' }); });
+  // Pré-aquecimento: o servidor consulta sozinho os períodos rápidos da tela (30, 15, 7 dias, ontem, hoje)
+  // ao iniciar e a cada 10 min, para ninguém pegar o cache frio (inclusive na virada do dia).
+  let warming = false;
+  async function warm() {
+    if (warming || !channelsConfig.serviceKey) return;
+    warming = true;
+    try {
+      for (const period of ['30', '15', '7', 'yesterday', 'today']) {
+        const range = dates({ period }), req = { headers: {}, query: {}, internal: mercadoLivre.INTERNAL };
+        try { await preparedOverview(req, range); } catch (e) { console.error('Pré-aquecimento ' + period + ' falhou:', e.message); }
+      }
+    } finally { warming = false; }
+  }
+  if (warmOnStart) { setTimeout(warm, 3000); setInterval(warm, 10 * 60000).unref(); }
   // Só estes caminhos passam pelo roteador; o restante de /api segue para as rotas existentes.
   app.use('/api', (req, res, next) => /^\/(session|channels|metrics)(\/|$)/.test(req.path) ? router(req, res, next) : next());
 }
