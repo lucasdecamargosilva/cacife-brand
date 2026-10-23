@@ -1146,11 +1146,18 @@ try {
     });
 
     // --- Visão Geral (Mercado Livre + Nuvemshop): mesmas rotas do painel local ---
-    require('./local/channels-routes').mountChannels(app, { channelsConfig: {
-        serviceKey: SUPABASE_SERVICE_KEY,
-        mercadolivre: { clientId: process.env.ML_CLIENT_ID, clientSecret: process.env.ML_CLIENT_SECRET },
-        nuvemshop: { storeId: Number(process.env.NUVEMSHOP_STORE_ID), token: process.env.NUVEMSHOP_TOKEN },
-    } });
+    // Falha aqui não pode derrubar o resto do painel (TikTok, Shopee, WhatsApp).
+    try {
+        require('./local/channels-routes').mountChannels(app, { channelsConfig: {
+            serviceKey: SUPABASE_SERVICE_KEY,
+            mercadolivre: { clientId: process.env.ML_CLIENT_ID, clientSecret: process.env.ML_CLIENT_SECRET },
+            nuvemshop: { storeId: Number(process.env.NUVEMSHOP_STORE_ID), token: process.env.NUVEMSHOP_TOKEN },
+        } });
+        console.log('📊 Visão Geral (ML + Nuvemshop) ligada — Node ' + process.version);
+    } catch (e) {
+        console.error('Visão Geral não iniciou (Node ' + process.version + '):', e.message);
+        app.use('/api', (req, res, next) => /^\/(session|channels|metrics)(\/|$)/.test(req.path) ? res.status(503).json({ error: 'Visão Geral indisponível no servidor.' }) : next());
+    }
     app.get('/', (req, res) => res.redirect('/metricas.html'));
 
     // --- Servir Arquivos Estáticos do Dashboard ---
