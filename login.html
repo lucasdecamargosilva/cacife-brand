@@ -19,155 +19,109 @@
     <link rel="stylesheet" href="style.css">
 
     <style>
+        :root {
+            --canvas: #f6f7f9; --panel: #fff; --line: #eceef2;
+            --text: #111827; --secondary: #4b5563; --muted: #6b7280; --danger: #dc2626;
+        }
+        * { box-sizing: border-box; }
         body {
-            background-color: #000;
+            background: var(--canvas);
+            color: var(--text);
+            font-family: 'DM Sans', Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            overflow: hidden;
+            padding: 16px;
         }
-
         .login-card {
-            background: #0a0a0a;
-            /* var(--bg-card) */
-            border: 1px solid #262626;
-            /* var(--border-color) */
-            padding: 40px;
-            /* var(--spacing-xl) */
+            background: var(--panel);
+            border: 1px solid var(--line);
             border-radius: 16px;
-            /* var(--radius-lg) */
+            box-shadow: 0 1px 2px #1118270a, 0 12px 32px #1118270f;
+            padding: 36px 32px 28px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
             text-align: center;
-            position: relative;
-            z-index: 2;
         }
-
-        .login-logo {
-            height: 60px;
-            margin-bottom: 32px;
-            display: inline-block;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #a3a3a3;
-            /* var(--text-gray) */
-            font-size: 14px;
-            font-weight: 500;
-        }
-
+        .login-logo { width: 164px; height: auto; margin-bottom: 8px; display: inline-block; filter: brightness(0); }
+        .login-title { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 18px 0 4px; }
+        .login-sub { font-size: 13px; color: var(--secondary); margin: 0 0 26px; }
+        .form-group { margin-bottom: 16px; text-align: left; }
+        .form-label { display: block; margin-bottom: 7px; color: var(--secondary); font-size: 12.5px; font-weight: 600; }
+        .input-wrap { position: relative; }
+        .input-wrap i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; pointer-events: none; }
         .form-input {
             width: 100%;
-            padding: 12px 16px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 8px;
-            /* var(--radius-sm) */
-            color: #fff;
-            font-family: 'DM Sans', sans-serif;
-            font-size: 15px;
-            transition: all 0.2s;
+            min-height: 42px;
+            padding: 10px 14px 10px 38px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            color: var(--text);
+            font: inherit;
+            font-size: 14px;
             outline: none;
+            transition: border-color .15s, box-shadow .15s;
         }
-
-        .form-input:focus {
-            border-color: #fff;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
+        .form-input::placeholder { color: #9ca3af; }
+        .form-input:focus { border-color: #111827; box-shadow: 0 0 0 3px #1118271a; }
         .btn-login {
             width: 100%;
-            padding: 14px;
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 8px;
-            /* var(--radius-sm) */
-            font-size: 16px;
-            font-weight: 700;
+            min-height: 42px;
+            margin-top: 8px;
+            background: #111827;
+            color: #fff;
+            border: 1px solid #111827;
+            border-radius: 9px;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 10px;
+            transition: background-color .15s, opacity .15s;
         }
-
-        .btn-login:hover {
-            background: #e5e5e5;
-            transform: translateY(-1px);
-        }
-
-        .btn-login:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .error-msg {
-            color: #ff4d4d;
-            /* var(--accent-red) */
-            font-size: 13px;
-            margin-top: 16px;
-            min-height: 20px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .error-msg.visible {
-            opacity: 1;
-        }
-
-        /* Background animated elements */
-        .bg-glow {
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, rgba(0, 0, 0, 0) 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-            pointer-events: none;
-        }
+        .btn-login:hover { background: #1f2937; }
+        .btn-login:active:not(:disabled) { transform: scale(.98); }
+        .btn-login:focus-visible { outline: 3px solid #1118274d; outline-offset: 2px; }
+        .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+        .error-msg { color: var(--danger); font-size: 12.5px; margin-top: 14px; min-height: 18px; opacity: 0; transition: opacity .2s; }
+        .error-msg.visible { opacity: 1; }
+        .login-foot { margin-top: 18px; font-size: 11.5px; color: var(--muted); }
     </style>
 </head>
 
 <body>
 
-    <div class="bg-glow"></div>
-
     <div class="login-card">
-        <img src="logo.png" alt="Cacife Brand" class="login-logo">
+        <img src="cacife-logo.png" alt="Cacife Brand" class="login-logo">
+        <h1 class="login-title">Entrar no painel</h1>
+        <p class="login-sub">Acompanhe todos os seus canais em um só lugar.</p>
 
         <form id="login-form">
             <div class="form-group">
                 <label for="email" class="form-label">E-mail</label>
-                <div style="position: relative;">
-                    <i class="ph ph-envelope" style="position: absolute; left: 14px; top: 14px; color: #555;"></i>
-                    <input type="email" id="email" class="form-input" style="padding-left: 40px;"
+                <div class="input-wrap">
+                    <i class="ph ph-envelope"></i>
+                    <input type="email" id="email" class="form-input" autocomplete="email"
                         placeholder="seu@email.com" required>
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="password" class="form-label">Senha</label>
-                <div style="position: relative;">
-                    <i class="ph ph-lock" style="position: absolute; left: 14px; top: 14px; color: #555;"></i>
-                    <input type="password" id="password" class="form-input" style="padding-left: 40px;"
+                <div class="input-wrap">
+                    <i class="ph ph-lock"></i>
+                    <input type="password" id="password" class="form-input" autocomplete="current-password"
                         placeholder="••••••••" required>
                 </div>
             </div>
 
             <button type="submit" class="btn-login" id="login-btn">Entrar</button>
-            <div id="error-message" class="error-msg"></div>
+            <div id="error-message" class="error-msg" role="alert"></div>
         </form>
+        <p class="login-foot">Cacife Brand · Provou Levou</p>
     </div>
 
     <!-- Scripts -->
