@@ -1156,7 +1156,7 @@ try {
         console.log('📊 Visão Geral (ML + Nuvemshop) ligada — Node ' + process.version);
     } catch (e) {
         console.error('Visão Geral não iniciou (Node ' + process.version + '):', e.message);
-        app.use('/api', (req, res, next) => /^\/(session|channels|metrics)(\/|$)/.test(req.path) ? res.status(503).json({ error: 'Visão Geral indisponível no servidor.' }) : next());
+        app.use('/api', (req, res, next) => /^\/(session|channels|metrics)(\/|$)/.test(req.path) ? res.status(503).json({ error: 'Visão Geral indisponível no servidor.', motivo: String(e.message).slice(0, 160), node: process.version }) : next());
     }
     app.get('/', (req, res) => res.redirect('/metricas.html'));
 
