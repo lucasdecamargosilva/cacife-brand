@@ -499,28 +499,36 @@ try {
     // Link de autorização assinado (HMAC + validade) para o lojista clicar sem receber a senha de admin.
     const connectSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-connect:' + exp).digest('hex');
     const stateSign = (exp) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('tiktok-state:' + exp).digest('hex');
-    const stateOk = (st) => { const m = /^(\d{10,13})\.([0-9a-f]{64})$/.exec(String(st || '')); return Boolean(m) && Number(m[1]) >= Date.now() && timingEq(m[2], stateSign(m[1])); };
-    const connectLinkOk = (t) => {
-        const m = /^(\d{10,13})\.([0-9a-f]{64})$/.exec(String(t || '')); if (!m) return false;
-        if (Number(m[1]) < Date.now()) return false;
-        return timingEq(m[2], connectSign(m[1]));
+    // Outra loja (ex.: ?loja=marina) entra assinada no link/state como "exp.loja.sig" e grava em tabelas *_lojas, sem tocar na Cacife.
+    const LOJA_RE = /^[a-z0-9-]{2,30}$/;
+    const lojaParam = (v) => (typeof v === 'string' && LOJA_RE.test(v) ? v : '');
+    const signed = (sign, v) => { const m = /^(\d{10,13})(?:\.([a-z0-9-]{2,30}))?\.([0-9a-f]{64})$/.exec(String(v || '')); if (!m || Number(m[1]) < Date.now()) return null; return timingEq(m[3], sign(m[2] ? m[1] + ':' + m[2] : m[1])) ? { loja: m[2] || '' } : null; };
+    const makeSigned = (sign, exp, loja) => loja ? `${exp}.${loja}.${sign(exp + ':' + loja)}` : `${exp}.${sign(exp)}`;
+    const stateOk = (st) => signed(stateSign, st);
+    const connectLinkOk = (t) => signed(connectSign, t);
+    const tiktokLoja = (loja) => {
+        const db = tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_lojas' });
+        return new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, allowedShopIds: [], db: { ...db, saveToken: (row) => db.saveToken({ ...row, loja }) } });
     };
     app.get('/api/tiktok/connect-link', (req, res) => {
         if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
         const exp = String(Date.now() + 48 * 3600000);
-        const app = req.query.app === 'analytics' ? '&app=analytics' : '';
-        res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${exp}.${connectSign(exp)}${app}`, expira: new Date(Number(exp)).toISOString() });
+        const loja = lojaParam(req.query.loja);
+        const app = req.query.app === 'analytics' && !loja ? '&app=analytics' : '';
+        res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${makeSigned(connectSign, exp, loja)}${app}`, expira: new Date(Number(exp)).toISOString() });
     });
     app.get('/tiktok/connect', (req, res) => {
         if (!requireTiktok(res)) return;
-        const ok = adminOk(req.query.key || req.headers['x-admin-token']) || connectLinkOk(req.query.t);
+        const link = connectLinkOk(req.query.t);
+        const ok = adminOk(req.query.key || req.headers['x-admin-token']) || link;
         if (!ok) return res.status(401).send('Link inválido ou expirado. Peça um novo link de autorização.');
+        const loja = link ? link.loja : lojaParam(req.query.loja);
         res.set('Referrer-Policy', 'no-referrer');
         // state assinado com validade (2h): o TikTok devolve e a gente confere a assinatura — não depende de cookie.
         const exp = String(Date.now() + 2 * 3600000);
         // ?app=analytics reautoriza o app de Analytics (desempenho, produtos, vídeos); sem o parâmetro, o app principal.
-        const inst = req.query.app === 'analytics' && tiktok2 ? tiktok2 : tiktok;
-        res.redirect(inst.authUrl(exp + '.' + stateSign(exp)));
+        const inst = req.query.app === 'analytics' && tiktok2 && !loja ? tiktok2 : tiktok;
+        res.redirect(inst.authUrl(makeSigned(stateSign, exp, loja)));
     });
     const tiktokDebug = [];
     const tkLog = (o) => { tiktokDebug.push({ at: new Date().toISOString(), ...o }); if (tiktokDebug.length > 20) tiktokDebug.shift(); };
@@ -530,17 +538,59 @@ try {
         try {
             if (!tiktok) return res.status(503).send('TikTok não configurado.');
             const state = req.query.state;
-            if (state !== undefined && !stateOk(state)) { tkLog({ step: 'state-invalido' }); return res.status(400).send('Autorização inválida ou expirada. Peça um novo link e tente de novo.'); }
+            const st = state !== undefined ? stateOk(state) : null;
+            if (state !== undefined && !st) { tkLog({ step: 'state-invalido' }); return res.status(400).send('Autorização inválida ou expirada. Peça um novo link e tente de novo.'); }
             // Sem state = veio pelo link de autorização do próprio TikTok; a trava passa a ser a allowlist de lojas (TIKTOK_ALLOWED_SHOP_IDS).
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
-            const inst = (tiktok2 && req.query.app_key === process.env.TIKTOK2_APP_KEY) ? tiktok2 : tiktok;
-            const r = await inst.exchange(code); tkLog({ step: 'ok', app: inst === tiktok2 ? 'analytics' : 'principal', lojas: r.shops, granted: r.granted });
+            const inst = st && st.loja ? tiktokLoja(st.loja) : (tiktok2 && req.query.app_key === process.env.TIKTOK2_APP_KEY) ? tiktok2 : tiktok;
+            const r = await inst.exchange(code); tkLog({ step: 'ok', app: st && st.loja ? 'loja:' + st.loja : inst === tiktok2 ? 'analytics' : 'principal', lojas: r.shops, granted: r.granted });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) });
             if (/Token salvo/.test(e.message)) return res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">🟡</div><h2>Autorização recebida!</h2><p>A chave da loja foi salva. Falta só liberar as permissões de API do app no Partner Center.<br>Pode fechar esta página.</p></div></body>');
             res.status(500).send('Falha ao conectar a loja. Tente novamente em /tiktok/connect.'); }
     });
+    // Mercado Livre de outra loja (ex.: ?loja=marina): OAuth com link assinado; token vai pra ml_tokens_lojas (a Cacife segue em ml_tokens).
+    const mlClientId = process.env.ML_CLIENT_ID || ML_APP_ID, mlSecret = process.env.ML_CLIENT_SECRET || ML_APP_SECRET;
+    const mlSign = (v) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('ml-connect:' + v).digest('hex');
+    const mlStateSign = (v) => crypto.createHmac('sha256', SHOPEE_ADMIN_TOKEN || 'x').update('ml-state:' + v).digest('hex');
+    const mlRedirect = `${PUBLIC_BASE_URL}/ml/callback`;
+    const okPage = (icon, title, msg) => '<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#f6f7f9;color:#111827;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">' + icon + '</div><h2>' + title + '</h2><p>' + msg + '</p></div></body>';
+    app.get('/api/ml/connect-link', (req, res) => {
+        if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
+        const loja = lojaParam(req.query.loja); if (!loja) return res.status(400).json({ error: 'informe ?loja=<slug>' });
+        const exp = String(Date.now() + 48 * 3600000);
+        res.json({ url: `${PUBLIC_BASE_URL}/ml/connect?t=${makeSigned(mlSign, exp, loja)}`, redirect_uri: mlRedirect, expira: new Date(Number(exp)).toISOString() });
+    });
+    app.get('/ml/connect', (req, res) => {
+        const link = signed(mlSign, req.query.t);
+        if (!link || !link.loja) return res.status(401).send('Link inválido ou expirado. Peça um novo link de autorização.');
+        res.set('Referrer-Policy', 'no-referrer');
+        const u = new URL('https://auth.mercadolivre.com.br/authorization');
+        u.searchParams.set('response_type', 'code'); u.searchParams.set('client_id', mlClientId); u.searchParams.set('redirect_uri', mlRedirect);
+        u.searchParams.set('state', makeSigned(mlStateSign, String(Date.now() + 2 * 3600000), link.loja));
+        res.redirect(u.toString());
+    });
+    app.get('/ml/callback', async (req, res) => {
+        res.set('Content-Type', 'text/html; charset=utf-8');
+        const st = signed(mlStateSign, req.query.state);
+        if (!st || !st.loja) return res.status(400).send(okPage('⚠️', 'Autorização inválida ou expirada', 'Peça um novo link e tente de novo.'));
+        const code = req.query.code;
+        if (typeof code !== 'string' || !code || code.length > 512) return res.status(400).send(okPage('⚠️', 'Retorno inválido do Mercado Livre', 'Tente de novo pelo link.'));
+        try {
+            const { data: t } = await axios.post('https://api.mercadolibre.com/oauth/token', new URLSearchParams({ grant_type: 'authorization_code', client_id: String(mlClientId), client_secret: mlSecret, code, redirect_uri: mlRedirect }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, timeout: 20000 });
+            let nickname = null;
+            try { nickname = (await axios.get('https://api.mercadolibre.com/users/me', { headers: { Authorization: 'Bearer ' + t.access_token }, timeout: 15000 })).data.nickname || null; } catch (_) {}
+            await axios.post(`${SUPABASE_URL}/rest/v1/ml_tokens_lojas?on_conflict=user_id`, { user_id: t.user_id, loja: st.loja, nickname, access_token: t.access_token, refresh_token: t.refresh_token || null, expires_at: new Date(Date.now() + (t.expires_in || 21600) * 1000).toISOString(), updated_at: new Date().toISOString() },
+                { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' } });
+            console.log('ML conectado:', st.loja, t.user_id, nickname);
+            res.send(okPage('✅', 'Mercado Livre conectado!', 'Conta ' + String(nickname || t.user_id).replace(/[<>&"]/g, '') + ' autorizada. Pode fechar esta página.'));
+        } catch (e) {
+            console.error('ML callback:', st.loja, e.response ? JSON.stringify(e.response.data).slice(0, 200) : e.message);
+            res.status(500).send(okPage('⚠️', 'Não foi possível conectar', 'Tente de novo pelo link. Se persistir, avise a Provou Levou.'));
+        }
+    });
+
     // Fallback: trocar um auth_code obtido fora do redirect (ex.: exibido na tela do TikTok) — admin only.
     app.post('/api/tiktok/exchange', async (req, res) => {
         if (!requireTiktok(res)) return;
