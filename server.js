@@ -493,7 +493,7 @@ try {
             tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: process.env.TIKTOK_TOKENS_TABLE || 'tiktok_tokens' }) });
             // 2º app (categoria TikTok Shop Seller): Analytics + Afiliados. Tokens em tabela própria.
             if (process.env.TIKTOK2_APP_KEY && process.env.TIKTOK2_APP_SECRET) {
-                tiktok2 = new TikTokProd({ appKey: process.env.TIKTOK2_APP_KEY, appSecret: process.env.TIKTOK2_APP_SECRET, serviceId: process.env.TIKTOK2_SERVICE_ID || '', trustedSellerName: process.env.TIKTOK_SELLER_NAME || 'Cacife Brand', fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_analytics' }) });
+                tiktok2 = new TikTokProd({ appKey: process.env.TIKTOK2_APP_KEY, appSecret: process.env.TIKTOK2_APP_SECRET, serviceId: process.env.TIKTOK2_SERVICE_ID || '', trustedSellerName: process.env.TIKTOK_SELLER_NAME || 'Cacife Brand', fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: process.env.TIKTOK_ANALYTICS_TOKENS_TABLE || 'tiktok_tokens_analytics' }) });
                 console.log('🎵 TikTok app 2 (Analytics/Afiliados) ligado (service ' + (process.env.TIKTOK2_SERVICE_ID || '?') + ')');
             }
             console.log('🎵 TikTok Shop ligado (service ' + TIKTOK_SERVICE_ID + ')');
@@ -515,11 +515,19 @@ try {
         const db = tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_lojas' });
         return new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, allowedShopIds: [], db: { ...db, saveToken: (row) => db.saveToken({ ...row, loja }) } });
     };
+    // App de Analytics da outra loja: não tem scope pra listar lojas, então só aceita o seller com o mesmo nome da loja já conectada no app principal.
+    const tiktokLojaAnalytics = async (loja) => {
+        const { data: rows } = await axios.get(`${SUPABASE_URL}/rest/v1/tiktok_tokens_lojas?loja=eq.${encodeURIComponent(loja)}&shop_id=not.like.pending*&select=shop_id,shop_name&order=updated_at.desc&limit=1`, { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } });
+        const main = rows && rows[0];
+        if (!main) throw new Error('Conecte primeiro o app principal do TikTok desta loja.');
+        const db = tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_analytics_lojas' });
+        return new TikTokProd({ appKey: process.env.TIKTOK2_APP_KEY, appSecret: process.env.TIKTOK2_APP_SECRET, serviceId: process.env.TIKTOK2_SERVICE_ID || '', trustedSellerName: main.shop_name, fallbackShopId: String(main.shop_id), allowedShopIds: [String(main.shop_id)], db: { ...db, saveToken: (row) => db.saveToken({ ...row, loja }) } });
+    };
     app.get('/api/tiktok/connect-link', (req, res) => {
         if (!adminOk(req.query.key || req.headers['x-admin-token'])) return res.sendStatus(401);
         const exp = String(Date.now() + 48 * 3600000);
         const loja = lojaParam(req.query.loja);
-        const app = req.query.app === 'analytics' && !loja ? '&app=analytics' : '';
+        const app = req.query.app === 'analytics' ? '&app=analytics' : '';
         res.json({ url: `${PUBLIC_BASE_URL}/tiktok/connect?t=${makeSigned(connectSign, exp, loja)}${app}`, expira: new Date(Number(exp)).toISOString() });
     });
     app.get('/tiktok/connect', (req, res) => {
@@ -532,7 +540,7 @@ try {
         // state assinado com validade (2h): o TikTok devolve e a gente confere a assinatura — não depende de cookie.
         const exp = String(Date.now() + 2 * 3600000);
         // ?app=analytics reautoriza o app de Analytics (desempenho, produtos, vídeos); sem o parâmetro, o app principal.
-        const inst = req.query.app === 'analytics' && tiktok2 && !loja ? tiktok2 : tiktok;
+        const inst = req.query.app === 'analytics' && tiktok2 ? tiktok2 : tiktok;
         res.redirect(inst.authUrl(makeSigned(stateSign, exp, loja)));
     });
     const tiktokDebug = [];
@@ -548,7 +556,8 @@ try {
             // Sem state = veio pelo link de autorização do próprio TikTok; a trava passa a ser a allowlist de lojas (TIKTOK_ALLOWED_SHOP_IDS).
             const code = req.query.code || req.query.auth_code;
             if (typeof code !== 'string' || !code || code.length > 2048) return res.status(400).send('Retorno inválido do TikTok.');
-            const inst = st && st.loja ? tiktokLoja(st.loja) : (tiktok2 && req.query.app_key === process.env.TIKTOK2_APP_KEY) ? tiktok2 : tiktok;
+            const analytics = Boolean(tiktok2) && req.query.app_key === process.env.TIKTOK2_APP_KEY;
+            const inst = st && st.loja ? (analytics ? await tiktokLojaAnalytics(st.loja) : tiktokLoja(st.loja)) : analytics ? tiktok2 : tiktok;
             const r = await inst.exchange(code); tkLog({ step: 'ok', app: st && st.loja ? 'loja:' + st.loja : inst === tiktok2 ? 'analytics' : 'principal', lojas: r.shops, granted: r.granted });
             res.set('Content-Type','text/html; charset=utf-8').send('<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font-family:system-ui;background:#031b30;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center"><div><div style="font-size:64px">✅</div><h2>Loja do TikTok Shop conectada!</h2><p>Pode fechar esta página. Obrigado!</p></div></body>');
         } catch (e) { console.error('TikTok callback:', e.message); tkLog({ step: 'erro', erro: String(e.message).slice(0, 200) });
