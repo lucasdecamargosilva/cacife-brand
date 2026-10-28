@@ -1,9 +1,9 @@
 'use strict';
 const ROOT='https://api.mercadolibre.com';
-const STORE='https://quantic-supabase.k5jwra.easypanel.host/rest/v1/ml_tokens';
-const SELLER='674281461';
+const STORE='https://quantic-supabase.k5jwra.easypanel.host/rest/v1/'+(process.env.ML_TOKENS_TABLE||'ml_tokens');
+const SELLER=process.env.ML_SELLER_ID||'674281461';
 const flights=new WeakMap();
-const RECONNECT='A autorização do Mercado Livre expirou ou foi revogada. Reconecte a conta da Cacife.';
+const RECONNECT='A autorização do Mercado Livre expirou ou foi revogada. Reconecte a conta da loja.';
 
 async function createReader({serviceKey,config={},fetchImpl=fetch}){
  const headers={apikey:serviceKey,Authorization:'Bearer '+serviceKey};

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const path = require('path');
+const fs = require('fs');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 try {
@@ -33,6 +34,7 @@ try {
 
     // --- SSO Chatwoot Endpoint ---
     app.get('/api/chatwoot/sso', async (req, res) => {
+        if (!(await requireViewer(req, res))) return;
         try {
             const CHATWOOT_URL = process.env.CHATWOOT_URL;
             const PLATFORM_TOKEN = process.env.PLATFORM_TOKEN;
@@ -79,12 +81,13 @@ try {
     const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZS1kZW1vIiwKICAgICJpYXQiOiAxNjQxNzY5MjAwLAogICAgImV4cCI6IDE3OTk1MzU2MDAKfQ.QF_2cwXiC3ry1eSjGGJVFHp2jZQtJdr3TBLxiR0ruG0';
     const ML_APP_ID = '523657307062945';
     const ML_APP_SECRET = 'I7jKNj6gzjyZZ7iqIFAvIvMWcZ3kFLkM';
-    const ML_USER_ID = 674281461;
+    const ML_USER_ID = Number(process.env.ML_SELLER_ID || 674281461);
+    const ML_TOKENS = process.env.ML_TOKENS_TABLE || 'ml_tokens';
 
     async function getMLToken() {
         try {
             const { data: tokens } = await axios.get(
-                `${SUPABASE_URL}/rest/v1/ml_tokens?user_id=eq.${ML_USER_ID}&select=access_token,refresh_token,expires_at`,
+                `${SUPABASE_URL}/rest/v1/${ML_TOKENS}?user_id=eq.${ML_USER_ID}&select=access_token,refresh_token,expires_at`,
                 { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` } }
             );
             if (!tokens || !tokens[0]) return null;
@@ -99,7 +102,7 @@ try {
             );
             if (refreshed.access_token) {
                 await axios.patch(
-                    `${SUPABASE_URL}/rest/v1/ml_tokens?user_id=eq.${ML_USER_ID}`,
+                    `${SUPABASE_URL}/rest/v1/${ML_TOKENS}?user_id=eq.${ML_USER_ID}`,
                     { access_token: refreshed.access_token, refresh_token: refreshed.refresh_token, expires_at: new Date(Date.now() + 21600000).toISOString(), updated_at: new Date().toISOString() },
                     { headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' } }
                 );
@@ -180,7 +183,9 @@ try {
         if (m && SUPABASE_ANON_KEY) {
             try {
                 const u = await axios.get(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${m[1]}` } });
-                if (u.data && u.data.id) { req.viewerId = String(u.data.id); return true; }
+                // Só os usuários liberados para este painel (CACIFE_ALLOWED_USERS); qualquer outro login do Supabase fica de fora.
+                const allowed = String(process.env.CACIFE_ALLOWED_USERS || '').split(',').map((x) => x.trim()).filter(Boolean);
+                if (u.data && u.data.id && (!allowed.length || allowed.includes(String(u.data.id)))) { req.viewerId = String(u.data.id); return true; }
             } catch { /* sessão inválida */ }
         }
         res.status(401).json({ error: 'não autorizado' });
@@ -485,7 +490,7 @@ try {
     let tiktok = null, tiktok2 = null;
     if (TIKTOK_APP_KEY && TIKTOK_APP_SECRET) {
         try {
-            tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY }) });
+            tiktok = new TikTokProd({ appKey: TIKTOK_APP_KEY, appSecret: TIKTOK_APP_SECRET, serviceId: TIKTOK_SERVICE_ID, fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: process.env.TIKTOK_TOKENS_TABLE || 'tiktok_tokens' }) });
             // 2º app (categoria TikTok Shop Seller): Analytics + Afiliados. Tokens em tabela própria.
             if (process.env.TIKTOK2_APP_KEY && process.env.TIKTOK2_APP_SECRET) {
                 tiktok2 = new TikTokProd({ appKey: process.env.TIKTOK2_APP_KEY, appSecret: process.env.TIKTOK2_APP_SECRET, serviceId: process.env.TIKTOK2_SERVICE_ID || '', trustedSellerName: process.env.TIKTOK_SELLER_NAME || 'Cacife Brand', fallbackShopId: process.env.TIKTOK_SHOP_ID || null, allowedShopIds: String(process.env.TIKTOK_ALLOWED_SHOP_IDS || process.env.TIKTOK_SHOP_ID || '').split(',').map(x=>x.trim()).filter(Boolean), db: tiktokDb({ url: SUPABASE_URL, serviceKey: SUPABASE_SERVICE_KEY, tokensTable: 'tiktok_tokens_analytics' }) });
@@ -1213,13 +1218,50 @@ try {
     }
     app.get('/', (req, res) => res.redirect('/metricas.html'));
 
+    // Código do servidor nunca sai pelo estático: só os .js que alguma página .html carrega são públicos.
+    const FRONT_JS = new Set();
+    (function scan(dir) {
+        for (const f of fs.readdirSync(dir, { withFileTypes: true })) {
+            if (f.name.startsWith('.') || ['node_modules', 'local', 'docs'].includes(f.name)) continue;
+            const full = path.join(dir, f.name);
+            if (f.isDirectory()) { scan(full); continue; }
+            if (!f.name.endsWith('.html')) continue;
+            for (const m of fs.readFileSync(full, 'utf8').matchAll(/<script[^>]+src="([^":?#]+\.js)/g)) FRONT_JS.add(path.posix.normalize(path.posix.join(path.relative(__dirname, dir).split(path.sep).join('/'), m[1].replace(/^\//, ''))).replace(/^\.\//, ''));
+        }
+    })(__dirname);
+    app.use((req, res, next) => {
+        let p; try { p = decodeURIComponent(req.path); } catch (_) { return res.sendStatus(400); }
+        const rel = p.replace(/^\/+/, '');
+        if (/(^|\/)\.|^(local|docs|node_modules)(\/|$)|\.(sql|md|toml|env|sqlite|log|sh|py)$|^package(-lock)?\.json$/i.test(rel) || (rel.endsWith('.js') && !FRONT_JS.has(rel))) return res.sendStatus(404);
+        next();
+    });
+
+    // Marca por ambiente (mesmo código servindo outra loja, ex.: Óticas Marina): troca nome/logo e esconde canais não conectados.
+    const BRAND_NAME = process.env.BRAND_NAME || '';
+    if (BRAND_NAME) {
+        const logo = process.env.BRAND_LOGO || 'cacife-logo.png';
+        const hide = String(process.env.HIDE_CHANNELS || '').split(',').map((x) => x.trim()).filter((x) => /^[a-z]+$/.test(x));
+        // O logo da Cacife é pintado de preto (filter); logo colorido de outra loja fica como é.
+        const css = '<style>' + (hide.length ? hide.map((c) => `[data-channel="${c}"],a[href^="${c}.html"],option[value="${c}"]`).join(',') + '{display:none!important}' : '') +
+            (logo !== 'cacife-logo.png' ? '.login-logo,.cacife-brand-logo,.brand img{filter:none!important}' : '') + '</style>';
+        const brand = (t) => t.replace(/Cacife Brand|Cacif[eé](?![A-Za-z])/g, BRAND_NAME).replace(/cacife-logo\.png/g, logo);
+        const branded = new Map();
+        app.get(/\.(html|js)$/, (req, res, next) => {
+            const rel = req.path.replace(/^\/+/, ''), file = path.join(__dirname, rel);
+            if (!file.startsWith(__dirname + path.sep) || !fs.existsSync(file)) return next();
+            if (!branded.has(rel)) { let t = brand(fs.readFileSync(file, 'utf8')); if (rel.endsWith('.html')) t = t.replace('</head>', css + '</head>'); branded.set(rel, t); }
+            res.type(rel.endsWith('.html') ? 'html' : 'application/javascript').set('Cache-Control', 'no-cache').send(branded.get(rel));
+        });
+    }
+
     // --- Servir Arquivos Estáticos do Dashboard ---
     // Fazemos isso ANTES do proxy para que as rotas locais tenham prioridade
     app.use(express.static(__dirname));
 
     // --- Proxy Reverso Híbrido para Chatwoot ---
     // Todas as rotas que não foram capturadas acima serão enviadas ao Chatwoot
-    app.use('/', createProxyMiddleware({
+    // Painel sem Chatwoot (outra loja): sem proxy, rota desconhecida vira 404.
+    if (process.env.CHATWOOT_URL) app.use('/', createProxyMiddleware({
         target: process.env.CHATWOOT_URL,
         changeOrigin: true,
         ws: true, // Suporte a WebSockets

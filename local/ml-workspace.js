@@ -1,7 +1,7 @@
 'use strict';
 const {authorize}=require('./mercadolivre');
 const M=require('../metricas-core');
-const SELLER='674281461', ROOT='https://api.mercadolibre.com';
+const SELLER=process.env.ML_SELLER_ID||'674281461', ROOT='https://api.mercadolibre.com';
 const cache=new Map();
 const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
 const cents=v=>v==null?null:M.money(v);

@@ -1,7 +1,7 @@
 'use strict';
 const SUPABASE='https://quantic-supabase.k5jwra.easypanel.host';
 const USER='9d41b952-5345-4bb9-bac2-ee64023d88bd';
-const SELLER='674281461';
+const SELLER=process.env.ML_SELLER_ID||'674281461';
 // Marca das consultas feitas pelo próprio servidor (pré-aquecimento do cache). Symbol não chega por HTTP.
 const INTERNAL=Symbol('cacife-internal');
 async function authorize({serviceKey,authorization,internal,fetchImpl=fetch}){

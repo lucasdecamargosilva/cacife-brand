@@ -42,7 +42,8 @@ function mountChannels(app, { channelsConfig = {}, warmOnStart = true } = {}) {
   }
   async function preparedOverview(req, range) {
     const { start, end } = range, scoped = { headers: req.headers, internal: req.internal, query: { ...req.query, start, end } };
-    const [ml, ns] = await Promise.all([mlOrders(scoped), nsSync.orders(nsOptions(req), start, end, req.query.refresh === '1')]);
+    const noNs = { orders: [], queriedAt: null, start, end, cache: { updatedAt: null, refreshing: false, stale: false, error: null } };
+    const [ml, ns] = await Promise.all([mlOrders(scoped), channelsConfig.nuvemshop && channelsConfig.nuvemshop.storeId ? nsSync.orders(nsOptions(req), start, end, req.query.refresh === '1') : noNs]);
     const r = metricQueries.sync(ml, ns, start, end);
     const need = (r.topProducts || []).filter(p => p.channel === 'mercadolivre' && !p.image).map(p => p.id);
     if (!need.length) return r;
