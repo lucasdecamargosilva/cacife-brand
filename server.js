@@ -1242,9 +1242,10 @@ try {
         const logo = process.env.BRAND_LOGO || 'cacife-logo.png';
         const hide = String(process.env.HIDE_CHANNELS || '').split(',').map((x) => x.trim()).filter((x) => /^[a-z]+$/.test(x));
         // O logo da Cacife é pintado de preto (filter); logo colorido de outra loja fica como é.
-        const css = '<style>' + (hide.length ? hide.map((c) => `[data-channel="${c}"],a[href^="${c}.html"],option[value="${c}"]`).join(',') + '{display:none!important}' : '') +
+        const css = '<style>' + (hide.length ? hide.map((c) => `[data-channel="${c}"],a[href^="${c}.html"],a[href*="channel=${c}"],option[value="${c}"]`).join(',') + '{display:none!important}' : '') +
             (logo !== 'cacife-logo.png' ? '.login-logo,.cacife-brand-logo,.brand img{filter:none!important}' : '') + '</style>';
-        const brand = (t) => t.replace(/Cacife Brand|Cacif[eé](?![A-Za-z])/g, BRAND_NAME).replace(/cacife-logo\.png/g, logo);
+        // Só a palavra solta: X-Cacife-Local, cacife_local etc. são nomes técnicos (cabeçalho, cookie) e não podem mudar.
+        const brand = (t) => t.replace(/(?<![-\w])(?:Cacife Brand|Cacif[eé])(?![-\w])/g, BRAND_NAME).replace(/cacife-logo\.png/g, logo);
         const branded = new Map();
         app.get(/\.(html|js)$/, (req, res, next) => {
             const rel = req.path.replace(/^\/+/, ''), file = path.join(__dirname, rel);
