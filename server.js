@@ -1248,13 +1248,14 @@ try {
     // Marca por ambiente (mesmo código servindo outra loja, ex.: Óticas Marina): troca nome/logo e esconde canais não conectados.
     const BRAND_NAME = process.env.BRAND_NAME || '';
     if (BRAND_NAME) {
-        const logo = process.env.BRAND_LOGO || 'cacife-logo.png';
+        const logo = process.env.BRAND_LOGO || 'cacife-logo.png', favicon = process.env.BRAND_FAVICON || 'favicon.png';
         const hide = String(process.env.HIDE_CHANNELS || '').split(',').map((x) => x.trim()).filter((x) => /^[a-z]+$/.test(x));
         // O logo da Cacife é pintado de preto (filter); logo colorido de outra loja fica como é.
         const css = '<style>' + (hide.length ? hide.map((c) => `[data-channel="${c}"],a[href^="${c}.html"],a[href*="channel=${c}"],option[value="${c}"]`).join(',') + '{display:none!important}' : '') +
             (logo !== 'cacife-logo.png' ? '.login-logo,.cacife-brand-logo,.brand img{filter:none!important}' : '') + '</style>';
         // Só a palavra solta: X-Cacife-Local, cacife_local etc. são nomes técnicos (cabeçalho, cookie) e não podem mudar.
-        const brand = (t) => t.replace(/(?<![-\w])(?:Cacife Brand|Cacif[eé])(?![-\w])/g, BRAND_NAME).replace(/cacife-logo\.png/g, logo);
+        const brand = (t) => t.replace(/(?<![-\w])(?:Cacife Brand|Cacif[eé])(?![-\w])/g, BRAND_NAME).replace(/cacife-logo\.png/g, logo).replace(/href="favicon\.png"/g, `href="${favicon}"`);
+        if (favicon !== 'favicon.png') app.get(['/favicon.png', '/favicon.ico'], (req, res) => res.sendFile(path.join(__dirname, favicon)));
         const branded = new Map();
         app.get(/\.(html|js)$/, (req, res, next) => {
             const rel = req.path.replace(/^\/+/, ''), file = path.join(__dirname, rel);
